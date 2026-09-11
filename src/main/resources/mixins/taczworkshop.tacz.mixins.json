@@ -1,0 +1,28 @@
+{
+  "required": false,
+  "minVersion": "0.8",
+  "compatibilityLevel": "JAVA_17",
+  "refmap": "taczworkshop.mixins.refmap.json",
+  "package": "dev.xyat.taczworkshop.mixin",
+  "mixins": [
+    "TaczDataManagerMixin",
+    "TaczRecipeRouteMixin",
+    "compat.InventoryAccessor",
+    "compat.TaczBackpackMixins$AbstractGunItemMixin",
+    "compat.TaczBackpackMixins$ModernGunScriptApiMixin",
+    "compat.BomdGauntletHitboxesMixin",
+    "compat.LrTacticalDataManagerMixins$MeleeIndexManagerMixin",
+    "compat.LrTacticalDataManagerMixins$ThrowableIndexManagerMixin",
+    "compat.LrTacticalDataManagerMixins$ConsumableIndexManagerMixin"
+  ],
+  "client": [
+    "TimelessApiPreviewMixin",
+    "compat.TaczBackpackMixins$GunAnimationStateContextMixin",
+    "compat.TaczBackpackMixins$GunHudOverlayMixin",
+    "compat.TaczUiMixins$GunSmithTableScreenMixin",
+    "compat.TaczUiMixins$ClientAttachmentItemTooltipMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
