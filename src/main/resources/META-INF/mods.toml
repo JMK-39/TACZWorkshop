@@ -14,7 +14,7 @@ TACZ firearm, attachment, ammunition, melee, supply, and recipe editing tools.
 [[dependencies.taczworkshop]]
 modId="forge"
 mandatory=true
-versionRange="[47,)"
+versionRange="[47.4.0,)"
 ordering="NONE"
 side="BOTH"
 

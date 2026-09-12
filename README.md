@@ -19,12 +19,11 @@ The project is designed around in-game administration. Where a feature changes s
 - Optional Sophisticated Backpacks integration.
 - Server-authoritative save flow for shared content.
 
-### Requirements and Compatibility
+### Dependencies
 
 | Type | Dependency |
 |---|---|
-| Required | Minecraft 1.20.1 |
-| Required | Minecraft Forge 47+ |
+| Required | Forge 47.4.0+ |
 | Required | KineticCore 26.9.8+ |
 | Required | Timeless and Classics Zero (TACZ) |
 | Optional | Sophisticated Backpacks |
@@ -421,12 +420,11 @@ Primary configuration/data paths:
 - 可选兼容 Sophisticated Backpacks。
 - 共享内容采用服务端权威保存流程。
 
-### 运行环境与兼容
+### 依赖
 
 | 类型 | 依赖 |
 |---|---|
-| 必需 | Minecraft 1.20.1 |
-| 必需 | Minecraft Forge 47+ |
+| 必需 | Forge 47.4.0+ |
 | 必需 | KineticCore 26.9.8+ |
 | 必需 | Timeless and Classics Zero (TACZ) |
 | 可选 | Sophisticated Backpacks |
