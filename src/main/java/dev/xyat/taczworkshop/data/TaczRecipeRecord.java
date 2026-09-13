@@ -2,6 +2,7 @@ package dev.xyat.taczworkshop.data;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 
 import java.nio.charset.StandardCharsets;
@@ -16,6 +17,7 @@ public final class TaczRecipeRecord {
     public static final String ORIGIN_CUSTOM = "custom";
     public static final String ORIGIN_ORIGINAL = "original";
     public static final String ORIGIN_REPLACEMENT = "replacement";
+    public static final String ORIGIN_INVALID = "invalid";
 
     private String uuid;
     private String id;
@@ -26,6 +28,9 @@ public final class TaczRecipeRecord {
     private String origin;
     private String originalId;
     private final List<String> workbenches;
+    private String issueCode = "";
+    private String issueDetail = "";
+    private JsonElement rawRecipe = JsonNull.INSTANCE;
 
     public TaczRecipeRecord(String uuid, String id, boolean enabled, String comment, List<TaczMaterial> materials, JsonObject result) {
         this(uuid, id, enabled, comment, materials, result, ORIGIN_CUSTOM, "", List.of());
@@ -82,6 +87,14 @@ public final class TaczRecipeRecord {
     public static TaczRecipeRecord original(String id, boolean enabled, List<TaczMaterial> materials, JsonObject result, List<String> workbenches) {
         String uuid = UUID.nameUUIDFromBytes(("taczworkshop:original:" + id).getBytes(StandardCharsets.UTF_8)).toString();
         return new TaczRecipeRecord(uuid, id, enabled, "", materials, result, ORIGIN_ORIGINAL, "", workbenches);
+    }
+
+    public static TaczRecipeRecord invalid(String id, List<TaczMaterial> materials, JsonObject result, String issueCode, String issueDetail, JsonElement rawRecipe) {
+        String safeId = clean(id);
+        String uuid = UUID.nameUUIDFromBytes(("taczworkshop:invalid:" + safeId).getBytes(StandardCharsets.UTF_8)).toString();
+        TaczRecipeRecord record = new TaczRecipeRecord(uuid, safeId, true, "", materials, result, ORIGIN_INVALID, "", List.of());
+        record.setIssue(issueCode, issueDetail, rawRecipe);
+        return record;
     }
 
     public String uuid() {
@@ -168,12 +181,55 @@ public final class TaczRecipeRecord {
         return ORIGIN_CUSTOM.equals(origin);
     }
 
+    public boolean isInvalid() {
+        return ORIGIN_INVALID.equals(origin);
+    }
+
+    public boolean hasIssue() {
+        return !issueCode.isBlank();
+    }
+
+    public String issueCode() {
+        return issueCode;
+    }
+
+    public String issueDetail() {
+        return issueDetail;
+    }
+
+    public JsonElement rawRecipe() {
+        return rawRecipe == null ? JsonNull.INSTANCE : rawRecipe.deepCopy();
+    }
+
+    public void setIssue(String code, String detail, JsonElement raw) {
+        issueCode = clean(code).toLowerCase(Locale.ROOT);
+        issueDetail = detail == null ? "" : detail.trim();
+        rawRecipe = raw == null ? JsonNull.INSTANCE : raw.deepCopy();
+    }
+
+    public void clearIssue() {
+        issueCode = "";
+        issueDetail = "";
+        rawRecipe = JsonNull.INSTANCE;
+        if (isInvalid()) origin = ORIGIN_CUSTOM;
+    }
+
+    public TaczRecipeRecord resolvedCopy() {
+        TaczRecipeRecord copy = copy();
+        copy.origin = ORIGIN_CUSTOM;
+        copy.originalId = "";
+        copy.clearIssue();
+        return copy;
+    }
+
     public String sourceRecipeId() {
         return isReplacement() && !originalId.isBlank() ? originalId : id;
     }
 
     public TaczRecipeRecord copy() {
-        return new TaczRecipeRecord(uuid, id, enabled, comment, materials, result, origin, originalId, workbenches);
+        TaczRecipeRecord copy = new TaczRecipeRecord(uuid, id, enabled, comment, materials, result, origin, originalId, workbenches);
+        copy.setIssue(issueCode, issueDetail, rawRecipe);
+        return copy;
     }
 
     public TaczRecipeRecord duplicate() {
@@ -185,6 +241,7 @@ public final class TaczRecipeRecord {
         copy.id = base + "_copy";
         copy.origin = ORIGIN_CUSTOM;
         copy.originalId = "";
+        copy.clearIssue();
         return copy;
     }
 
@@ -194,6 +251,7 @@ public final class TaczRecipeRecord {
         copy.originalId = id;
         copy.id = replacementId;
         copy.origin = ORIGIN_REPLACEMENT;
+        copy.clearIssue();
         return copy;
     }
 
@@ -204,6 +262,7 @@ public final class TaczRecipeRecord {
         copy.id = createdId;
         copy.origin = ORIGIN_CUSTOM;
         copy.enabled = true;
+        copy.clearIssue();
         return copy;
     }
 
@@ -223,7 +282,7 @@ public final class TaczRecipeRecord {
     }
 
     public String searchableText() {
-        return (id + " " + originalId + " " + resultType() + " " + resultId() + " " + comment + " " + String.join(" ", workbenches)).toLowerCase(Locale.ROOT);
+        return (id + " " + originalId + " " + resultType() + " " + resultId() + " " + comment + " " + issueCode + " " + issueDetail + " " + String.join(" ", workbenches)).toLowerCase(Locale.ROOT);
     }
 
     public JsonObject toJson() {
@@ -243,6 +302,13 @@ public final class TaczRecipeRecord {
         for (TaczMaterial material : materials) array.add(material.toJson());
         object.add("materials", array);
         object.add("result", result.deepCopy());
+        if (hasIssue()) {
+            JsonObject issue = new JsonObject();
+            issue.addProperty("code", issueCode);
+            if (!issueDetail.isBlank()) issue.addProperty("detail", issueDetail);
+            if (rawRecipe != null && !rawRecipe.isJsonNull()) issue.add("raw", rawRecipe.deepCopy());
+            object.add("issue", issue);
+        }
         return object;
     }
 
@@ -269,7 +335,15 @@ public final class TaczRecipeRecord {
         JsonObject result = object.has("result") && object.get("result").isJsonObject()
                 ? object.getAsJsonObject("result")
                 : new JsonObject();
-        return new TaczRecipeRecord(uuid, id, enabled, comment, materials, result, origin, originalId, workbenches);
+        TaczRecipeRecord record = new TaczRecipeRecord(uuid, id, enabled, comment, materials, result, origin, originalId, workbenches);
+        if (object.has("issue") && object.get("issue").isJsonObject()) {
+            JsonObject issue = object.getAsJsonObject("issue");
+            String code = issue.has("code") && issue.get("code").isJsonPrimitive() ? issue.get("code").getAsString() : "";
+            String detail = issue.has("detail") && issue.get("detail").isJsonPrimitive() ? issue.get("detail").getAsString() : "";
+            JsonElement raw = issue.has("raw") ? issue.get("raw") : JsonNull.INSTANCE;
+            record.setIssue(code, detail, raw);
+        }
+        return record;
     }
 
     private static String normalizeUuid(String value) {
@@ -286,6 +360,7 @@ public final class TaczRecipeRecord {
         return switch (value == null ? "" : value.trim().toLowerCase(Locale.ROOT)) {
             case ORIGIN_ORIGINAL -> ORIGIN_ORIGINAL;
             case ORIGIN_REPLACEMENT -> ORIGIN_REPLACEMENT;
+            case ORIGIN_INVALID -> ORIGIN_INVALID;
             default -> ORIGIN_CUSTOM;
         };
     }

@@ -1,13 +1,14 @@
 package dev.xyat.taczworkshop.client.gui;
 
+import dev.xyat.kineticcore.api.client.text.KineticText;
 import dev.xyat.kineticcore.api.client.overlay.GuiOverlay;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
 import dev.xyat.kineticcore.api.client.screen.KineticScreen;
+import dev.xyat.kineticcore.api.client.widget.KineticWidgets;
 import dev.xyat.kineticcore.api.client.widget.KineticWidgets.GridScrollController;
-import dev.xyat.kineticcore.api.client.widget.KineticWidgets.HighZButton;
 import dev.xyat.kineticcore.api.client.widget.KineticWidgets.NumericEditBox;
 import dev.xyat.taczworkshop.client.TaczDataClientState;
 import dev.xyat.taczworkshop.client.TaczDataStackUtil;
@@ -15,9 +16,7 @@ import dev.xyat.taczworkshop.client.TaczPreviewIndexContext;
 import dev.xyat.taczworkshop.data.TaczDataKind;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
@@ -28,10 +27,8 @@ import org.jetbrains.annotations.NotNull;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Set;
 
 public final class TaczDataDetailScreen extends KineticScreen {
@@ -61,9 +58,7 @@ public final class TaczDataDetailScreen extends KineticScreen {
     private final boolean resourceAvailable;
     private final JsonObject previewIndex;
     private final GridScrollController fieldScroll = new GridScrollController();
-    private final TaczContextMenu contextMenu = new TaczContextMenu();
     private final List<AbstractWidget> activeFieldWidgets = new ArrayList<>();
-    private final Map<AbstractWidget, Component> widgetTooltips = new LinkedHashMap<>();
     private boolean removed;
     private boolean dirty;
     private EditBox search;
@@ -90,34 +85,31 @@ public final class TaczDataDetailScreen extends KineticScreen {
         this.resourceAvailable = detail.has("index") && detail.get("index").isJsonObject() && !detail.getAsJsonObject("index").entrySet().isEmpty()
                 || !this.previewIndex.entrySet().isEmpty();
         this.removed = bool(detail, "removed");
-        useCanvas(640, 360, 6);
-        maxScale = 1.0F;
+        useStandardCanvas();
     }
 
     @Override
     protected void buildUi() {
-        contextMenu.close();
+        closeContextMenu();
         activeFieldWidgets.clear();
-        widgetTooltips.clear();
         String oldSearch = search == null ? "" : search.getValue();
-        search = new EditBox(font, 20, 50, 250, 20, Component.translatable("gui.taczworkshop.search"));
+        search = addTextField(20, 50, 250, Component.translatable("gui.taczworkshop.search"));
         search.setMaxLength(256);
         search.setValue(oldSearch);
         search.setResponder(value -> {
             fieldScroll.reset();
             rebuildFieldWidgets();
         });
-        addRenderableWidget(search);
 
-        addButton(278, 18, 68, 20, removed ? "gui.taczworkshop.data.restore" : "gui.taczworkshop.data.remove", "tip.taczworkshop.data.remove", this::toggleRemoved);
-        addButton(350, 18, 64, 20, "gui.taczworkshop.data.reset", "tip.taczworkshop.data.reset", this::confirmReset);
+        addButton(278, 18, 68, Component.translatable(removed ? "gui.taczworkshop.data.restore" : "gui.taczworkshop.data.remove"), Component.translatable("tip.taczworkshop.data.remove"), this::toggleRemoved);
+        addButton(350, 18, 64, Component.translatable("gui.taczworkshop.data.reset"), Component.translatable("tip.taczworkshop.data.reset"), this::confirmReset);
         if (hasExpandableCollections()) {
-            addHighButton(418, 18, 68, 20, "gui.taczworkshop.data.collection.add", "tip.taczworkshop.data.collection.add", this::openAddCollectionMenu);
+            addHighZButton(418, 18, 68, Component.translatable("gui.taczworkshop.data.collection.add"), Component.translatable("tip.taczworkshop.data.collection.add"), 40, this::openAddCollectionMenu);
         }
         if (hasRemovableCollections()) {
-            addHighButton(490, 18, 68, 20, "gui.taczworkshop.data.collection.remove", "tip.taczworkshop.data.collection.remove", this::openRemoveCollectionMenu);
+            addHighZButton(490, 18, 68, Component.translatable("gui.taczworkshop.data.collection.remove"), Component.translatable("tip.taczworkshop.data.collection.remove"), 40, this::openRemoveCollectionMenu);
         }
-        addButton(562, 18, 64, 20, "gui.taczworkshop.back", "tip.taczworkshop.back.data_list", this::onClose);
+        addButton(562, 18, 64, Component.translatable("gui.taczworkshop.back"), Component.translatable("tip.taczworkshop.back.data_list"), this::onClose);
 
         rebuildFieldWidgets();
     }
@@ -162,19 +154,24 @@ public final class TaczDataDetailScreen extends KineticScreen {
         Component label = fieldLabel(leaf.displayPath());
         if (leaf.isBoolean()) {
             boolean current = leaf.value().getAsBoolean();
-            Button button = Button.builder(Component.translatable(current ? "gui.taczworkshop.data.boolean.true" : "gui.taczworkshop.data.boolean.false"), ignored -> {
-                TaczJsonLeafModel.set(data, leaf, Boolean.toString(!current));
-                markDirty();
-                rebuildFieldWidgets();
-            }).bounds(inputX, y + 2, INPUT_WIDTH, 20).build();
-            addRenderableWidget(button);
+            KineticWidgets.ToggleButton button = addToggleButton(
+                    inputX, y + 2, INPUT_WIDTH,
+                    current,
+                    Component.translatable("gui.taczworkshop.data.boolean.true"),
+                    Component.translatable("gui.taczworkshop.data.boolean.false"),
+                    null,
+                    value -> {
+                        TaczJsonLeafModel.set(data, leaf, Boolean.toString(value));
+                        markDirty();
+                    }
+            );
             activeFieldWidgets.add(button);
             return;
         }
 
         EditBox box;
         if (leaf.isNumber()) {
-            NumericEditBox numeric = NumericEditBox.decimal(font, inputX, y + 2, INPUT_WIDTH, 20, label, true, null, null);
+            NumericEditBox numeric = addDecimalField(inputX, y + 2, INPUT_WIDTH, label, true, null, null, null);
             numeric.setValue(leaf.value().getAsString());
             numeric.setResponder(value -> {
                 try {
@@ -187,7 +184,7 @@ public final class TaczDataDetailScreen extends KineticScreen {
             });
             box = numeric;
         } else {
-            box = new EditBox(font, inputX, y + 2, INPUT_WIDTH, 20, label);
+            box = addTextField(inputX, y + 2, INPUT_WIDTH, label);
             box.setValue(leaf.value().getAsString());
             box.setResponder(value -> {
                 TaczJsonLeafModel.set(data, leaf, value);
@@ -195,7 +192,6 @@ public final class TaczDataDetailScreen extends KineticScreen {
             });
         }
         box.setMaxLength(2048);
-        addRenderableWidget(box);
         activeFieldWidgets.add(box);
     }
 
@@ -243,34 +239,31 @@ public final class TaczDataDetailScreen extends KineticScreen {
     }
 
     private void confirmReset() {
-        if (minecraft == null) return;
-        minecraft.setScreen(new ConfirmScreen(
-                confirmed -> {
-                    minecraft.setScreen(this);
-                    if (confirmed) {
-                        TaczDataClientState.stageReset(kind, id);
-                        dirty = false;
-                        minecraft.setScreen(parent);
-                    }
-                },
+        openDialog(
                 Component.translatable("gui.taczworkshop.data.reset.title"),
-                Component.translatable("gui.taczworkshop.data.reset.message", id)
-        ));
+                Component.translatable("gui.taczworkshop.data.reset.message", id),
+                Component.translatable("gui.yes"),
+                Component.translatable("gui.no"),
+                () -> {
+                    TaczDataClientState.stageReset(kind, id);
+                    dirty = false;
+                    if (minecraft != null) navigateBack();
+                },
+                () -> { }
+        );
     }
 
     private void rebuildWidgetsKeepSearch() {
         String oldSearch = search == null ? "" : search.getValue();
-        clearWidgets();
         search = null;
-        buildUi();
+        rebuildUi();
         if (search != null) search.setValue(oldSearch);
     }
 
     private void rebuildWidgetsKeepSearchAndReveal(String pathPrefix) {
         String oldSearch = search == null ? "" : search.getValue();
-        clearWidgets();
         search = null;
-        buildUi();
+        rebuildUi();
         if (search != null) search.setValue(oldSearch);
         revealField(pathPrefix);
     }
@@ -301,7 +294,7 @@ public final class TaczDataDetailScreen extends KineticScreen {
     }
 
     private void openAddCollectionMenu() {
-        List<TaczContextMenu.Entry> items = new ArrayList<>();
+        List<GuiOverlay.MenuItem> items = new ArrayList<>();
         if (kind == TaczDataKind.GUN) {
             addCollectionEntry(items, "gui.taczworkshop.data.collection.damage_curve", true, this::addDamageCurvePoint);
             if (arrayAtPath("extras.ammo_types") != null) addCollectionEntry(items, "gui.taczworkshop.data.collection.ammo_type", true, this::addAmmoType);
@@ -315,11 +308,11 @@ public final class TaczDataDetailScreen extends KineticScreen {
         if (kind == TaczDataKind.THROWABLE && objectAtPath("cloud") != null) {
             addCollectionEntry(items, "gui.taczworkshop.data.collection.cloud_effect", true, this::addCloudEffect);
         }
-        if (!items.isEmpty()) contextMenu.open(font, 418, 40, canvasWidth, canvasHeight, items);
+        if (!items.isEmpty()) openContextMenu(418, 40, items);
     }
 
     private void openRemoveCollectionMenu() {
-        List<TaczContextMenu.Entry> items = new ArrayList<>();
+        List<GuiOverlay.MenuItem> items = new ArrayList<>();
         if (arraySize("bullet.extra_damage.damage_adjust") > 0) addCollectionEntry(items, "gui.taczworkshop.data.collection.damage_curve", false, () -> removeLast("bullet.extra_damage.damage_adjust", 0));
         if (arraySize("extras.ammo_types") > 1) addCollectionEntry(items, "gui.taczworkshop.data.collection.ammo_type", false, () -> removeLast("extras.ammo_types", 1));
         if (arraySize("recoil.pitch") > 1) addCollectionEntry(items, "gui.taczworkshop.data.collection.recoil_pitch", false, () -> removeLast("recoil.pitch", 1));
@@ -327,12 +320,12 @@ public final class TaczDataDetailScreen extends KineticScreen {
         if (arraySize("effects") > 0) addCollectionEntry(items, "gui.taczworkshop.data.collection.effect", false, () -> removeLast("effects", 0));
         if (arraySize("remove_effects") > 0) addCollectionEntry(items, "gui.taczworkshop.data.collection.remove_effect", false, () -> removeLast("remove_effects", 0));
         if (arraySize("cloud.effects") > 0) addCollectionEntry(items, "gui.taczworkshop.data.collection.cloud_effect", false, () -> removeLast("cloud.effects", 0));
-        if (!items.isEmpty()) contextMenu.open(font, 490, 40, canvasWidth, canvasHeight, items);
+        if (!items.isEmpty()) openContextMenu(490, 40, items);
     }
 
-    private void addCollectionEntry(List<TaczContextMenu.Entry> items, String labelKey, boolean add, Runnable action) {
+    private void addCollectionEntry(List<GuiOverlay.MenuItem> items, String labelKey, boolean add, Runnable action) {
         Component label = Component.translatable(labelKey);
-        items.add(TaczContextMenu.Entry.action(
+        items.add(GuiOverlay.MenuItem.action(
                 label,
                 Component.translatable(add ? "tip.taczworkshop.data.collection.add_entry" : "tip.taczworkshop.data.collection.remove_entry", label),
                 action
@@ -557,7 +550,7 @@ public final class TaczDataDetailScreen extends KineticScreen {
 
     @Override
     protected void renderCanvasForeground(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderSearchPlaceholder(graphics, search);
+        renderTextFieldPlaceholder(graphics, search, Component.translatable("gui.taczworkshop.data.field.search.hint"));
         ItemStack stack = TaczDataStackUtil.build(kind, id);
         hoveredHeaderItem = GuiTheme.hovering(mouseX, mouseY, 20, 14, 18, 18);
         GuiTheme.itemSlot(graphics, 20, 14, hoveredHeaderItem);
@@ -569,9 +562,9 @@ public final class TaczDataDetailScreen extends KineticScreen {
         if (serverModified || dirty) graphics.renderOutline(20, 14, 18, 18, 0xFF35D06F);
         if (removed) graphics.renderOutline(20, 14, 18, 18, 0xFFFF5656);
 
-        graphics.drawString(font, GuiTheme.trim(font, displayName(stack).getString(), 280), 44, 14, 0xFFFFFFFF, true);
-        graphics.drawString(font, GuiTheme.trim(font, id, 280), 44, 27, 0xFFCCCCCC, false);
-        graphics.drawString(font, GuiTheme.trim(font, Component.translatable("gui.taczworkshop.data.detail.data_id", dataId).getString(), 290), 44, 40, 0xFFAAAAAA, false);
+        KineticText.drawScrollingLeft(graphics, font, displayName(stack), 44, 14, 280, 0xFFFFFFFF, true);
+        KineticText.drawScrollingLeft(graphics, font, id, 44, 27, 280, 0xFFCCCCCC, false);
+        KineticText.drawScrollingLeft(graphics, font, Component.translatable("gui.taczworkshop.data.detail.data_id", dataId), 44, 40, 290, 0xFFAAAAAA, false);
         graphics.drawString(font, Component.translatable(removed ? "gui.taczworkshop.data.status.removed" : serverModified || dirty ? "gui.taczworkshop.data.status.modified" : "gui.taczworkshop.data.status.active"), 280, 56, 0xFFFFFFFF, true);
 
         hoveredAttachmentSummary = false;
@@ -591,31 +584,16 @@ public final class TaczDataDetailScreen extends KineticScreen {
             int y = fieldBaseY() + row * ROW_HEIGHT - shift;
             TaczJsonLeafModel.Leaf leaf = leaves.get(i);
             Component label = fieldLabel(leaf.displayPath());
-            String visibleLabel = GuiTheme.trim(font, label.getString(), LABEL_WIDTH);
-            graphics.drawString(font, visibleLabel, x, y + 8, 0xFFFFFFFF, false);
+            KineticText.drawScrollingLeft(graphics, font, label, x, y + 8, LABEL_WIDTH, 0xFFFFFFFF, false);
             if (GuiTheme.hovering(mouseX, mouseY, x, y + 2, INPUT_OFFSET + INPUT_WIDTH, 20)) hoveredLeaf = leaf;
         }
-        graphics.disableScissor();
+        disableCanvasScissor(graphics);
 
         graphics.drawString(font, Component.translatable("gui.taczworkshop.data.fields", leaves.size()), 20, 338, 0xFFCCCCCC, false);
-        contextMenu.render(graphics, mouseX, mouseY, partialTick);
-    }
-
-    private void renderSearchPlaceholder(GuiGraphics graphics, EditBox box) {
-        if (box == null || !box.visible || !box.getValue().isEmpty() || box.isFocused()) return;
-        String text = font.plainSubstrByWidth(Component.translatable("gui.taczworkshop.data.field.search.hint").getString(), Math.max(0, box.getWidth() - 10));
-        graphics.drawString(font, text, box.getX() + 5, box.getY() + (box.getHeight() - font.lineHeight) / 2, 0xFFAAAAAA, false);
     }
 
     @Override
     protected boolean canvasMouseClicked(double mouseX, double mouseY, int button) {
-        if (contextMenu.isOpen()) {
-            if (contextMenu.mouseClicked(mouseX, mouseY, button)) return true;
-            if (contextMenu.contains(mouseX, mouseY)) return true;
-            contextMenu.close();
-            if (button != 1) return true;
-        }
-
         if (button == 1 && kind == TaczDataKind.GUN && GuiTheme.hovering(mouseX, mouseY, ATTACHMENT_SUMMARY_X, ATTACHMENT_SUMMARY_Y, ATTACHMENT_SUMMARY_WIDTH, ATTACHMENT_SUMMARY_HEIGHT)) {
             openAttachmentContextMenu((int) mouseX, (int) mouseY);
             return true;
@@ -630,7 +608,6 @@ public final class TaczDataDetailScreen extends KineticScreen {
 
     @Override
     protected boolean canvasMouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
-        if (contextMenu.isOpen()) return true;
         int scrollHeight = visibleFieldRows() * ROW_HEIGHT - 4;
         if (fieldScroll.drag(mouseY, fieldBaseY(), scrollHeight, 18)) {
             return true;
@@ -646,7 +623,6 @@ public final class TaczDataDetailScreen extends KineticScreen {
 
     @Override
     protected boolean canvasMouseScrolled(double mouseX, double mouseY, double delta) {
-        if (contextMenu.isOpen()) return true;
         int scrollHeight = visibleFieldRows() * ROW_HEIGHT - 4;
         if (GuiTheme.hovering(mouseX, mouseY, 14, fieldBaseY(), 612, scrollHeight) && fieldScroll.scroll(delta)) {
             return true;
@@ -656,15 +632,7 @@ public final class TaczDataDetailScreen extends KineticScreen {
 
     @Override
     protected void renderTooltips(GuiGraphics graphics, int scaledMouseX, int scaledMouseY, int mouseX, int mouseY) {
-        if (contextMenu.isOpen()) {
-            contextMenu.requestTooltip(graphics, font, scaledMouseX, scaledMouseY, mouseX, mouseY);
-            return;
-        }
-        Component widgetTooltip = widgetTooltipAt(scaledMouseX, scaledMouseY);
-        if (widgetTooltip != null && !widgetTooltip.getString().isBlank()) {
-            GuiOverlay.requestFormattedTooltip(font.split(widgetTooltip, 320), mouseX, mouseY);
-            return;
-        }
+        if (overlays().blocksInput()) return;
         if (hoveredLeaf != null) {
             List<FormattedCharSequence> lines = new ArrayList<>();
             Component label = fieldLabel(hoveredLeaf.displayPath());
@@ -672,11 +640,11 @@ public final class TaczDataDetailScreen extends KineticScreen {
             if (!label.getString().equals(hoveredLeaf.displayPath())) {
                 lines.addAll(font.split(Component.translatable("gui.taczworkshop.data.tooltip.field_path", hoveredLeaf.displayPath()), 320));
             }
-            GuiOverlay.requestFormattedTooltip(lines, mouseX, mouseY);
+            showFormattedTooltip(lines);
             return;
         }
         if (hoveredAttachmentSummary && kind == TaczDataKind.GUN) {
-            GuiOverlay.requestFormattedTooltip(attachmentSummaryTooltip(), mouseX, mouseY);
+            showFormattedTooltip(attachmentSummaryTooltip());
             return;
         }
         if (hoveredHeaderItem) {
@@ -687,7 +655,7 @@ public final class TaczDataDetailScreen extends KineticScreen {
             } else lines.addAll(font.split(Component.translatable("gui.taczworkshop.data.resource_missing"), 320));
             lines.addAll(font.split(Component.translatable("gui.taczworkshop.data.tooltip.item_id", id), 320));
             if (!dataId.isBlank()) lines.addAll(font.split(Component.translatable("gui.taczworkshop.data.tooltip.data_id", dataId), 320));
-            GuiOverlay.requestFormattedTooltip(lines, mouseX, mouseY);
+            showFormattedTooltip(lines);
         }
     }
 
@@ -741,10 +709,10 @@ public final class TaczDataDetailScreen extends KineticScreen {
 
     private void openAttachmentContextMenu(int mouseX, int mouseY) {
         Set<String> enabled = attachmentTypes();
-        List<TaczContextMenu.Entry> items = new ArrayList<>();
+        List<GuiOverlay.MenuItem> items = new ArrayList<>();
         for (String type : ATTACHMENT_TYPES) {
             boolean on = enabled.contains(type);
-            items.add(TaczContextMenu.Entry.toggle(
+            items.add(GuiOverlay.MenuItem.toggle(
                     Component.translatable("gui.taczworkshop.attachment." + type),
                     Component.translatable(on ? "tip.taczworkshop.data.slot.enabled" : "tip.taczworkshop.data.slot.disabled"),
                     on,
@@ -754,23 +722,14 @@ public final class TaczDataDetailScreen extends KineticScreen {
                     }
             ));
         }
-        contextMenu.open(font, mouseX, mouseY, canvasWidth, canvasHeight, items);
+        openContextMenu(mouseX, mouseY, items);
     }
 
-
-    @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == 256 && contextMenu.isOpen()) {
-            contextMenu.close();
-            return true;
-        }
-        return super.keyPressed(keyCode, scanCode, modifiers);
-    }
 
     @Override
     public void onClose() {
         stageCurrentEdit();
-        if (minecraft != null) minecraft.setScreen(parent);
+        if (minecraft != null) navigateBack();
     }
 
     private void stageCurrentEdit() {
@@ -1186,28 +1145,6 @@ public final class TaczDataDetailScreen extends KineticScreen {
         } catch (NumberFormatException ignored) {
             return -1;
         }
-    }
-
-    private void addButton(int x, int y, int w, int h, String textKey, String tipKey, Runnable action) {
-        Button button = Button.builder(Component.translatable(textKey), ignored -> action.run()).bounds(x, y, w, h).build();
-        addRenderableWidget(button);
-        widgetTooltips.put(button, Component.translatable(tipKey));
-    }
-
-    private void addHighButton(int x, int y, int w, int h, String textKey, String tipKey, Runnable action) {
-        HighZButton button = new HighZButton(x, y, w, h, Component.translatable(textKey), ignored -> action.run(), null, 40);
-        addRenderableWidget(button);
-        widgetTooltips.put(button, Component.translatable(tipKey));
-    }
-
-    private Component widgetTooltipAt(double mouseX, double mouseY) {
-        for (Map.Entry<AbstractWidget, Component> entry : widgetTooltips.entrySet()) {
-            AbstractWidget widget = entry.getKey();
-            if (widget.visible && widget.active && GuiTheme.hovering(mouseX, mouseY, widget.getX(), widget.getY(), widget.getWidth(), widget.getHeight())) {
-                return entry.getValue();
-            }
-        }
-        return null;
     }
 
     private static String read(JsonObject object, String key) {

@@ -104,7 +104,20 @@ public final class TaczRecipeStore {
         Set<String> disabled = state.disabledOriginals();
         TaczRecipeRecord stored;
 
-        if (record.isOriginal()) {
+        if (record.hasIssue()) {
+            stored = record.resolvedCopy();
+            TaczRecipeCodec.validateAndBuild(stored);
+            boolean replaced = false;
+            for (int i = 0; i < records.size(); i++) {
+                TaczRecipeRecord existing = records.get(i);
+                if (existing.uuid().equals(stored.uuid()) || existing.id().equals(stored.id())) {
+                    records.set(i, stored.copy());
+                    replaced = true;
+                    break;
+                }
+            }
+            if (!replaced) records.add(stored.copy());
+        } else if (record.isOriginal()) {
             String originalId = record.id();
             stored = record.asCreatedFromOriginal(createdId(originalId, records));
             disabled.add(originalId);

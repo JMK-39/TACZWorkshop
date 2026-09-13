@@ -1,5 +1,6 @@
 package dev.xyat.taczworkshop.client.gui;
 
+import dev.xyat.kineticcore.api.client.text.KineticText;
 import com.tacz.guns.api.TimelessAPI;
 import com.tacz.guns.api.item.builder.BlockItemBuilder;
 import com.tacz.guns.resource.index.CommonBlockIndex;
@@ -7,9 +8,7 @@ import dev.xyat.kineticcore.api.client.theme.GuiTheme;
 import dev.xyat.kineticcore.api.client.screen.KineticScreen;
 import dev.xyat.kineticcore.api.client.widget.KineticWidgets.GridScrollController;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
@@ -57,8 +56,7 @@ public final class TaczWorkbenchSelectorScreen extends KineticScreen {
         this.onSave = onSave;
         this.originalSelection = selected == null ? List.of() : List.copyOf(selected);
         if (selected != null) this.selected.addAll(selected);
-        useCanvas(640, 360, 6);
-        maxScale = 1.0F;
+        useStandardCanvas();
         loadEntries();
     }
 
@@ -84,20 +82,22 @@ public final class TaczWorkbenchSelectorScreen extends KineticScreen {
     @Override
     protected void buildUi() {
         String oldSearch = search == null ? "" : search.getValue();
-        search = new EditBox(font, 14, 12, 224, 20, Component.translatable("gui.taczworkshop.search"));
+        search = addTextField(14, 12, 224, Component.translatable("gui.taczworkshop.search"));
         search.setMaxLength(256);
         search.setValue(oldSearch);
         search.setResponder(value -> {
             scroll.reset();
             rebuildFiltered();
         });
-        addRenderableWidget(search);
 
-        Button restore = Button.builder(Component.translatable("gui.taczworkshop.workbench.restore_original"), ignored -> restoreOriginal()).bounds(244, 12, 118, 20).build();
-        restore.setTooltip(Tooltip.create(Component.translatable("tip.taczworkshop.workbench.restore_original")));
-        addRenderableWidget(restore);
-        addButton(492, 328, 62, 20, "gui.taczworkshop.save", "tip.taczworkshop.save", this::saveAndClose);
-        addButton(560, 328, 66, 20, "gui.taczworkshop.back", "tip.taczworkshop.back.recipe_editor", this::onClose);
+        addButton(
+                244, 12, 118,
+                Component.translatable("gui.taczworkshop.workbench.restore_original"),
+                Component.translatable("tip.taczworkshop.workbench.restore_original"),
+                this::restoreOriginal
+        );
+        addButton(492, 328, 62, Component.translatable("gui.taczworkshop.save"), Component.translatable("tip.taczworkshop.save"), this::saveAndClose);
+        addButton(560, 328, 66, Component.translatable("gui.taczworkshop.back"), Component.translatable("tip.taczworkshop.back.recipe_editor"), this::onClose);
         rebuildFiltered();
     }
 
@@ -128,7 +128,7 @@ public final class TaczWorkbenchSelectorScreen extends KineticScreen {
 
     @Override
     protected void renderCanvasForeground(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderSearchPlaceholder(graphics);
+        renderTextFieldPlaceholder(graphics, search, Component.translatable("gui.taczworkshop.workbench.search.hint"));
         graphics.drawString(font, Component.translatable("gui.taczworkshop.workbench.selected_count", selected.size()), 374, 18, 0xFFFFFFFF, true);
         int x = INFO_X + 8;
         int y = GRID_Y + 8;
@@ -140,7 +140,7 @@ public final class TaczWorkbenchSelectorScreen extends KineticScreen {
                 y += font.lineHeight + 2;
             }
         } else {
-            graphics.drawString(font, GuiTheme.trim(font, hovered.name(), INFO_W - 16), x, y, 0xFFFFFFFF, true);
+            KineticText.drawScrollingLeft(graphics, font, hovered.name(), x, y, INFO_W - 16, 0xFFFFFFFF, true);
             y += 15;
             for (var line : font.split(Component.literal(hovered.id().toString()), INFO_W - 16)) {
                 graphics.drawString(font, line, x, y, 0xFFCCCCCC, false);
@@ -157,7 +157,7 @@ public final class TaczWorkbenchSelectorScreen extends KineticScreen {
         int visualShift = scroll.visualShift(CELL_SIZE);
         int first = baseRow * COLUMNS;
         int last = Math.min(filtered.size(), first + (ROWS + 2) * COLUMNS);
-        graphics.enableScissor(GRID_X, GRID_Y, GRID_X + GRID_W, GRID_Y + GRID_H);
+        enableCanvasScissor(graphics, GRID_X, GRID_Y, GRID_X + GRID_W, GRID_Y + GRID_H);
         for (int index = first; index < last; index++) {
             int visible = index - first;
             int x = GRID_X + (visible % COLUMNS) * CELL_SIZE;
@@ -169,7 +169,7 @@ public final class TaczWorkbenchSelectorScreen extends KineticScreen {
             if (selected.contains(entry.id().toString())) graphics.renderOutline(x, y, SLOT_SIZE, SLOT_SIZE, 0xFF35D06F);
             if (hover) hovered = entry;
         }
-        graphics.disableScissor();
+        disableCanvasScissor(graphics);
     }
 
     @Override
@@ -213,25 +213,14 @@ public final class TaczWorkbenchSelectorScreen extends KineticScreen {
         return super.canvasMouseScrolled(mouseX, mouseY, delta);
     }
 
-    private void renderSearchPlaceholder(GuiGraphics graphics) {
-        if (search == null || !search.visible || !search.getValue().isEmpty() || search.isFocused()) return;
-        String text = font.plainSubstrByWidth(Component.translatable("gui.taczworkshop.workbench.search.hint").getString(), Math.max(0, search.getWidth() - 10));
-        graphics.drawString(font, text, search.getX() + 5, search.getY() + (search.getHeight() - font.lineHeight) / 2, 0xFFAAAAAA, false);
-    }
-
     private void saveAndClose() {
         if (onSave != null) onSave.accept(new ArrayList<>(selected));
-        if (minecraft != null) minecraft.setScreen(parent);
+        if (minecraft != null) navigateBack();
     }
 
-    private void addButton(int x, int y, int w, int h, String key, String tip, Runnable action) {
-        Button button = Button.builder(Component.translatable(key), ignored -> action.run()).bounds(x, y, w, h).build();
-        button.setTooltip(Tooltip.create(Component.translatable(tip)));
-        addRenderableWidget(button);
-    }
 
     @Override
     public void onClose() {
-        if (minecraft != null) minecraft.setScreen(parent);
+        if (minecraft != null) navigateBack();
     }
 }

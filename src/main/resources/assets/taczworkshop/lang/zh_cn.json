@@ -616,5 +616,19 @@
   "gui.taczworkshop.data.collection.effect": "状态效果",
   "gui.taczworkshop.data.collection.remove_effect": "移除效果",
   "gui.taczworkshop.data.collection.cloud_effect": "区域云效果",
-  "gui.taczworkshop.data.collection.ammo_type": "弹种配置"
+  "gui.taczworkshop.data.collection.ammo_type": "弹种配置",
+  "gui.taczworkshop.recipe.origin.invalid": "错误配方",
+  "gui.taczworkshop.recipe.error.badge": "配方异常",
+  "gui.taczworkshop.recipe.error.editor": "正在修复：%s",
+  "gui.taczworkshop.recipe.error.invalid_root": "配方根节点格式错误",
+  "gui.taczworkshop.recipe.error.missing_type": "缺少或无法识别配方类型",
+  "gui.taczworkshop.recipe.error.invalid_materials": "材料列表格式错误",
+  "gui.taczworkshop.recipe.error.invalid_result": "输出结果格式错误",
+  "gui.taczworkshop.recipe.error.invalid_resource_location": "资源 ID 格式错误",
+  "gui.taczworkshop.recipe.error.unknown_item": "引用了不存在的物品",
+  "gui.taczworkshop.recipe.error.unknown_tag": "引用了不存在的标签",
+  "gui.taczworkshop.recipe.error.missing_item": "材料缺少物品字段",
+  "gui.taczworkshop.recipe.error.invalid_ingredient": "材料数据无法被 TACZ 解析",
+  "gui.taczworkshop.recipe.error.tacz_deserialize_failed": "TACZ 配方解析失败",
+  "tip.taczworkshop.recipe.error.edit": "打开此错误配方并修复。保存后会生成 TACZWorkshop 修复版本，原枪包文件不会被修改。"
 }

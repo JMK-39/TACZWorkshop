@@ -56,6 +56,7 @@ public final class TaczRecipeRuntime {
     public static void onServerStopping(ServerStoppingEvent event) {
         resetRuntimeState();
         BASE_RECIPES.clear();
+        TaczRecipeIssueRegistry.clear();
     }
 
     @SubscribeEvent
@@ -80,6 +81,11 @@ public final class TaczRecipeRuntime {
     public static synchronized List<TaczRecipeRecord> combinedSnapshot() {
         TaczRecipeStore.State state = TaczRecipeStore.loadState();
         List<TaczRecipeRecord> result = new ArrayList<>();
+        Set<String> suppressedIssueIds = new HashSet<>(state.disabledOriginals());
+        for (TaczRecipeRecord stored : state.recipes()) {
+            if (stored != null && !stored.id().isBlank()) suppressedIssueIds.add(stored.id());
+        }
+        result.addAll(TaczRecipeIssueRegistry.snapshotRecords(suppressedIssueIds));
 
         for (Map.Entry<ResourceLocation, GunSmithTableRecipe> entry : BASE_RECIPES.entrySet()) {
             String originalId = entry.getKey().toString();

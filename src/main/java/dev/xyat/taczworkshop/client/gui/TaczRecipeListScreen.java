@@ -1,10 +1,10 @@
 package dev.xyat.taczworkshop.client.gui;
 
+import dev.xyat.kineticcore.api.client.text.KineticText;
 import dev.xyat.kineticcore.api.client.overlay.GuiOverlay;
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
 import dev.xyat.kineticcore.api.client.screen.KineticScreen;
 import dev.xyat.kineticcore.api.client.widget.KineticWidgets.GridScrollController;
-import dev.xyat.kineticcore.api.client.widget.KineticWidgets.HighZButton;
 import dev.xyat.taczworkshop.client.TaczClientState;
 import dev.xyat.taczworkshop.client.TaczDataClientState;
 import dev.xyat.taczworkshop.client.TaczDataListEntry;
@@ -16,8 +16,6 @@ import dev.xyat.taczworkshop.network.TaczRecipeNetwork;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.components.Tooltip;
-import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
@@ -94,7 +92,6 @@ public final class TaczRecipeListScreen extends KineticScreen {
     private final Map<String, TaczRecipeRecord> pendingRecordSaves = new LinkedHashMap<>();
     private final Set<String> pendingDeletedUuids = new LinkedHashSet<>();
     private final GridScrollController gridScroll = new GridScrollController();
-    private final TaczContextMenu contextMenu = new TaczContextMenu();
     private StatusFilter statusFilter = StatusFilter.ALL;
     private CategoryFilter categoryFilter = CategoryFilter.ALL;
     private EditBox search;
@@ -111,8 +108,7 @@ public final class TaczRecipeListScreen extends KineticScreen {
         this.parent = parent;
         this.initialSearch = initialSearch == null ? "" : initialSearch;
         source.addAll(copyRecords(TaczClientState.snapshot()));
-        useCanvas(640, 360, 6);
-        maxScale = 1.0F;
+        useStandardCanvas();
         configureStandaloneDraft(this::captureListSnapshot, this::restoreListSnapshot);
     }
 
@@ -167,31 +163,44 @@ public final class TaczRecipeListScreen extends KineticScreen {
 
     @Override
     protected void buildUi() {
-        contextMenu.close();
+        closeContextMenu();
         String oldSearch = search == null ? initialSearch : search.getValue();
-        search = new EditBox(font, SEARCH_X, SEARCH_Y, SEARCH_W, 20, Component.translatable("gui.taczworkshop.search"));
+        search = addTextField(SEARCH_X, SEARCH_Y, SEARCH_W, Component.translatable("gui.taczworkshop.search"));
         search.setMaxLength(256);
         search.setValue(oldSearch);
         search.setResponder(value -> {
             gridScroll.reset();
             rebuildFiltered();
         });
-        addRenderableWidget(search);
 
-        categoryButton = new HighZButton(230, 10, 110, 20, categoryComponent(), ignored -> openCategoryMenu(), null, 40);
-        addRenderableWidget(categoryButton);
+        categoryButton = addHighZButton(
+                230, 10, 110,
+                categoryComponent(),
+                null,
+                40,
+                this::openCategoryMenu
+        );
 
-        createButton = new HighZButton(344, 10, 92, 20, Component.translatable("gui.taczworkshop.recipe.create"), ignored -> openCreateMenu(), null, 40);
-        addRenderableWidget(createButton);
+        createButton = addHighZButton(
+                344, 10, 92,
+                Component.translatable("gui.taczworkshop.recipe.create"),
+                null,
+                40,
+                this::openCreateMenu
+        );
 
-        addButton(440, 10, 58, 20, "gui.taczworkshop.refresh", "tip.taczworkshop.refresh", TaczRecipeNetwork::requestSnapshot);
-        addButton(502, 10, 58, 20, "gui.taczworkshop.save", "tip.taczworkshop.save", this::savePendingRecipeListChanges);
-        addButton(564, 10, 62, 20, "gui.taczworkshop.back", "tip.taczworkshop.back.management", this::onClose);
+        addButton(440, 10, 58, Component.translatable("gui.taczworkshop.refresh"), Component.translatable("tip.taczworkshop.refresh"), TaczRecipeNetwork::requestSnapshot);
+        addButton(502, 10, 58, Component.translatable("gui.taczworkshop.save"), Component.translatable("tip.taczworkshop.save"), this::savePendingRecipeListChanges);
+        addButton(564, 10, 62, Component.translatable("gui.taczworkshop.back"), Component.translatable("tip.taczworkshop.back.management"), this::onClose);
 
-        addFilterButton(14, 34, 76, StatusFilter.ALL);
-        addFilterButton(92, 34, 76, StatusFilter.ORIGINAL);
-        addFilterButton(170, 34, 76, StatusFilter.CREATED);
-        addFilterButton(248, 34, 76, StatusFilter.REMOVED);
+        Button allFilter = addButton(14, 34, 76, Component.translatable(StatusFilter.ALL.key), Component.translatable("tip.taczworkshop.recipe.filter.all"), () -> setStatusFilter(StatusFilter.ALL));
+        allFilter.active = statusFilter != StatusFilter.ALL;
+        Button originalFilter = addButton(92, 34, 76, Component.translatable(StatusFilter.ORIGINAL.key), Component.translatable("tip.taczworkshop.recipe.filter.original"), () -> setStatusFilter(StatusFilter.ORIGINAL));
+        originalFilter.active = statusFilter != StatusFilter.ORIGINAL;
+        Button createdFilter = addButton(170, 34, 76, Component.translatable(StatusFilter.CREATED.key), Component.translatable("tip.taczworkshop.recipe.filter.created"), () -> setStatusFilter(StatusFilter.CREATED));
+        createdFilter.active = statusFilter != StatusFilter.CREATED;
+        Button removedFilter = addButton(248, 34, 76, Component.translatable(StatusFilter.REMOVED.key), Component.translatable("tip.taczworkshop.recipe.filter.removed"), () -> setStatusFilter(StatusFilter.REMOVED));
+        removedFilter.active = statusFilter != StatusFilter.REMOVED;
         refreshFromState();
     }
 
@@ -238,9 +247,8 @@ public final class TaczRecipeListScreen extends KineticScreen {
 
     private void rebuildHeaderWidgets() {
         String oldSearch = search == null ? "" : search.getValue();
-        clearWidgets();
         search = null;
-        buildUi();
+        rebuildUi();
         if (search != null) search.setValue(oldSearch);
     }
 
@@ -255,7 +263,8 @@ public final class TaczRecipeListScreen extends KineticScreen {
             if (query.isEmpty() || record.searchableText().contains(query) || localizedName.contains(query) || dataId.contains(query)) filtered.add(record);
         }
         filtered.sort(Comparator
-                .comparing(TaczRecipeRecord::isOriginal).reversed()
+                .comparing(TaczRecipeRecord::hasIssue).reversed()
+                .thenComparing(Comparator.comparing(TaczRecipeRecord::isOriginal).reversed())
                 .thenComparing(TaczRecipeRecord::id));
         int totalRows = (filtered.size() + COLUMNS - 1) / COLUMNS;
         gridScroll.update(totalRows, ROWS_VISIBLE);
@@ -291,9 +300,9 @@ public final class TaczRecipeListScreen extends KineticScreen {
     }
 
     private void openCategoryMenu() {
-        List<TaczContextMenu.Entry> entries = new ArrayList<>();
+        List<GuiOverlay.MenuItem> entries = new ArrayList<>();
         for (CategoryFilter option : CategoryFilter.values()) {
-            entries.add(TaczContextMenu.Entry.toggle(
+            entries.add(GuiOverlay.MenuItem.toggle(
                     Component.translatable("gui.taczworkshop.recipe.category." + option.key),
                     Component.empty(),
                     option == categoryFilter,
@@ -302,12 +311,12 @@ public final class TaczRecipeListScreen extends KineticScreen {
         }
         int x = categoryButton == null ? 230 : categoryButton.getX();
         int y = categoryButton == null ? 32 : categoryButton.getY() + categoryButton.getHeight() + 2;
-        contextMenu.open(font, x, y, canvasWidth, canvasHeight, entries);
+        openContextMenu(x, y, entries);
     }
 
     private void setCategoryFilter(CategoryFilter next) {
         if (next == null) return;
-        contextMenu.close();
+        closeContextMenu();
         if (categoryFilter == next) {
             if (categoryButton != null) categoryButton.setMessage(categoryComponent());
             return;
@@ -319,9 +328,9 @@ public final class TaczRecipeListScreen extends KineticScreen {
     }
 
     private void openCreateMenu() {
-        List<TaczContextMenu.Entry> entries = new ArrayList<>();
+        List<GuiOverlay.MenuItem> entries = new ArrayList<>();
         for (String type : CREATE_TYPES) {
-            entries.add(TaczContextMenu.Entry.action(
+            entries.add(GuiOverlay.MenuItem.action(
                     Component.translatable("gui.taczworkshop.type.short." + type),
                     Component.empty(),
                     () -> create(type)
@@ -329,7 +338,7 @@ public final class TaczRecipeListScreen extends KineticScreen {
         }
         int x = createButton == null ? 344 : createButton.getX();
         int y = createButton == null ? 32 : createButton.getY() + createButton.getHeight() + 2;
-        contextMenu.open(font, x, y, canvasWidth, canvasHeight, entries);
+        openContextMenu(x, y, entries);
     }
 
     private void create(String type) {
@@ -381,27 +390,27 @@ public final class TaczRecipeListScreen extends KineticScreen {
     }
 
     private void confirmRestoreOriginal(TaczRecipeRecord record) {
-        if (minecraft == null || record == null) return;
-        minecraft.setScreen(new ConfirmScreen(
-                confirmed -> {
-                    minecraft.setScreen(this);
-                    if (confirmed) restoreOriginal(record);
-                },
+        if (record == null) return;
+        openDialog(
                 Component.translatable("gui.taczworkshop.recipe.restore.title"),
-                Component.translatable("gui.taczworkshop.recipe.restore.message", record.id())
-        ));
+                Component.translatable("gui.taczworkshop.recipe.restore.message", record.id()),
+                Component.translatable("gui.yes"),
+                Component.translatable("gui.no"),
+                () -> restoreOriginal(record),
+                () -> { }
+        );
     }
 
     private void confirmDelete(TaczRecipeRecord record) {
-        if (minecraft == null || record == null) return;
-        minecraft.setScreen(new ConfirmScreen(
-                confirmed -> {
-                    minecraft.setScreen(this);
-                    if (confirmed) stageDelete(record);
-                },
+        if (record == null) return;
+        openDialog(
                 Component.translatable("gui.taczworkshop.delete.title"),
-                Component.translatable("gui.taczworkshop.delete.message", record.id())
-        ));
+                Component.translatable("gui.taczworkshop.delete.message", record.id()),
+                Component.translatable("gui.yes"),
+                Component.translatable("gui.no"),
+                () -> stageDelete(record),
+                () -> { }
+        );
     }
 
     private void stageDelete(TaczRecipeRecord record) {
@@ -446,17 +455,10 @@ public final class TaczRecipeListScreen extends KineticScreen {
 
     @Override
     protected void renderCanvasForeground(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderSearchPlaceholder(graphics, search, "gui.taczworkshop.search.hint");
+        renderTextFieldPlaceholder(graphics, search, Component.translatable("gui.taczworkshop.search.hint"));
         graphics.drawString(font, Component.translatable("gui.taczworkshop.list.count", filtered.size()), 390, 41, 0xFFFFFFFF, true);
         renderInfoPanel(graphics);
         if (filtered.isEmpty()) graphics.drawCenteredString(font, Component.translatable("gui.taczworkshop.data.empty"), GRID_X + GRID_WIDTH / 2, GRID_Y + GRID_HEIGHT / 2, 0xFFAAAAAA);
-        contextMenu.render(graphics, mouseX, mouseY, partialTick);
-    }
-
-    private void renderSearchPlaceholder(GuiGraphics graphics, EditBox box, String key) {
-        if (box == null || !box.visible || !box.getValue().isEmpty() || box.isFocused()) return;
-        String text = font.plainSubstrByWidth(Component.translatable(key).getString(), Math.max(0, box.getWidth() - 10));
-        graphics.drawString(font, text, box.getX() + 5, box.getY() + (box.getHeight() - font.lineHeight) / 2, 0xFFAAAAAA, false);
     }
 
     private void renderRecipes(GuiGraphics graphics, int mouseX, int mouseY) {
@@ -466,13 +468,13 @@ public final class TaczRecipeListScreen extends KineticScreen {
         int visualShift = gridScroll.visualShift(CELL_SIZE);
         int first = baseRow * COLUMNS;
         int last = Math.min(filtered.size(), first + (ROWS_VISIBLE + 2) * COLUMNS);
-        graphics.enableScissor(GRID_X, GRID_Y, GRID_X + GRID_WIDTH, GRID_Y + GRID_HEIGHT);
+        enableCanvasScissor(graphics, GRID_X, GRID_Y, GRID_X + GRID_WIDTH, GRID_Y + GRID_HEIGHT);
         for (int index = first; index < last; index++) {
             int visible = index - first;
             int x = GRID_X + (visible % COLUMNS) * CELL_SIZE;
             int y = GRID_Y + (visible / COLUMNS) * CELL_SIZE - visualShift;
             TaczRecipeRecord record = filtered.get(index);
-            boolean hovered = index == hoveredIndex && !contextMenu.isOpen();
+            boolean hovered = index == hoveredIndex && !overlays().blocksInput();
 
             GuiTheme.itemSlot(graphics, x, y, hovered);
             TaczDataListEntry previewEntry = dataEntry(record);
@@ -481,11 +483,12 @@ public final class TaczRecipeListScreen extends KineticScreen {
                 if (previewEntry == null) GuiTheme.item(graphics, font, stack, x, y, SLOT_SIZE, 1.0F, false);
                 else TaczPreviewIndexContext.with(previewEntry, () -> GuiTheme.item(graphics, font, stack, x, y, SLOT_SIZE, 1.0F, false));
             }
-            if (!record.enabled()) graphics.renderOutline(x, y, SLOT_SIZE, SLOT_SIZE, 0xFFFF5656);
+            if (record.hasIssue()) graphics.renderOutline(x, y, SLOT_SIZE, SLOT_SIZE, 0xFFFF3030);
+            else if (!record.enabled()) graphics.renderOutline(x, y, SLOT_SIZE, SLOT_SIZE, 0xFFFF5656);
             else if (!record.isOriginal()) graphics.renderOutline(x, y, SLOT_SIZE, SLOT_SIZE, 0xFF35D06F);
             if (hovered) hoveredRecord = record;
         }
-        graphics.disableScissor();
+        disableCanvasScissor(graphics);
     }
 
     private void renderInfoPanel(GuiGraphics graphics) {
@@ -500,11 +503,30 @@ public final class TaczRecipeListScreen extends KineticScreen {
             }
             return;
         }
+        if (hoveredRecord.hasIssue()) {
+            graphics.drawString(font, Component.translatable("gui.taczworkshop.recipe.error.badge"), x, y, 0xFFFF5656, true);
+            y += 14;
+            KineticText.drawScrollingLeft(graphics, font, hoveredRecord.id(), x, y, INFO_WIDTH - 16, 0xFFFFFFFF, false);
+            y += 13;
+            for (FormattedCharSequence line : font.split(issueComponent(hoveredRecord), INFO_WIDTH - 16)) {
+                graphics.drawString(font, line, x, y, 0xFFFF7777, false);
+                y += font.lineHeight + 1;
+                if (y > INFO_Y + INFO_HEIGHT - 60) break;
+            }
+            if (!hoveredRecord.issueDetail().isBlank() && y <= INFO_Y + INFO_HEIGHT - 45) {
+                for (FormattedCharSequence line : font.split(Component.literal(hoveredRecord.issueDetail()), INFO_WIDTH - 16)) {
+                    graphics.drawString(font, line, x, y, 0xFFCCAAAA, false);
+                    y += font.lineHeight + 1;
+                    if (y > INFO_Y + INFO_HEIGHT - 30) break;
+                }
+            }
+            return;
+        }
         TaczDataListEntry entry = dataEntry(hoveredRecord);
         ItemStack stack = previewCache.computeIfAbsent(hoveredRecord.uuid(), ignored -> recipePreview(hoveredRecord, entry));
-        graphics.drawString(font, GuiTheme.trim(font, localizedResultName(hoveredRecord, entry, stack).getString(), INFO_WIDTH - 16), x, y, 0xFFFFFFFF, true);
+        KineticText.drawScrollingLeft(graphics, font, localizedResultName(hoveredRecord, entry, stack), x, y, INFO_WIDTH - 16, 0xFFFFFFFF, true);
         y += 14;
-        graphics.drawString(font, GuiTheme.trim(font, hoveredRecord.resultId(), INFO_WIDTH - 16), x, y, 0xFFCCCCCC, false);
+        KineticText.drawScrollingLeft(graphics, font, hoveredRecord.resultId(), x, y, INFO_WIDTH - 16, 0xFFCCCCCC, false);
         y += 13;
         graphics.drawString(font, Component.translatable(originKey(hoveredRecord)), x, y, 0xFFFFFFFF, false);
         y += 13;
@@ -516,6 +538,7 @@ public final class TaczRecipeListScreen extends KineticScreen {
     }
 
     private String originKey(TaczRecipeRecord record) {
+        if (record.hasIssue()) return "gui.taczworkshop.recipe.origin.invalid";
         if (record.isOriginal()) return record.enabled()
                 ? "gui.taczworkshop.recipe.origin.original"
                 : "gui.taczworkshop.recipe.origin.removed";
@@ -566,12 +589,6 @@ public final class TaczRecipeListScreen extends KineticScreen {
 
     @Override
     protected boolean canvasMouseClicked(double mouseX, double mouseY, int button) {
-        if (contextMenu.isOpen()) {
-            if (contextMenu.mouseClicked(mouseX, mouseY, button)) return true;
-            if (contextMenu.contains(mouseX, mouseY)) return true;
-            contextMenu.close();
-            if (button != 1) return true;
-        }
         boolean widget = super.canvasMouseClicked(mouseX, mouseY, button);
         if (button == 0 && gridScroll.beginDrag(mouseX, mouseY, SCROLL_X, GRID_Y, SCROLL_WIDTH, GRID_HEIGHT, 18, 2)) return true;
         int index = indexAt(mouseX, mouseY);
@@ -582,45 +599,47 @@ public final class TaczRecipeListScreen extends KineticScreen {
             return true;
         }
         if (button == 1) {
-            openContextMenu(record, (int) mouseX, (int) mouseY);
+            openRecipeContextMenu(record, (int) mouseX, (int) mouseY);
             return true;
         }
         return widget;
     }
 
-    private void openContextMenu(TaczRecipeRecord record, int mouseX, int mouseY) {
-        List<TaczContextMenu.Entry> entries = new ArrayList<>();
-        if (record.isOriginal() && !record.enabled()) {
-            entries.add(TaczContextMenu.Entry.action(
+    private void openRecipeContextMenu(TaczRecipeRecord record, int mouseX, int mouseY) {
+        List<GuiOverlay.MenuItem> entries = new ArrayList<>();
+        if (record.hasIssue()) {
+            entries.add(GuiOverlay.MenuItem.action(Component.translatable("gui.taczworkshop.context.edit"), Component.translatable("tip.taczworkshop.recipe.error.edit"), () -> edit(record)));
+            entries.add(GuiOverlay.MenuItem.action(Component.translatable("gui.taczworkshop.copy"), Component.translatable("tip.taczworkshop.copy"), () -> copy(record)));
+        } else if (record.isOriginal() && !record.enabled()) {
+            entries.add(GuiOverlay.MenuItem.action(
                     Component.translatable("gui.taczworkshop.recipe.restore_original"),
                     Component.translatable("tip.taczworkshop.recipe.restore_original_keep_created"),
                     () -> confirmRestoreOriginal(record)
             ));
         } else {
-            entries.add(TaczContextMenu.Entry.action(Component.translatable("gui.taczworkshop.context.edit"), Component.translatable("tip.taczworkshop.context.edit"), () -> edit(record)));
-            entries.add(TaczContextMenu.Entry.action(Component.translatable("gui.taczworkshop.copy"), Component.translatable("tip.taczworkshop.copy"), () -> copy(record)));
+            entries.add(GuiOverlay.MenuItem.action(Component.translatable("gui.taczworkshop.context.edit"), Component.translatable("tip.taczworkshop.context.edit"), () -> edit(record)));
+            entries.add(GuiOverlay.MenuItem.action(Component.translatable("gui.taczworkshop.copy"), Component.translatable("tip.taczworkshop.copy"), () -> copy(record)));
             if (record.isOriginal()) {
-                entries.add(TaczContextMenu.Entry.danger(
+                entries.add(GuiOverlay.MenuItem.danger(
                         Component.translatable("gui.taczworkshop.recipe.remove_original"),
                         Component.translatable("tip.taczworkshop.recipe.remove_original"),
                         () -> stageOriginalDisabled(record, true)
                 ));
             } else {
-                entries.add(TaczContextMenu.Entry.action(
+                entries.add(GuiOverlay.MenuItem.action(
                         Component.translatable(record.enabled() ? "gui.taczworkshop.context.disable" : "gui.taczworkshop.context.enable"),
                         Component.translatable(record.enabled() ? "tip.taczworkshop.recipe.disable" : "tip.taczworkshop.recipe.enable"),
                         () -> toggleEnabled(record)
                 ));
-                entries.add(TaczContextMenu.Entry.separator());
-                entries.add(TaczContextMenu.Entry.danger(Component.translatable("gui.taczworkshop.remove"), Component.translatable("tip.taczworkshop.recipe.delete"), () -> confirmDelete(record)));
+                entries.add(GuiOverlay.MenuItem.separator());
+                entries.add(GuiOverlay.MenuItem.danger(Component.translatable("gui.taczworkshop.remove"), Component.translatable("tip.taczworkshop.recipe.delete"), () -> confirmDelete(record)));
             }
         }
-        contextMenu.open(font, mouseX, mouseY, canvasWidth, canvasHeight, entries);
+        openContextMenu(mouseX, mouseY, entries);
     }
 
     @Override
     protected boolean canvasMouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
-        if (contextMenu.isOpen()) return true;
         return gridScroll.drag(mouseY, GRID_Y, GRID_HEIGHT, 18) || super.canvasMouseDragged(mouseX, mouseY, button, dragX, dragY);
     }
 
@@ -631,57 +650,45 @@ public final class TaczRecipeListScreen extends KineticScreen {
 
     @Override
     protected boolean canvasMouseScrolled(double mouseX, double mouseY, double delta) {
-        if (contextMenu.isOpen()) return true;
         if (GuiTheme.hovering(mouseX, mouseY, GRID_X, GRID_Y, GRID_WIDTH + 12, GRID_HEIGHT) && gridScroll.scroll(delta)) return true;
         return super.canvasMouseScrolled(mouseX, mouseY, delta);
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == 256 && contextMenu.isOpen()) {
-            contextMenu.close();
-            return true;
-        }
-        return super.keyPressed(keyCode, scanCode, modifiers);
-    }
-
-    @Override
     protected void renderTooltips(GuiGraphics graphics, int scaledMouseX, int scaledMouseY, int mouseX, int mouseY) {
-        if (contextMenu.isOpen()) {
-            contextMenu.requestTooltip(graphics, font, scaledMouseX, scaledMouseY, mouseX, mouseY);
-            return;
-        }
+        if (overlays().blocksInput()) return;
         if (hoveredRecord == null) return;
         List<FormattedCharSequence> lines = new ArrayList<>();
-        TaczDataListEntry entry = dataEntry(hoveredRecord);
-        ItemStack stack = previewCache.computeIfAbsent(hoveredRecord.uuid(), ignored -> recipePreview(hoveredRecord, entry));
-        lines.addAll(font.split(localizedResultName(hoveredRecord, entry, stack), 320));
-        lines.addAll(font.split(Component.literal(hoveredRecord.resultId()), 320));
-        lines.addAll(font.split(Component.literal(hoveredRecord.id()), 320));
-        lines.addAll(font.split(Component.translatable(originKey(hoveredRecord)), 320));
-        lines.addAll(font.split(Component.translatable(hoveredRecord.enabled() ? "gui.taczworkshop.enabled" : "gui.taczworkshop.disabled"), 320));
-        if (!hoveredRecord.workbenches().isEmpty()) lines.addAll(font.split(Component.translatable("gui.taczworkshop.workbench.tooltip", hoveredRecord.workbenches().size()), 320));
+        if (hoveredRecord.hasIssue()) {
+            lines.addAll(font.split(Component.translatable("gui.taczworkshop.recipe.error.badge"), 320));
+            lines.addAll(font.split(Component.literal(hoveredRecord.id()), 320));
+            lines.addAll(font.split(issueComponent(hoveredRecord), 320));
+            if (!hoveredRecord.issueDetail().isBlank()) lines.addAll(font.split(Component.literal(hoveredRecord.issueDetail()), 320));
+        } else {
+            TaczDataListEntry entry = dataEntry(hoveredRecord);
+            ItemStack stack = previewCache.computeIfAbsent(hoveredRecord.uuid(), ignored -> recipePreview(hoveredRecord, entry));
+            lines.addAll(font.split(localizedResultName(hoveredRecord, entry, stack), 320));
+            lines.addAll(font.split(Component.literal(hoveredRecord.resultId()), 320));
+            lines.addAll(font.split(Component.literal(hoveredRecord.id()), 320));
+            lines.addAll(font.split(Component.translatable(originKey(hoveredRecord)), 320));
+            lines.addAll(font.split(Component.translatable(hoveredRecord.enabled() ? "gui.taczworkshop.enabled" : "gui.taczworkshop.disabled"), 320));
+            if (!hoveredRecord.workbenches().isEmpty()) lines.addAll(font.split(Component.translatable("gui.taczworkshop.workbench.tooltip", hoveredRecord.workbenches().size()), 320));
+        }
         lines.addAll(font.split(Component.translatable("gui.taczworkshop.recipe.grid.tooltip"), 320));
-        GuiOverlay.requestFormattedTooltip(lines, mouseX, mouseY);
+        showFormattedTooltip(lines);
     }
 
 
-    private void addFilterButton(int x, int y, int width, StatusFilter filter) {
-        Button button = Button.builder(Component.translatable(filter.key), ignored -> setStatusFilter(filter)).bounds(x, y, width, 20).build();
-        button.active = filter != statusFilter;
-        button.setTooltip(Tooltip.create(Component.translatable("tip.taczworkshop.recipe.filter." + filter.name().toLowerCase(Locale.ROOT))));
-        addRenderableWidget(button);
-    }
 
-    private void addButton(int x, int y, int w, int h, String textKey, String tipKey, Runnable action) {
-        Button button = Button.builder(Component.translatable(textKey), ignored -> action.run()).bounds(x, y, w, h).build();
-        button.setTooltip(Tooltip.create(Component.translatable(tipKey)));
-        addRenderableWidget(button);
+    private Component issueComponent(TaczRecipeRecord record) {
+        if (record == null || !record.hasIssue()) return Component.empty();
+        String code = record.issueCode().isBlank() ? "tacz_deserialize_failed" : record.issueCode();
+        return Component.translatable("gui.taczworkshop.recipe.error." + code);
     }
 
     @Override
     public void onClose() {
         discardDraft();
-        if (minecraft != null) minecraft.setScreen(parent);
+        if (minecraft != null) navigateBack();
     }
 }

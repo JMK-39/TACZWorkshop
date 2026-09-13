@@ -5,6 +5,7 @@
   "refmap": "taczworkshop.mixins.refmap.json",
   "package": "dev.xyat.taczworkshop.mixin",
   "mixins": [
+    "RecipeManagerPreflightMixin",
     "TaczDataManagerMixin",
     "TaczRecipeRouteMixin",
     "compat.InventoryAccessor",

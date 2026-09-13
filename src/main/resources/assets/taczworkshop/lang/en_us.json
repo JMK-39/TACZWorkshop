@@ -616,5 +616,19 @@
   "gui.taczworkshop.data.collection.effect": "Status Effect",
   "gui.taczworkshop.data.collection.remove_effect": "Removed Effect",
   "gui.taczworkshop.data.collection.cloud_effect": "Area Cloud Effect",
-  "gui.taczworkshop.data.collection.ammo_type": "Ammo Type Configuration"
+  "gui.taczworkshop.data.collection.ammo_type": "Ammo Type Configuration",
+  "gui.taczworkshop.recipe.origin.invalid": "Invalid Recipe",
+  "gui.taczworkshop.recipe.error.badge": "Recipe Error",
+  "gui.taczworkshop.recipe.error.editor": "Repairing: %s",
+  "gui.taczworkshop.recipe.error.invalid_root": "Invalid recipe root format",
+  "gui.taczworkshop.recipe.error.missing_type": "Missing or unrecognized recipe type",
+  "gui.taczworkshop.recipe.error.invalid_materials": "Invalid materials list",
+  "gui.taczworkshop.recipe.error.invalid_result": "Invalid recipe result",
+  "gui.taczworkshop.recipe.error.invalid_resource_location": "Invalid resource identifier",
+  "gui.taczworkshop.recipe.error.unknown_item": "References an unknown item",
+  "gui.taczworkshop.recipe.error.unknown_tag": "References an unknown tag",
+  "gui.taczworkshop.recipe.error.missing_item": "Ingredient is missing its item field",
+  "gui.taczworkshop.recipe.error.invalid_ingredient": "Ingredient cannot be parsed by TACZ",
+  "gui.taczworkshop.recipe.error.tacz_deserialize_failed": "TACZ recipe parsing failed",
+  "tip.taczworkshop.recipe.error.edit": "Open and repair this invalid recipe. Saving creates a TACZWorkshop repair without modifying the original gun pack."
 }
