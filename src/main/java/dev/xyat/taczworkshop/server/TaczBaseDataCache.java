@@ -1,5 +1,6 @@
 package dev.xyat.taczworkshop.server;
 
+import dev.xyat.kineticcore.api.resource.KineticResourceIds;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import dev.xyat.taczworkshop.data.TaczDataKind;
@@ -97,7 +98,7 @@ public final class TaczBaseDataCache {
     }
 
     public static synchronized JsonObject detailSnapshot(TaczDataKind kind, String logicalId) {
-        ResourceLocation id = ResourceLocation.tryParse(logicalId);
+        ResourceLocation id = KineticResourceIds.tryParse(logicalId);
         if (id == null) throw new IllegalArgumentException("Invalid TACZ id");
         JsonObject index = copy(BASE.get(indexDomain(kind)).get(id));
         String dataIdString;
@@ -110,7 +111,7 @@ public final class TaczBaseDataCache {
             baseData = copy(index);
         } else {
             dataIdString = stringValue(index, "data");
-            ResourceLocation dataId = ResourceLocation.tryParse(dataIdString);
+            ResourceLocation dataId = KineticResourceIds.tryParse(dataIdString);
             baseData = copy(dataId == null ? null : BASE.get(dataDomain(kind)).get(dataId));
         }
 
@@ -165,14 +166,14 @@ public final class TaczBaseDataCache {
     private static void applyDataOverrides(Map<ResourceLocation, JsonElement> source, Map<String, TaczDataOverride> overrides) {
         overrides.values().forEach(override -> {
             if (override.dataId().isBlank() || override.data() == null) return;
-            ResourceLocation dataId = ResourceLocation.tryParse(override.dataId());
+            ResourceLocation dataId = KineticResourceIds.tryParse(override.dataId());
             if (dataId != null) source.put(dataId, override.data());
         });
     }
 
     private static void applyIndexOverrides(Map<ResourceLocation, JsonElement> source, Map<String, TaczDataOverride> overrides, boolean replaceData) {
         overrides.forEach((idString, override) -> {
-            ResourceLocation id = ResourceLocation.tryParse(idString);
+            ResourceLocation id = KineticResourceIds.tryParse(idString);
             if (id == null) return;
             if (override.removed()) {
                 source.remove(id);
@@ -184,7 +185,7 @@ public final class TaczBaseDataCache {
 
     private static void applyInlineIndexOverrides(Map<ResourceLocation, JsonElement> source, Map<String, TaczDataOverride> overrides) {
         overrides.forEach((idString, override) -> {
-            ResourceLocation id = ResourceLocation.tryParse(idString);
+            ResourceLocation id = KineticResourceIds.tryParse(idString);
             if (id == null) return;
             if (override.removed()) {
                 source.remove(id);

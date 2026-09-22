@@ -1,5 +1,6 @@
 package dev.xyat.taczworkshop.server;
 
+import dev.xyat.kineticcore.api.resource.KineticResourceIds;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -8,7 +9,7 @@ import com.mojang.logging.LogUtils;
 import dev.xyat.taczworkshop.data.TaczRecipeCodec;
 import dev.xyat.taczworkshop.data.TaczRecipeRecord;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.fml.loading.FMLPaths;
+import dev.xyat.kineticcore.api.runtime.KineticPaths;
 import org.slf4j.Logger;
 
 import java.io.IOException;
@@ -23,7 +24,7 @@ import java.util.Set;
 
 public final class TaczRecipeStore {
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static final Path DIRECTORY = FMLPaths.CONFIGDIR.get().resolve("kineticcore");
+    private static final Path DIRECTORY = KineticPaths.configDirectory().resolve("kineticcore");
     private static final Path FILE = DIRECTORY.resolve("taczrecipes.json");
     private static final Path BACKUP = DIRECTORY.resolve("taczrecipes.json.bak");
     private static boolean lastLoadHealthy = true;
@@ -59,7 +60,7 @@ public final class TaczRecipeStore {
                 for (JsonElement element : root.getAsJsonArray("disabled_originals")) {
                     if (!element.isJsonPrimitive()) continue;
                     String id = element.getAsString().trim();
-                    if (ResourceLocation.tryParse(id) != null) disabled.add(id);
+                    if (KineticResourceIds.tryParse(id) != null) disabled.add(id);
                 }
             }
             lastLoadHealthy = true;
@@ -79,7 +80,7 @@ public final class TaczRecipeStore {
         State copies = state == null ? new State(new ArrayList<>(), new LinkedHashSet<>()) : state.copy();
         TaczRecipeCodec.validateCollection(copies.recipes());
         for (String id : copies.disabledOriginals()) {
-            if (ResourceLocation.tryParse(id) == null) throw new IllegalArgumentException("invalid disabled original id: " + id);
+            if (KineticResourceIds.tryParse(id) == null) throw new IllegalArgumentException("invalid disabled original id: " + id);
         }
         Files.createDirectories(DIRECTORY);
         Path temp = DIRECTORY.resolve("taczrecipes.json.tmp");
@@ -142,7 +143,7 @@ public final class TaczRecipeStore {
     }
 
     public static synchronized void setOriginalDisabled(String originalId, boolean disabled) throws IOException {
-        if (ResourceLocation.tryParse(originalId) == null) throw new IllegalArgumentException("invalid original recipe id");
+        if (KineticResourceIds.tryParse(originalId) == null) throw new IllegalArgumentException("invalid original recipe id");
         State state = loadState();
         requireHealthyLoad();
         if (disabled) state.disabledOriginals().add(originalId);
@@ -155,7 +156,7 @@ public final class TaczRecipeStore {
     }
 
     public static synchronized boolean restoreOriginal(String originalId, String replacementUuid) throws IOException {
-        if (ResourceLocation.tryParse(originalId) == null) throw new IllegalArgumentException("invalid original recipe id");
+        if (KineticResourceIds.tryParse(originalId) == null) throw new IllegalArgumentException("invalid original recipe id");
         State state = loadState();
         requireHealthyLoad();
         boolean changed = state.disabledOriginals().remove(originalId);
@@ -172,13 +173,13 @@ public final class TaczRecipeStore {
     }
 
     private static String createdId(String originalId, List<TaczRecipeRecord> records) {
-        ResourceLocation source = ResourceLocation.tryParse(originalId);
+        ResourceLocation source = KineticResourceIds.tryParse(originalId);
         if (source == null) throw new IllegalArgumentException("invalid original recipe id");
         String base = "taczworkshop:created/" + source.getNamespace() + "/" + source.getPath();
         String candidate = base;
         int suffix = 2;
         while (containsRecipeId(records, candidate)) candidate = base + "_" + suffix++;
-        ResourceLocation created = ResourceLocation.tryParse(candidate);
+        ResourceLocation created = KineticResourceIds.tryParse(candidate);
         if (created == null) throw new IllegalArgumentException("unable to create recipe id");
         return created.toString();
     }

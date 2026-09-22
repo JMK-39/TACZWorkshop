@@ -1,5 +1,6 @@
 package dev.xyat.taczworkshop.server;
 
+import dev.xyat.kineticcore.api.resource.KineticResourceIds;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.mojang.logging.LogUtils;
@@ -13,15 +14,12 @@ import dev.xyat.taczworkshop.TaczWorkshop;
 import dev.xyat.taczworkshop.data.TaczRecipeCodec;
 import dev.xyat.taczworkshop.data.TaczRecipeRecord;
 import dev.xyat.taczworkshop.network.TaczRecipeNetwork;
+import dev.xyat.kineticcore.api.event.KineticEventPriority;
+import dev.xyat.kineticcore.api.server.event.KineticServerEvents;
 import net.minecraft.network.protocol.game.ClientboundUpdateRecipesPacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.item.crafting.Recipe;
-import net.minecraftforge.event.OnDatapackSyncEvent;
-import net.minecraftforge.event.server.ServerStartedEvent;
-import net.minecraftforge.event.server.ServerStoppingEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
 import org.slf4j.Logger;
 
 import java.util.ArrayList;
@@ -33,7 +31,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-@Mod.EventBusSubscriber(modid = TaczWorkshop.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class TaczRecipeRuntime {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final Map<ResourceLocation, GunSmithTableRecipe> BASE_RECIPES = new LinkedHashMap<>();
@@ -42,28 +39,34 @@ public final class TaczRecipeRuntime {
     private static final Map<ResourceLocation, Recipe<?>> REPLACED_BASE = new HashMap<>();
     private static final Map<ResourceLocation, Set<ResourceLocation>> ROUTES = new HashMap<>();
 
+    private static boolean registered;
+
     private TaczRecipeRuntime() {
     }
 
-    @SubscribeEvent
-    public static void onServerStarted(ServerStartedEvent event) {
-        resetRuntimeState();
-        captureBaseRecipes(event.getServer());
-        apply(event.getServer(), false);
+    public static synchronized void register() {
+        if (registered) return;
+        registered = true;
+        KineticServerEvents.onStarted(KineticEventPriority.NORMAL, TaczRecipeRuntime::onServerStarted);
+        KineticServerEvents.onStopping(KineticEventPriority.NORMAL, server -> onServerStopping());
+        KineticServerEvents.onDatapackSync(KineticEventPriority.NORMAL, TaczRecipeRuntime::onDatapackSync);
     }
 
-    @SubscribeEvent
-    public static void onServerStopping(ServerStoppingEvent event) {
+    private static void onServerStarted(MinecraftServer server) {
+        resetRuntimeState();
+        captureBaseRecipes(server);
+        apply(server, false);
+    }
+
+    private static void onServerStopping() {
         resetRuntimeState();
         BASE_RECIPES.clear();
         TaczRecipeIssueRegistry.clear();
     }
 
-    @SubscribeEvent
-    public static void onDatapackSync(OnDatapackSyncEvent event) {
-        if (event.getPlayer() != null) return;
+    private static void onDatapackSync(MinecraftServer server, net.minecraft.server.level.ServerPlayer player) {
+        if (player != null) return;
         resetRuntimeState();
-        MinecraftServer server = event.getPlayerList().getServer();
         captureBaseRecipes(server);
         apply(server, true);
         TaczRecipeNetwork.broadcastRoutes(server);
@@ -97,7 +100,7 @@ public final class TaczRecipeRuntime {
             TaczRecipeRecord created = stored.copy();
             if (created.isReplacement()) created.setOrigin(TaczRecipeRecord.ORIGIN_CUSTOM);
             if (created.workbenches().isEmpty() && !created.originalId().isBlank()) {
-                ResourceLocation originalId = ResourceLocation.tryParse(created.originalId());
+                ResourceLocation originalId = KineticResourceIds.tryParse(created.originalId());
                 GunSmithTableRecipe original = originalId == null ? null : BASE_RECIPES.get(originalId);
                 if (original != null) created.setWorkbenches(detectWorkbenches(original));
             }
@@ -157,7 +160,7 @@ public final class TaczRecipeRuntime {
         TaczRecipeStore.State state = TaczRecipeStore.loadState();
         Set<ResourceLocation> effectiveDisabled = new LinkedHashSet<>();
         for (String raw : state.disabledOriginals()) {
-            ResourceLocation id = ResourceLocation.tryParse(raw);
+            ResourceLocation id = KineticResourceIds.tryParse(raw);
             if (id != null) effectiveDisabled.add(id);
         }
         effectiveDisabled.forEach(merged::remove);
@@ -170,7 +173,7 @@ public final class TaczRecipeRuntime {
         for (TaczRecipeRecord record : state.recipes()) {
             if (!record.enabled()) continue;
             try {
-                ResourceLocation id = ResourceLocation.tryParse(record.id());
+                ResourceLocation id = KineticResourceIds.tryParse(record.id());
                 if (id == null) throw new IllegalArgumentException("invalid recipe id");
                 if (!previousActive.contains(id) && merged.containsKey(id)) REPLACED_BASE.putIfAbsent(id, merged.get(id));
                 Recipe<?> recipe = TaczRecipeCodec.validateAndBuild(record);
@@ -178,7 +181,7 @@ public final class TaczRecipeRuntime {
                 nextActive.add(id);
                 Set<ResourceLocation> workbenches = parseWorkbenches(record.workbenches());
                 if (workbenches.isEmpty() && !record.originalId().isBlank()) {
-                    ResourceLocation originalId = ResourceLocation.tryParse(record.originalId());
+                    ResourceLocation originalId = KineticResourceIds.tryParse(record.originalId());
                     GunSmithTableRecipe original = originalId == null ? null : BASE_RECIPES.get(originalId);
                     if (original != null) workbenches = parseWorkbenches(detectWorkbenches(original));
                 }
@@ -231,7 +234,7 @@ public final class TaczRecipeRuntime {
         Set<ResourceLocation> result = new LinkedHashSet<>();
         if (raw == null) return result;
         for (String value : raw) {
-            ResourceLocation id = ResourceLocation.tryParse(value);
+            ResourceLocation id = KineticResourceIds.tryParse(value);
             if (id != null) result.add(id);
         }
         return result;

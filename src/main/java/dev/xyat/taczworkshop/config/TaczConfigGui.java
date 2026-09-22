@@ -1,8 +1,8 @@
 package dev.xyat.taczworkshop.config;
 
-import dev.xyat.kineticcore.config.client.KTConfigApi;
-import dev.xyat.kineticcore.config.client.KTConfigPage;
-import dev.xyat.kineticcore.config.client.KTConfigScope;
+import dev.xyat.kineticcore.api.config.client.KTConfigApi;
+import dev.xyat.kineticcore.api.config.client.KTConfigPage;
+import dev.xyat.kineticcore.api.config.client.KTConfigScope;
 import dev.xyat.taczworkshop.client.TaczClientHandler;
 import net.minecraft.network.chat.Component;
 

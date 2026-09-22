@@ -1,5 +1,7 @@
 package dev.xyat.taczworkshop.client;
 
+import dev.xyat.kineticcore.api.registry.KineticRegistries;
+import dev.xyat.kineticcore.api.resource.KineticResourceIds;
 import com.google.gson.JsonObject;
 import com.tacz.guns.api.item.builder.AmmoItemBuilder;
 import com.tacz.guns.api.item.builder.AttachmentItemBuilder;
@@ -9,7 +11,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraftforge.registries.ForgeRegistries;
 
 public final class TaczDataStackUtil {
     private TaczDataStackUtil() {
@@ -20,7 +21,7 @@ public final class TaczDataStackUtil {
     }
 
     public static ItemStack build(TaczDataKind kind, String id, JsonObject index) {
-        ResourceLocation resourceId = ResourceLocation.tryParse(id);
+        ResourceLocation resourceId = KineticResourceIds.tryParse(id);
         if (resourceId == null || kind == null) return ItemStack.EMPTY;
         return switch (kind) {
             case GUN -> GunItemBuilder.create().setId(resourceId).forceBuild();
@@ -40,9 +41,9 @@ public final class TaczDataStackUtil {
                 default -> "";
             };
         }
-        ResourceLocation baseId = ResourceLocation.tryParse(baseItem);
+        ResourceLocation baseId = KineticResourceIds.tryParse(baseItem);
         if (baseId == null) return ItemStack.EMPTY;
-        Item item = ForgeRegistries.ITEMS.getValue(baseId);
+        Item item = KineticRegistries.items().get(baseId);
         if (item == null || item == Items.AIR) return ItemStack.EMPTY;
         ItemStack stack = new ItemStack(item);
         String key = switch (kind) {

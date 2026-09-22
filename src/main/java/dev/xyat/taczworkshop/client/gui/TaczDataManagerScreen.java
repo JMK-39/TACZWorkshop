@@ -1,10 +1,11 @@
 package dev.xyat.taczworkshop.client.gui;
 
+import dev.xyat.kineticcore.api.client.input.KineticMouseButtons;
 import dev.xyat.kineticcore.api.client.text.KineticText;
-import dev.xyat.kineticcore.api.client.overlay.GuiOverlay;
+import dev.xyat.kineticcore.api.client.overlay.KineticOverlays;
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
 import dev.xyat.kineticcore.api.client.screen.KineticScreen;
-import dev.xyat.kineticcore.api.client.widget.KineticWidgets.GridScrollController;
+import dev.xyat.kineticcore.api.client.widget.scroll.KineticScroll.GridScrollController;
 import dev.xyat.taczworkshop.client.TaczDataClientState;
 import dev.xyat.taczworkshop.client.TaczDataListEntry;
 import dev.xyat.taczworkshop.client.TaczDataStackUtil;
@@ -12,10 +13,10 @@ import dev.xyat.taczworkshop.client.TaczPreviewIndexContext;
 import dev.xyat.taczworkshop.data.TaczDataKind;
 import dev.xyat.taczworkshop.network.TaczRecipeNetwork;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.EditBox;
+import dev.xyat.kineticcore.api.client.widget.button.KineticButtons.HighZButton;
+import dev.xyat.kineticcore.api.client.widget.button.KineticButtons.StateButton;
+import dev.xyat.kineticcore.api.client.widget.input.KineticTextFields.KineticEditBox;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.ItemStack;
@@ -59,25 +60,23 @@ public final class TaczDataManagerScreen extends KineticScreen {
         }
     }
 
-    private final Screen parent;
     private final List<TaczDataListEntry> source = new ArrayList<>();
     private final List<TaczDataListEntry> filtered = new ArrayList<>();
     private final Map<String, ItemStack> stackCache = new HashMap<>();
     private final GridScrollController gridScroll = new GridScrollController();
     private TaczDataKind kind = TaczDataKind.GUN;
     private StatusFilter statusFilter = StatusFilter.ACTIVE;
-    private EditBox search;
-    private Button categoryButton;
-    private Button saveAllButton;
-    private Button activeFilterButton;
-    private Button modifiedFilterButton;
-    private Button removedFilterButton;
+    private KineticEditBox search;
+    private HighZButton categoryButton;
+    private StateButton saveAllButton;
+    private StateButton activeFilterButton;
+    private StateButton modifiedFilterButton;
+    private StateButton removedFilterButton;
     private TaczDataListEntry hoveredEntry;
 
     public TaczDataManagerScreen(Screen parent) {
         super(Component.translatable("gui.taczworkshop.data.title"));
-        this.parent = parent;
-        useStandardCanvas();
+        setParentScreen(parent);
         configureStandaloneDraft(TaczDataClientState::capturePendingSnapshot, TaczDataClientState::restorePendingSnapshot);
     }
 
@@ -85,7 +84,7 @@ public final class TaczDataManagerScreen extends KineticScreen {
     protected void buildUi() {
         closeContextMenu();
         String oldSearch = search == null ? "" : search.getValue();
-        search = addTextField(SEARCH_X, SEARCH_Y, 180, Component.translatable("gui.taczworkshop.search"));
+        search = addTextField(SEARCH_X, SEARCH_Y, 180, Component.translatable("gui.taczworkshop.search"), Component.translatable("gui.taczworkshop.data.search.hint"), null, null);
         search.setMaxLength(256);
         search.setValue(oldSearch);
         search.setResponder(value -> {
@@ -102,18 +101,18 @@ public final class TaczDataManagerScreen extends KineticScreen {
         );
 
         activeFilterButton = addButton(14, 34, 80, Component.translatable(StatusFilter.ACTIVE.key), Component.translatable("tip.taczworkshop.data.filter.active"), () -> setStatusFilter(StatusFilter.ACTIVE));
-        activeFilterButton.active = statusFilter != StatusFilter.ACTIVE;
+        activeFilterButton.setEnabled(statusFilter != StatusFilter.ACTIVE);
         modifiedFilterButton = addButton(96, 34, 80, Component.translatable(StatusFilter.MODIFIED.key), Component.translatable("tip.taczworkshop.data.filter.modified"), () -> setStatusFilter(StatusFilter.MODIFIED));
-        modifiedFilterButton.active = statusFilter != StatusFilter.MODIFIED;
+        modifiedFilterButton.setEnabled(statusFilter != StatusFilter.MODIFIED);
         removedFilterButton = addButton(178, 34, 80, Component.translatable(StatusFilter.REMOVED.key), Component.translatable("tip.taczworkshop.data.filter.removed"), () -> setStatusFilter(StatusFilter.REMOVED));
-        removedFilterButton.active = statusFilter != StatusFilter.REMOVED;
+        removedFilterButton.setEnabled(statusFilter != StatusFilter.REMOVED);
         saveAllButton = addButton(
                 340, 34, 92,
                 Component.translatable("gui.taczworkshop.data.save_all", TaczDataClientState.pendingCount()),
                 Component.translatable("tip.taczworkshop.data.save_all"),
                 this::saveAll
         );
-        saveAllButton.active = TaczDataClientState.hasPending();
+        saveAllButton.setEnabled(TaczDataClientState.hasPending());
         addButton(436, 34, 90, Component.translatable("gui.taczworkshop.data.refresh"), Component.translatable("tip.taczworkshop.data.refresh"), TaczRecipeNetwork::requestDataList);
         addButton(530, 34, 96, Component.translatable("gui.taczworkshop.back"), Component.translatable("tip.taczworkshop.back.management"), this::onClose);
 
@@ -130,9 +129,9 @@ public final class TaczDataManagerScreen extends KineticScreen {
 
 
     private void openKindMenu() {
-        List<GuiOverlay.MenuItem> items = new ArrayList<>();
+        List<KineticOverlays.MenuItem> items = new ArrayList<>();
         for (TaczDataKind option : TaczDataKind.values()) {
-            items.add(GuiOverlay.MenuItem.toggle(
+            items.add(KineticOverlays.MenuItem.toggle(
                     Component.translatable(tabKey(option)),
                     Component.translatable("tip.taczworkshop.data.category.entry", Component.translatable(tabKey(option))),
                     option == kind,
@@ -174,14 +173,14 @@ public final class TaczDataManagerScreen extends KineticScreen {
 
     private void updateHeaderControls() {
         if (categoryButton != null) {
-            categoryButton.setMessage(Component.translatable("gui.taczworkshop.data.category", Component.translatable(tabKey(kind))));
+            categoryButton.setText(Component.translatable("gui.taczworkshop.data.category", Component.translatable(tabKey(kind))));
         }
-        if (activeFilterButton != null) activeFilterButton.active = statusFilter != StatusFilter.ACTIVE;
-        if (modifiedFilterButton != null) modifiedFilterButton.active = statusFilter != StatusFilter.MODIFIED;
-        if (removedFilterButton != null) removedFilterButton.active = statusFilter != StatusFilter.REMOVED;
+        if (activeFilterButton != null) activeFilterButton.setEnabled(statusFilter != StatusFilter.ACTIVE);
+        if (modifiedFilterButton != null) modifiedFilterButton.setEnabled(statusFilter != StatusFilter.MODIFIED);
+        if (removedFilterButton != null) removedFilterButton.setEnabled(statusFilter != StatusFilter.REMOVED);
         if (saveAllButton != null) {
-            saveAllButton.setMessage(Component.translatable("gui.taczworkshop.data.save_all", TaczDataClientState.pendingCount()));
-            saveAllButton.active = TaczDataClientState.hasPending();
+            saveAllButton.setText(Component.translatable("gui.taczworkshop.data.save_all", TaczDataClientState.pendingCount()));
+            saveAllButton.setEnabled(TaczDataClientState.hasPending());
         }
     }
 
@@ -189,7 +188,7 @@ public final class TaczDataManagerScreen extends KineticScreen {
         String query = search == null ? "" : search.getValue().trim().toLowerCase(Locale.ROOT);
         filtered.clear();
         for (TaczDataListEntry entry : source) {
-            if (!matchesStatus(entry)) continue;
+            if (failsStatusFilter(entry)) continue;
             String translated = localizedNameText(entry);
             String searchable = (entry.id() + " " + entry.dataId() + " " + translated + " " + entry.type()).toLowerCase(Locale.ROOT);
             if (query.isEmpty() || searchable.contains(query)) filtered.add(entry);
@@ -201,11 +200,11 @@ public final class TaczDataManagerScreen extends KineticScreen {
         gridScroll.update(totalRows, ROWS_VISIBLE);
     }
 
-    private boolean matchesStatus(TaczDataListEntry entry) {
+    private boolean failsStatusFilter(TaczDataListEntry entry) {
         return switch (statusFilter) {
-            case ACTIVE -> !entry.removed();
-            case MODIFIED -> entry.modified() && !entry.removed();
-            case REMOVED -> entry.removed();
+            case ACTIVE -> entry.removed();
+            case MODIFIED -> (!entry.modified()) || (entry.removed());
+            case REMOVED -> !entry.removed();
         };
     }
 
@@ -220,7 +219,6 @@ public final class TaczDataManagerScreen extends KineticScreen {
 
     @Override
     protected void renderCanvasForeground(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderTextFieldPlaceholder(graphics, search, Component.translatable("gui.taczworkshop.data.search.hint"));
         graphics.drawString(font, Component.translatable("gui.taczworkshop.data.count", filtered.size()), 386, 16, 0xFFFFFFFF, true);
         renderInfoPanel(graphics);
         if (filtered.isEmpty()) {
@@ -276,7 +274,7 @@ public final class TaczDataManagerScreen extends KineticScreen {
         int visualShift = gridScroll.visualShift(CELL_SIZE);
         int first = baseRow * COLUMNS;
         int last = Math.min(filtered.size(), first + (ROWS_VISIBLE + 2) * COLUMNS);
-        enableCanvasScissor(graphics, GRID_X, GRID_Y, GRID_X + GRID_WIDTH, GRID_Y + GRID_HEIGHT);
+        enableUiScissor(graphics, GRID_X, GRID_Y, GRID_X + GRID_WIDTH, GRID_Y + GRID_HEIGHT);
         for (int index = first; index < last; index++) {
             int visible = index - first;
             int col = visible % COLUMNS;
@@ -284,7 +282,7 @@ public final class TaczDataManagerScreen extends KineticScreen {
             int x = GRID_X + col * CELL_SIZE;
             int y = GRID_Y + row * CELL_SIZE - visualShift;
             TaczDataListEntry entry = filtered.get(index);
-            boolean hovered = index == hoveredIndex && !overlays().blocksInput();
+            boolean hovered = index == hoveredIndex && !overlayBlocksInput();
 
             GuiTheme.itemSlot(graphics, x, y, hovered);
             ItemStack stack = stackFor(entry);
@@ -294,11 +292,11 @@ public final class TaczDataManagerScreen extends KineticScreen {
                 graphics.drawCenteredString(font, Component.translatable("gui.taczworkshop.data.missing_mark"), x + 9, y + 5, 0xFFFFCC55);
             }
 
-            if (entry.removed()) graphics.renderOutline(x, y, SLOT_SIZE, SLOT_SIZE, 0xFFFF5656);
-            else if (entry.modified()) graphics.renderOutline(x, y, SLOT_SIZE, SLOT_SIZE, 0xFF35D06F);
+            if (entry.removed()) GuiTheme.indicatorOutline(graphics, x, y, SLOT_SIZE, SLOT_SIZE, GuiTheme.Indicator.DANGER);
+            else if (entry.modified()) GuiTheme.indicatorOutline(graphics, x, y, SLOT_SIZE, SLOT_SIZE, GuiTheme.Indicator.SUCCESS);
             if (hovered) hoveredEntry = entry;
         }
-        disableCanvasScissor(graphics);
+        disableUiScissor(graphics);
     }
 
     private ItemStack stackFor(TaczDataListEntry entry) {
@@ -306,7 +304,7 @@ public final class TaczDataManagerScreen extends KineticScreen {
     }
 
     private Component hoverName(TaczDataListEntry entry, ItemStack stack) {
-        if (!entry.nameKey().isBlank() && I18n.exists(entry.nameKey())) {
+        if (!entry.nameKey().isBlank() && KineticText.hasTranslation(entry.nameKey())) {
             return Component.translatable(entry.nameKey());
         }
         if (!stack.isEmpty()) {
@@ -320,7 +318,7 @@ public final class TaczDataManagerScreen extends KineticScreen {
 
     private String localizedNameText(TaczDataListEntry entry) {
         if (entry == null) return "";
-        if (!entry.nameKey().isBlank() && I18n.exists(entry.nameKey())) return Component.translatable(entry.nameKey()).getString();
+        if (!entry.nameKey().isBlank() && KineticText.hasTranslation(entry.nameKey())) return Component.translatable(entry.nameKey()).getString();
         return entry.id();
     }
 
@@ -332,7 +330,7 @@ public final class TaczDataManagerScreen extends KineticScreen {
         int col = localX / CELL_SIZE;
         int row = localY / CELL_SIZE;
         if (col < 0 || col >= COLUMNS || row < 0 || row > ROWS_VISIBLE) return -1;
-        if (localX % CELL_SIZE >= SLOT_SIZE || localY % CELL_SIZE >= SLOT_SIZE) return -1;
+        if (localX % CELL_SIZE == SLOT_SIZE || localY % CELL_SIZE == SLOT_SIZE) return -1;
         int index = (gridScroll.smoothIndexOffset() + row) * COLUMNS + col;
         return index >= 0 && index < filtered.size() ? index : -1;
     }
@@ -340,16 +338,16 @@ public final class TaczDataManagerScreen extends KineticScreen {
     @Override
     protected boolean canvasMouseClicked(double mouseX, double mouseY, int button) {
         boolean widget = super.canvasMouseClicked(mouseX, mouseY, button);
-        if (button == 0 && gridScroll.beginDrag(mouseX, mouseY, SCROLL_X, GRID_Y, SCROLL_WIDTH, GRID_HEIGHT, 18, 2)) return true;
+        if (KineticMouseButtons.isPrimary(button) && gridScroll.beginDrag(mouseX, mouseY, SCROLL_X, GRID_Y, SCROLL_WIDTH, GRID_HEIGHT, 18, 2)) return true;
 
         int index = indexAt(mouseX, mouseY);
         if (index < 0) return widget;
         TaczDataListEntry entry = filtered.get(index);
-        if (button == 0) {
+        if (KineticMouseButtons.isPrimary(button)) {
             TaczRecipeNetwork.requestDataDetail(entry.kind(), entry.id());
             return true;
         }
-        if (button == 1) {
+        if (KineticMouseButtons.isSecondary(button)) {
             openEntryContextMenu(entry, (int) mouseX, (int) mouseY);
             return true;
         }
@@ -357,20 +355,20 @@ public final class TaczDataManagerScreen extends KineticScreen {
     }
 
     private void openEntryContextMenu(TaczDataListEntry entry, int mouseX, int mouseY) {
-        List<GuiOverlay.MenuItem> items = new ArrayList<>();
-        items.add(GuiOverlay.MenuItem.action(
+        List<KineticOverlays.MenuItem> items = new ArrayList<>();
+        items.add(KineticOverlays.MenuItem.action(
                 Component.translatable("gui.taczworkshop.context.edit"),
                 Component.translatable("tip.taczworkshop.context.edit"),
                 () -> TaczRecipeNetwork.requestDataDetail(entry.kind(), entry.id())
         ));
-        items.add(GuiOverlay.MenuItem.action(
+        items.add(KineticOverlays.MenuItem.action(
                 Component.translatable(entry.removed() ? "gui.taczworkshop.context.enable" : "gui.taczworkshop.context.disable"),
                 Component.translatable(entry.removed() ? "tip.taczworkshop.context.enable" : "tip.taczworkshop.context.disable"),
                 () -> stageRemovedEntry(entry, !entry.removed())
         ));
         if (entry.modified()) {
-            items.add(GuiOverlay.MenuItem.separator());
-            items.add(GuiOverlay.MenuItem.danger(
+            items.add(KineticOverlays.MenuItem.separator());
+            items.add(KineticOverlays.MenuItem.danger(
                     Component.translatable("gui.taczworkshop.context.reset"),
                     Component.translatable("tip.taczworkshop.context.reset"),
                     () -> confirmResetEntry(entry)
@@ -412,7 +410,7 @@ public final class TaczDataManagerScreen extends KineticScreen {
 
     @Override
     protected void renderTooltips(GuiGraphics graphics, int scaledMouseX, int scaledMouseY, int mouseX, int mouseY) {
-        if (overlays().blocksInput()) return;
+        if (overlayBlocksInput()) return;
         if (hoveredEntry == null) return;
         ItemStack stack = stackFor(hoveredEntry);
         List<FormattedCharSequence> lines = new ArrayList<>();
@@ -444,11 +442,6 @@ public final class TaczDataManagerScreen extends KineticScreen {
         if (entry.removed()) return Component.translatable("gui.taczworkshop.data.tooltip.status.removed");
         if (entry.modified()) return Component.translatable("gui.taczworkshop.data.tooltip.status.modified");
         return Component.translatable("gui.taczworkshop.data.tooltip.status.active");
-    }
-
-    @Override
-    public void onClose() {
-        if (minecraft != null) navigateBack();
     }
 
 

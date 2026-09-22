@@ -1,28 +1,29 @@
 package dev.xyat.taczworkshop.client.gui;
 
+import dev.xyat.kineticcore.api.client.input.KineticMouseButtons;
 import dev.xyat.kineticcore.api.client.text.KineticText;
-import dev.xyat.kineticcore.api.client.overlay.GuiOverlay;
+import dev.xyat.kineticcore.api.client.overlay.KineticOverlays;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
 import dev.xyat.kineticcore.api.client.screen.KineticScreen;
-import dev.xyat.kineticcore.api.client.widget.KineticWidgets;
-import dev.xyat.kineticcore.api.client.widget.KineticWidgets.GridScrollController;
-import dev.xyat.kineticcore.api.client.widget.KineticWidgets.NumericEditBox;
+import dev.xyat.kineticcore.api.client.widget.KineticControl;
+import dev.xyat.kineticcore.api.client.widget.button.KineticButtons.ToggleButton;
+import dev.xyat.kineticcore.api.client.widget.input.KineticTextFields.KineticEditBox;
+import dev.xyat.kineticcore.api.client.widget.scroll.KineticScroll.GridScrollController;
+import dev.xyat.kineticcore.api.client.widget.input.KineticNumericFields.NumericEditBox;
 import dev.xyat.taczworkshop.client.TaczDataClientState;
 import dev.xyat.taczworkshop.client.TaczDataStackUtil;
 import dev.xyat.taczworkshop.client.TaczPreviewIndexContext;
 import dev.xyat.taczworkshop.data.TaczDataKind;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.AbstractWidget;
-import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -48,7 +49,6 @@ public final class TaczDataDetailScreen extends KineticScreen {
     private static final int ATTACHMENT_SUMMARY_WIDTH = 200;
     private static final int ATTACHMENT_SUMMARY_HEIGHT = 22;
 
-    private final Screen parent;
     private final TaczDataKind kind;
     private final String id;
     private final String dataId;
@@ -58,10 +58,10 @@ public final class TaczDataDetailScreen extends KineticScreen {
     private final boolean resourceAvailable;
     private final JsonObject previewIndex;
     private final GridScrollController fieldScroll = new GridScrollController();
-    private final List<AbstractWidget> activeFieldWidgets = new ArrayList<>();
+    private final List<KineticControl> activeFieldWidgets = new ArrayList<>();
     private boolean removed;
     private boolean dirty;
-    private EditBox search;
+    private KineticEditBox search;
     private List<TaczJsonLeafModel.Leaf> leaves = List.of();
     private TaczJsonLeafModel.Leaf hoveredLeaf;
     private boolean hoveredHeaderItem;
@@ -70,7 +70,7 @@ public final class TaczDataDetailScreen extends KineticScreen {
 
     public TaczDataDetailScreen(Screen parent, JsonObject detail) {
         super(Component.translatable("gui.taczworkshop.data.detail.title"));
-        this.parent = parent;
+        setParentScreen(parent);
         this.kind = TaczDataKind.fromWire(read(detail, "kind"));
         this.id = read(detail, "id");
         this.dataId = read(detail, "data_id");
@@ -85,7 +85,6 @@ public final class TaczDataDetailScreen extends KineticScreen {
         this.resourceAvailable = detail.has("index") && detail.get("index").isJsonObject() && !detail.getAsJsonObject("index").entrySet().isEmpty()
                 || !this.previewIndex.entrySet().isEmpty();
         this.removed = bool(detail, "removed");
-        useStandardCanvas();
     }
 
     @Override
@@ -93,7 +92,7 @@ public final class TaczDataDetailScreen extends KineticScreen {
         closeContextMenu();
         activeFieldWidgets.clear();
         String oldSearch = search == null ? "" : search.getValue();
-        search = addTextField(20, 50, 250, Component.translatable("gui.taczworkshop.search"));
+        search = addTextField(20, 50, 250, Component.translatable("gui.taczworkshop.search"), Component.translatable("gui.taczworkshop.data.field.search.hint"), null, null);
         search.setMaxLength(256);
         search.setValue(oldSearch);
         search.setResponder(value -> {
@@ -123,7 +122,7 @@ public final class TaczDataDetailScreen extends KineticScreen {
     }
 
     private void rebuildFieldWidgets() {
-        activeFieldWidgets.forEach(this::removeWidget);
+        activeFieldWidgets.forEach(this::removeKineticControl);
         activeFieldWidgets.clear();
 
         String query = search == null ? "" : search.getValue().trim().toLowerCase(Locale.ROOT);
@@ -154,7 +153,7 @@ public final class TaczDataDetailScreen extends KineticScreen {
         Component label = fieldLabel(leaf.displayPath());
         if (leaf.isBoolean()) {
             boolean current = leaf.value().getAsBoolean();
-            KineticWidgets.ToggleButton button = addToggleButton(
+            ToggleButton button = addToggleButton(
                     inputX, y + 2, INPUT_WIDTH,
                     current,
                     Component.translatable("gui.taczworkshop.data.boolean.true"),
@@ -169,7 +168,7 @@ public final class TaczDataDetailScreen extends KineticScreen {
             return;
         }
 
-        EditBox box;
+        KineticEditBox box;
         if (leaf.isNumber()) {
             NumericEditBox numeric = addDecimalField(inputX, y + 2, INPUT_WIDTH, label, true, null, null, null);
             numeric.setValue(leaf.value().getAsString());
@@ -204,12 +203,12 @@ public final class TaczDataDetailScreen extends KineticScreen {
         }
         int shift = fieldScroll.visualShift(ROW_HEIGHT);
         for (int i = 0; i < activeFieldWidgets.size(); i++) {
-            AbstractWidget widget = activeFieldWidgets.get(i);
+            KineticControl widget = activeFieldWidgets.get(i);
             int row = i / FIELDS_PER_ROW;
             widget.setY(fieldBaseY() + row * ROW_HEIGHT - shift + 2);
             boolean intersects = widget.getY() + widget.getHeight() > fieldBaseY()
                     && widget.getY() < fieldBaseY() + visibleFieldRows() * ROW_HEIGHT;
-            widget.visible = intersects;
+            widget.setVisible(intersects);
         }
     }
 
@@ -247,7 +246,7 @@ public final class TaczDataDetailScreen extends KineticScreen {
                 () -> {
                     TaczDataClientState.stageReset(kind, id);
                     dirty = false;
-                    if (minecraft != null) navigateBack();
+                    navigateBack();
                 },
                 () -> { }
         );
@@ -282,7 +281,7 @@ public final class TaczDataDetailScreen extends KineticScreen {
     private boolean hasExpandableCollections() {
         if (kind == TaczDataKind.GUN) return true;
         if (kind == TaczDataKind.CONSUMABLE) return true;
-        return kind == TaczDataKind.THROWABLE && objectAtPath("cloud") != null;
+        return kind == TaczDataKind.THROWABLE && objectAtPath() != null;
     }
 
     private boolean hasRemovableCollections() {
@@ -294,7 +293,7 @@ public final class TaczDataDetailScreen extends KineticScreen {
     }
 
     private void openAddCollectionMenu() {
-        List<GuiOverlay.MenuItem> items = new ArrayList<>();
+        List<KineticOverlays.MenuItem> items = new ArrayList<>();
         if (kind == TaczDataKind.GUN) {
             addCollectionEntry(items, "gui.taczworkshop.data.collection.damage_curve", true, this::addDamageCurvePoint);
             if (arrayAtPath("extras.ammo_types") != null) addCollectionEntry(items, "gui.taczworkshop.data.collection.ammo_type", true, this::addAmmoType);
@@ -305,14 +304,14 @@ public final class TaczDataDetailScreen extends KineticScreen {
             addCollectionEntry(items, "gui.taczworkshop.data.collection.effect", true, this::addConsumableEffect);
             addCollectionEntry(items, "gui.taczworkshop.data.collection.remove_effect", true, this::addRemoveEffect);
         }
-        if (kind == TaczDataKind.THROWABLE && objectAtPath("cloud") != null) {
+        if (kind == TaczDataKind.THROWABLE && objectAtPath() != null) {
             addCollectionEntry(items, "gui.taczworkshop.data.collection.cloud_effect", true, this::addCloudEffect);
         }
         if (!items.isEmpty()) openContextMenu(418, 40, items);
     }
 
     private void openRemoveCollectionMenu() {
-        List<GuiOverlay.MenuItem> items = new ArrayList<>();
+        List<KineticOverlays.MenuItem> items = new ArrayList<>();
         if (arraySize("bullet.extra_damage.damage_adjust") > 0) addCollectionEntry(items, "gui.taczworkshop.data.collection.damage_curve", false, () -> removeLast("bullet.extra_damage.damage_adjust", 0));
         if (arraySize("extras.ammo_types") > 1) addCollectionEntry(items, "gui.taczworkshop.data.collection.ammo_type", false, () -> removeLast("extras.ammo_types", 1));
         if (arraySize("recoil.pitch") > 1) addCollectionEntry(items, "gui.taczworkshop.data.collection.recoil_pitch", false, () -> removeLast("recoil.pitch", 1));
@@ -323,9 +322,9 @@ public final class TaczDataDetailScreen extends KineticScreen {
         if (!items.isEmpty()) openContextMenu(490, 40, items);
     }
 
-    private void addCollectionEntry(List<GuiOverlay.MenuItem> items, String labelKey, boolean add, Runnable action) {
+    private void addCollectionEntry(List<KineticOverlays.MenuItem> items, String labelKey, boolean add, Runnable action) {
         Component label = Component.translatable(labelKey);
-        items.add(GuiOverlay.MenuItem.action(
+        items.add(KineticOverlays.MenuItem.action(
                 label,
                 Component.translatable(add ? "tip.taczworkshop.data.collection.add_entry" : "tip.taczworkshop.data.collection.remove_entry", label),
                 action
@@ -337,7 +336,7 @@ public final class TaczDataDetailScreen extends KineticScreen {
         if (array == null) return;
         double distance = 10.0D;
         double damage = 1.0D;
-        if (array.size() > 0 && array.get(array.size() - 1).isJsonObject()) {
+        if (!array.isEmpty() && array.get(array.size() - 1).isJsonObject()) {
             JsonObject last = array.get(array.size() - 1).getAsJsonObject();
             double lastDistance = number(last, "distance", 0.0D);
             damage = number(last, "damage", 1.0D);
@@ -359,7 +358,7 @@ public final class TaczDataDetailScreen extends KineticScreen {
 
     private void addAmmoType() {
         JsonArray array = arrayAtPath("extras.ammo_types");
-        if (array == null || array.size() == 0 || !array.get(array.size() - 1).isJsonObject()) return;
+        if (array == null || array.isEmpty() || !array.get(array.size() - 1).isJsonObject()) return;
         int index = array.size();
         array.add(array.get(array.size() - 1).getAsJsonObject().deepCopy());
         markDirty();
@@ -371,7 +370,7 @@ public final class TaczDataDetailScreen extends KineticScreen {
         if (array == null) return;
         JsonObject point = new JsonObject();
         double nextTime = 0.1D;
-        if (array.size() > 0 && array.get(array.size() - 1).isJsonObject()) {
+        if (!array.isEmpty() && array.get(array.size() - 1).isJsonObject()) {
             JsonObject last = array.get(array.size() - 1).getAsJsonObject();
             point = last.deepCopy();
             double lastTime = number(last, "time", 0.0D);
@@ -398,7 +397,7 @@ public final class TaczDataDetailScreen extends KineticScreen {
         JsonArray array = ensureArrayAtPath("effects");
         if (array == null) return;
         JsonObject effect;
-        if (array.size() > 0 && array.get(array.size() - 1).isJsonObject()) {
+        if (!array.isEmpty() && array.get(array.size() - 1).isJsonObject()) {
             effect = array.get(array.size() - 1).getAsJsonObject().deepCopy();
         } else {
             effect = new JsonObject();
@@ -420,7 +419,7 @@ public final class TaczDataDetailScreen extends KineticScreen {
         JsonArray array = ensureArrayAtPath("remove_effects");
         if (array == null) return;
         String value = "@harmful";
-        if (array.size() > 0 && array.get(array.size() - 1).isJsonPrimitive()) value = array.get(array.size() - 1).getAsString();
+        if (!array.isEmpty() && array.get(array.size() - 1).isJsonPrimitive()) value = array.get(array.size() - 1).getAsString();
         int index = array.size();
         array.add(value);
         markDirty();
@@ -431,7 +430,7 @@ public final class TaczDataDetailScreen extends KineticScreen {
         JsonArray array = ensureArrayAtPath("cloud.effects");
         if (array == null) return;
         JsonObject effect;
-        if (array.size() > 0 && array.get(array.size() - 1).isJsonObject()) {
+        if (!array.isEmpty() && array.get(array.size() - 1).isJsonObject()) {
             effect = array.get(array.size() - 1).getAsJsonObject().deepCopy();
         } else {
             effect = new JsonObject();
@@ -451,7 +450,7 @@ public final class TaczDataDetailScreen extends KineticScreen {
         JsonArray array = arrayAtPath(path);
         if (array == null || array.size() <= minimumSize) return;
         array.remove(array.size() - 1);
-        if (array.size() == 0) removePath(path);
+        if (array.isEmpty()) removePath(path);
         markDirty();
         rebuildWidgetsKeepSearchAndReveal(path);
     }
@@ -466,8 +465,8 @@ public final class TaczDataDetailScreen extends KineticScreen {
         return element != null && element.isJsonArray() ? element.getAsJsonArray() : null;
     }
 
-    private JsonObject objectAtPath(String path) {
-        JsonElement element = elementAtPath(path);
+    private JsonObject objectAtPath() {
+        JsonElement element = elementAtPath("cloud");
         return element != null && element.isJsonObject() ? element.getAsJsonObject() : null;
     }
 
@@ -550,7 +549,6 @@ public final class TaczDataDetailScreen extends KineticScreen {
 
     @Override
     protected void renderCanvasForeground(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderTextFieldPlaceholder(graphics, search, Component.translatable("gui.taczworkshop.data.field.search.hint"));
         ItemStack stack = TaczDataStackUtil.build(kind, id);
         hoveredHeaderItem = GuiTheme.hovering(mouseX, mouseY, 20, 14, 18, 18);
         GuiTheme.itemSlot(graphics, 20, 14, hoveredHeaderItem);
@@ -559,8 +557,8 @@ public final class TaczDataDetailScreen extends KineticScreen {
         } else {
             graphics.drawCenteredString(font, Component.translatable("gui.taczworkshop.data.missing_mark"), 29, 19, 0xFFFFCC55);
         }
-        if (serverModified || dirty) graphics.renderOutline(20, 14, 18, 18, 0xFF35D06F);
-        if (removed) graphics.renderOutline(20, 14, 18, 18, 0xFFFF5656);
+        if (serverModified || dirty) GuiTheme.indicatorOutline(graphics, 20, 14, 18, 18, GuiTheme.Indicator.SUCCESS);
+        if (removed) GuiTheme.indicatorOutline(graphics, 20, 14, 18, 18, GuiTheme.Indicator.DANGER);
 
         KineticText.drawScrollingLeft(graphics, font, displayName(stack), 44, 14, 280, 0xFFFFFFFF, true);
         KineticText.drawScrollingLeft(graphics, font, id, 44, 27, 280, 0xFFCCCCCC, false);
@@ -575,7 +573,7 @@ public final class TaczDataDetailScreen extends KineticScreen {
         int shift = fieldScroll.visualShift(ROW_HEIGHT);
         int start = firstRow * FIELDS_PER_ROW;
         int end = Math.min(leaves.size(), start + (visibleFieldRows() + 1) * FIELDS_PER_ROW);
-        enableCanvasScissor(graphics, 14, fieldBaseY(), 617, fieldBaseY() + visibleFieldRows() * ROW_HEIGHT);
+        enableUiScissor(graphics, 14, fieldBaseY(), 617, fieldBaseY() + visibleFieldRows() * ROW_HEIGHT);
         for (int i = start; i < end; i++) {
             int local = i - start;
             int col = local % FIELDS_PER_ROW;
@@ -587,20 +585,20 @@ public final class TaczDataDetailScreen extends KineticScreen {
             KineticText.drawScrollingLeft(graphics, font, label, x, y + 8, LABEL_WIDTH, 0xFFFFFFFF, false);
             if (GuiTheme.hovering(mouseX, mouseY, x, y + 2, INPUT_OFFSET + INPUT_WIDTH, 20)) hoveredLeaf = leaf;
         }
-        disableCanvasScissor(graphics);
+        disableUiScissor(graphics);
 
         graphics.drawString(font, Component.translatable("gui.taczworkshop.data.fields", leaves.size()), 20, 338, 0xFFCCCCCC, false);
     }
 
     @Override
     protected boolean canvasMouseClicked(double mouseX, double mouseY, int button) {
-        if (button == 1 && kind == TaczDataKind.GUN && GuiTheme.hovering(mouseX, mouseY, ATTACHMENT_SUMMARY_X, ATTACHMENT_SUMMARY_Y, ATTACHMENT_SUMMARY_WIDTH, ATTACHMENT_SUMMARY_HEIGHT)) {
+        if (KineticMouseButtons.isSecondary(button) && kind == TaczDataKind.GUN && GuiTheme.hovering(mouseX, mouseY, ATTACHMENT_SUMMARY_X, ATTACHMENT_SUMMARY_Y, ATTACHMENT_SUMMARY_WIDTH, ATTACHMENT_SUMMARY_HEIGHT)) {
             openAttachmentContextMenu((int) mouseX, (int) mouseY);
             return true;
         }
         boolean widget = super.canvasMouseClicked(mouseX, mouseY, button);
         int scrollHeight = visibleFieldRows() * ROW_HEIGHT - 4;
-        if (button == 0 && fieldScroll.beginDrag(mouseX, mouseY, FIELD_SCROLL_X, fieldBaseY(), FIELD_SCROLL_WIDTH, scrollHeight, 18, 2)) {
+        if (KineticMouseButtons.isPrimary(button) && fieldScroll.beginDrag(mouseX, mouseY, FIELD_SCROLL_X, fieldBaseY(), FIELD_SCROLL_WIDTH, scrollHeight, 18, 2)) {
             return true;
         }
         return widget;
@@ -632,11 +630,10 @@ public final class TaczDataDetailScreen extends KineticScreen {
 
     @Override
     protected void renderTooltips(GuiGraphics graphics, int scaledMouseX, int scaledMouseY, int mouseX, int mouseY) {
-        if (overlays().blocksInput()) return;
+        if (overlayBlocksInput()) return;
         if (hoveredLeaf != null) {
-            List<FormattedCharSequence> lines = new ArrayList<>();
             Component label = fieldLabel(hoveredLeaf.displayPath());
-            lines.addAll(font.split(label, 320));
+            List<FormattedCharSequence> lines = new ArrayList<>(font.split(label, 320));
             if (!label.getString().equals(hoveredLeaf.displayPath())) {
                 lines.addAll(font.split(Component.translatable("gui.taczworkshop.data.tooltip.field_path", hoveredLeaf.displayPath()), 320));
             }
@@ -661,7 +658,7 @@ public final class TaczDataDetailScreen extends KineticScreen {
 
 
     private Component displayName(ItemStack stack) {
-        if (!nameKey.isBlank() && I18n.exists(nameKey)) return Component.translatable(nameKey);
+        if (!nameKey.isBlank() && KineticText.hasTranslation(nameKey)) return Component.translatable(nameKey);
         if (resourceAvailable && !stack.isEmpty()) {
             Component name = TaczPreviewIndexContext.withResult(kind, id, previewIndex, stack::getHoverName);
             String text = name.getString();
@@ -681,7 +678,7 @@ public final class TaczDataDetailScreen extends KineticScreen {
                 ATTACHMENT_SUMMARY_WIDTH,
                 ATTACHMENT_SUMMARY_HEIGHT
         );
-        if (hoveredAttachmentSummary) graphics.renderOutline(ATTACHMENT_SUMMARY_X, ATTACHMENT_SUMMARY_Y, ATTACHMENT_SUMMARY_WIDTH, ATTACHMENT_SUMMARY_HEIGHT, 0xFFFFFFFF);
+        if (hoveredAttachmentSummary) GuiTheme.stateOutline(graphics, ATTACHMENT_SUMMARY_X, ATTACHMENT_SUMMARY_Y, ATTACHMENT_SUMMARY_WIDTH, ATTACHMENT_SUMMARY_HEIGHT, false, true, false);
         graphics.drawString(
                 font,
                 Component.translatable("gui.taczworkshop.data.slot.summary", enabled.size(), ATTACHMENT_TYPES.size()),
@@ -693,8 +690,7 @@ public final class TaczDataDetailScreen extends KineticScreen {
     }
 
     private List<FormattedCharSequence> attachmentSummaryTooltip() {
-        List<FormattedCharSequence> lines = new ArrayList<>();
-        lines.addAll(font.split(Component.translatable("gui.taczworkshop.data.slot.summary.title"), 320));
+        List<FormattedCharSequence> lines = new ArrayList<>(font.split(Component.translatable("gui.taczworkshop.data.slot.summary.title"), 320));
         Set<String> enabled = attachmentTypes();
         for (String type : ATTACHMENT_TYPES) {
             lines.addAll(font.split(Component.translatable(
@@ -709,10 +705,10 @@ public final class TaczDataDetailScreen extends KineticScreen {
 
     private void openAttachmentContextMenu(int mouseX, int mouseY) {
         Set<String> enabled = attachmentTypes();
-        List<GuiOverlay.MenuItem> items = new ArrayList<>();
+        List<KineticOverlays.MenuItem> items = new ArrayList<>();
         for (String type : ATTACHMENT_TYPES) {
             boolean on = enabled.contains(type);
-            items.add(GuiOverlay.MenuItem.toggle(
+            items.add(KineticOverlays.MenuItem.toggle(
                     Component.translatable("gui.taczworkshop.attachment." + type),
                     Component.translatable(on ? "tip.taczworkshop.data.slot.enabled" : "tip.taczworkshop.data.slot.disabled"),
                     on,
@@ -727,9 +723,9 @@ public final class TaczDataDetailScreen extends KineticScreen {
 
 
     @Override
-    public void onClose() {
+    protected boolean handleCloseRequest() {
         stageCurrentEdit();
-        if (minecraft != null) navigateBack();
+        return false;
     }
 
     private void stageCurrentEdit() {
@@ -936,7 +932,7 @@ public final class TaczDataDetailScreen extends KineticScreen {
         if (segment == null || segment.isBlank()) return Component.empty();
         String safe = segment.toLowerCase(Locale.ROOT).replace(':', '_').replace('-', '_');
         String key = "gui.taczworkshop.data.field.generic." + safe;
-        if (I18n.exists(key)) return Component.translatable(key);
+        if (KineticText.hasTranslation(key)) return Component.translatable(key);
         String[] parts = safe.split("_+");
         if (parts.length > 1) {
             Component result = genericSimpleSegmentLabel(parts[0]);
@@ -950,7 +946,7 @@ public final class TaczDataDetailScreen extends KineticScreen {
 
     private Component genericSimpleSegmentLabel(String segment) {
         String key = "gui.taczworkshop.data.field.generic." + segment;
-        if (I18n.exists(key)) return Component.translatable(key);
+        if (KineticText.hasTranslation(key)) return Component.translatable(key);
         return Component.translatable("gui.taczworkshop.data.field.custom", segment);
     }
 
@@ -970,17 +966,7 @@ public final class TaczDataDetailScreen extends KineticScreen {
             int close = path.indexOf(']');
             int index = arrayIndex(path.substring(0, close + 1));
             if (index >= 0) {
-                String suffix = path.substring(close + 2);
-                String key = switch (suffix) {
-                    case "amplifier" -> "gui.taczworkshop.data.field.lr.effect.amplifier";
-                    case "chance" -> "gui.taczworkshop.data.field.lr.effect.chance";
-                    case "duration" -> "gui.taczworkshop.data.field.lr.effect.duration";
-                    case "id" -> "gui.taczworkshop.data.field.lr.effect.id";
-                    case "ambient" -> "gui.taczworkshop.data.field.lr.effect.ambient";
-                    case "visible" -> "gui.taczworkshop.data.field.lr.effect.visible";
-                    case "show_icon" -> "gui.taczworkshop.data.field.lr.effect.show_icon";
-                    default -> null;
-                };
+                String key = getKey(path, close);
                 if (key != null) return Component.translatable(key, index + 1);
             }
         }
@@ -996,15 +982,7 @@ public final class TaczDataDetailScreen extends KineticScreen {
                     index = -1;
                 }
                 if (index >= 0) {
-                    String suffix = path.substring(close + 2);
-                    String key = switch (suffix) {
-                        case "amplifier" -> "gui.taczworkshop.data.field.lr.cloud_effect.amplifier";
-                        case "duration" -> "gui.taczworkshop.data.field.lr.cloud_effect.duration";
-                        case "type" -> "gui.taczworkshop.data.field.lr.cloud_effect.type";
-                        case "visible" -> "gui.taczworkshop.data.field.lr.cloud_effect.visible";
-                        case "show_icon" -> "gui.taczworkshop.data.field.lr.cloud_effect.show_icon";
-                        default -> null;
-                    };
+                    String key = getString(path, close);
                     if (key != null) return Component.translatable(key, index + 1);
                 }
             }
@@ -1067,6 +1045,32 @@ public final class TaczDataDetailScreen extends KineticScreen {
         };
     }
 
+    private static @Nullable String getKey(String path, int close) {
+        String suffix = path.substring(close + 2);
+        return switch (suffix) {
+            case "amplifier" -> "gui.taczworkshop.data.field.lr.effect.amplifier";
+            case "chance" -> "gui.taczworkshop.data.field.lr.effect.chance";
+            case "duration" -> "gui.taczworkshop.data.field.lr.effect.duration";
+            case "id" -> "gui.taczworkshop.data.field.lr.effect.id";
+            case "ambient" -> "gui.taczworkshop.data.field.lr.effect.ambient";
+            case "visible" -> "gui.taczworkshop.data.field.lr.effect.visible";
+            case "show_icon" -> "gui.taczworkshop.data.field.lr.effect.show_icon";
+            default -> null;
+        };
+    }
+
+    private static @Nullable String getString(String path, int close) {
+        String suffix = path.substring(close + 2);
+        return switch (suffix) {
+            case "amplifier" -> "gui.taczworkshop.data.field.lr.cloud_effect.amplifier";
+            case "duration" -> "gui.taczworkshop.data.field.lr.cloud_effect.duration";
+            case "type" -> "gui.taczworkshop.data.field.lr.cloud_effect.type";
+            case "visible" -> "gui.taczworkshop.data.field.lr.cloud_effect.visible";
+            case "show_icon" -> "gui.taczworkshop.data.field.lr.cloud_effect.show_icon";
+            default -> null;
+        };
+    }
+
     private Component lrMeleeAttackLabel(String suffix) {
         return switch (suffix) {
             case "factor" -> Component.translatable("gui.taczworkshop.data.field.lr.melee.attack.factor");
@@ -1111,10 +1115,14 @@ public final class TaczDataDetailScreen extends KineticScreen {
         }
         String suffix = remainder.substring(close + 1);
         String key;
-        if (".time".equals(suffix)) key = "gui.taczworkshop.data.field.recoil." + axis + ".time";
-        else if (".value[0]".equals(suffix)) key = "gui.taczworkshop.data.field.recoil." + axis + ".min";
-        else if (".value[1]".equals(suffix)) key = "gui.taczworkshop.data.field.recoil." + axis + ".max";
-        else return null;
+        switch (suffix) {
+            case ".time" -> key = "gui.taczworkshop.data.field.recoil." + axis + ".time";
+            case ".value[0]" -> key = "gui.taczworkshop.data.field.recoil." + axis + ".min";
+            case ".value[1]" -> key = "gui.taczworkshop.data.field.recoil." + axis + ".max";
+            default -> {
+                return null;
+            }
+        }
         return Component.translatable(key, index);
     }
 

@@ -3,14 +3,14 @@ package dev.xyat.taczworkshop.compat.sophisticated;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.fml.ModList;
+import dev.xyat.kineticcore.api.runtime.KineticPlatform;
 import net.minecraftforge.items.IItemHandler;
 
 import java.util.ArrayList;
 import java.util.function.Consumer;
 
 public final class SophisticatedBackpacksCompat {
-    private static final boolean INSTALLED = ModList.get().isLoaded("sophisticatedbackpacks");
+    private static final boolean INSTALLED = KineticPlatform.isModLoaded("sophisticatedbackpacks");
 
     private SophisticatedBackpacksCompat() {
     }

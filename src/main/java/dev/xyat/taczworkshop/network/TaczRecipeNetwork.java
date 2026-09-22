@@ -1,9 +1,5 @@
 package dev.xyat.taczworkshop.network;
 
-import dev.xyat.kineticcore.api.KTNetworkProtocol;
-import dev.xyat.kineticcore.api.NetworkCompressUtil;
-import dev.xyat.taczworkshop.TaczWorkshop;
-import dev.xyat.taczworkshop.client.TaczClientHandler;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -12,6 +8,16 @@ import com.tacz.guns.resource.CommonAssetsManager;
 import com.tacz.guns.resource.index.CommonAmmoIndex;
 import com.tacz.guns.resource.pojo.data.attachment.AttachmentData;
 import com.tacz.guns.resource.pojo.data.gun.GunData;
+import dev.xyat.kineticcore.api.network.KineticCompression;
+import dev.xyat.kineticcore.api.network.NetworkBuffer;
+import dev.xyat.kineticcore.api.network.NetworkCodec;
+import dev.xyat.kineticcore.api.network.NetworkVersionPolicy;
+import dev.xyat.kineticcore.api.network.PacketChannel;
+import dev.xyat.kineticcore.api.network.PacketRegistrations;
+import dev.xyat.kineticcore.api.network.ServerPacketContext;
+import dev.xyat.kineticcore.api.resource.KineticResourceIds;
+import dev.xyat.taczworkshop.TaczWorkshop;
+import dev.xyat.taczworkshop.client.TaczClientHandler;
 import dev.xyat.taczworkshop.data.TaczDataCodec;
 import dev.xyat.taczworkshop.data.TaczDataKind;
 import dev.xyat.taczworkshop.data.TaczDataOverride;
@@ -22,59 +28,83 @@ import dev.xyat.taczworkshop.server.TaczDataRuntime;
 import dev.xyat.taczworkshop.server.TaczDataStore;
 import dev.xyat.taczworkshop.server.TaczRecipeRuntime;
 import dev.xyat.taczworkshop.server.TaczRecipeStore;
-import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.NetworkRegistry;
-import net.minecraftforge.network.PacketDistributor;
-import net.minecraftforge.network.simple.SimpleChannel;
 
 import java.util.Map;
-import java.util.Objects;
 import java.util.UUID;
-import java.util.function.Supplier;
 
 public final class TaczRecipeNetwork {
     private static final String PROTOCOL_VERSION = "1";
     private static final int MAX_COMPRESSED = 4 * 1024 * 1024;
     private static final int MAX_DECOMPRESSED = 32 * 1024 * 1024;
-
-    public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
-            Objects.requireNonNull(ResourceLocation.tryParse(TaczWorkshop.MODID + ":main")),
-            () -> PROTOCOL_VERSION,
-            KTNetworkProtocol::acceptsAnyVersion,
-            KTNetworkProtocol::acceptsAnyVersion
+    private static final PacketChannel CHANNEL = PacketChannel.create(
+            KineticResourceIds.of(TaczWorkshop.MODID, "main"),
+            PROTOCOL_VERSION,
+            NetworkVersionPolicy.ANY
     );
+    private static final boolean[] REGISTERED = new boolean[19];
 
     private TaczRecipeNetwork() {
     }
 
-    public static void register() {
-        int id = 0;
-        CHANNEL.registerMessage(id++, OpenEditorPacket.class, OpenEditorPacket::encode, OpenEditorPacket::new, OpenEditorPacket::handle);
-        CHANNEL.registerMessage(id++, RequestSnapshotPacket.class, RequestSnapshotPacket::encode, RequestSnapshotPacket::new, RequestSnapshotPacket::handle);
-        CHANNEL.registerMessage(id++, SnapshotPacket.class, SnapshotPacket::encode, SnapshotPacket::new, SnapshotPacket::handle);
-        CHANNEL.registerMessage(id++, RouteSnapshotPacket.class, RouteSnapshotPacket::encode, RouteSnapshotPacket::new, RouteSnapshotPacket::handle);
-        CHANNEL.registerMessage(id++, SaveRecordPacket.class, SaveRecordPacket::encode, SaveRecordPacket::new, SaveRecordPacket::handle);
-        CHANNEL.registerMessage(id++, DeleteRecordPacket.class, DeleteRecordPacket::encode, DeleteRecordPacket::new, DeleteRecordPacket::handle);
-        CHANNEL.registerMessage(id++, RequestDataListPacket.class, RequestDataListPacket::encode, RequestDataListPacket::new, RequestDataListPacket::handle);
-        CHANNEL.registerMessage(id++, DataListPacket.class, DataListPacket::encode, DataListPacket::new, DataListPacket::handle);
-        CHANNEL.registerMessage(id++, RequestDataDetailPacket.class, RequestDataDetailPacket::encode, RequestDataDetailPacket::new, RequestDataDetailPacket::handle);
-        CHANNEL.registerMessage(id++, DataDetailPacket.class, DataDetailPacket::encode, DataDetailPacket::new, DataDetailPacket::handle);
-        CHANNEL.registerMessage(id++, SaveDataOverridePacket.class, SaveDataOverridePacket::encode, SaveDataOverridePacket::new, SaveDataOverridePacket::handle);
-        CHANNEL.registerMessage(id++, ResetDataOverridePacket.class, ResetDataOverridePacket::encode, ResetDataOverridePacket::new, ResetDataOverridePacket::handle);
-        CHANNEL.registerMessage(id++, SetDataRemovedPacket.class, SetDataRemovedPacket::encode, SetDataRemovedPacket::new, SetDataRemovedPacket::handle);
-        CHANNEL.registerMessage(id++, SetOriginalRecipeDisabledPacket.class, SetOriginalRecipeDisabledPacket::encode, SetOriginalRecipeDisabledPacket::new, SetOriginalRecipeDisabledPacket::handle);
-        CHANNEL.registerMessage(id++, RestoreOriginalRecipePacket.class, RestoreOriginalRecipePacket::encode, RestoreOriginalRecipePacket::new, RestoreOriginalRecipePacket::handle);
-        CHANNEL.registerMessage(id++, ToastPacket.class, ToastPacket::encode, ToastPacket::new, ToastPacket::handle);
-        CHANNEL.registerMessage(id++, SaveDataBatchPacket.class, SaveDataBatchPacket::encode, SaveDataBatchPacket::new, SaveDataBatchPacket::handle);
-        CHANNEL.registerMessage(id++, DataBatchCommitPacket.class, DataBatchCommitPacket::encode, DataBatchCommitPacket::new, DataBatchCommitPacket::handle);
-        CHANNEL.registerMessage(id, SavedPacket.class, SavedPacket::encode, SavedPacket::new, SavedPacket::handle);
+    public static synchronized void register() {
+        PacketRegistrations.runIndependent(
+                () -> registerClientbound(0, OpenEditorPacket.class, OpenEditorPacket::new, OpenEditorPacket::encode, packet -> TaczClientHandler.openEditor()),
+                () -> registerServerbound(1, RequestSnapshotPacket.class, RequestSnapshotPacket::new, RequestSnapshotPacket::encode, TaczRecipeNetwork::handleRequestSnapshot),
+                () -> registerClientbound(2, SnapshotPacket.class, SnapshotPacket::new, SnapshotPacket::encode, packet -> TaczClientHandler.handleSnapshot(decompress(packet.payload()))),
+                () -> registerClientbound(3, RouteSnapshotPacket.class, RouteSnapshotPacket::new, RouteSnapshotPacket::encode, packet -> TaczClientHandler.handleRoutes(decompress(packet.payload()))),
+                () -> registerServerbound(4, SaveRecordPacket.class, SaveRecordPacket::new, SaveRecordPacket::encode, TaczRecipeNetwork::handleSaveRecord),
+                () -> registerServerbound(5, DeleteRecordPacket.class, DeleteRecordPacket::new, DeleteRecordPacket::encode, TaczRecipeNetwork::handleDeleteRecord),
+                () -> registerServerbound(6, RequestDataListPacket.class, RequestDataListPacket::new, RequestDataListPacket::encode, TaczRecipeNetwork::handleRequestDataList),
+                () -> registerClientbound(7, DataListPacket.class, DataListPacket::new, DataListPacket::encode, packet -> TaczClientHandler.handleDataList(decompress(packet.payload()))),
+                () -> registerServerbound(8, RequestDataDetailPacket.class, RequestDataDetailPacket::new, RequestDataDetailPacket::encode, TaczRecipeNetwork::handleRequestDataDetail),
+                () -> registerClientbound(9, DataDetailPacket.class, DataDetailPacket::new, DataDetailPacket::encode, packet -> TaczClientHandler.handleDataDetail(decompress(packet.payload()))),
+                () -> registerServerbound(10, SaveDataOverridePacket.class, SaveDataOverridePacket::new, SaveDataOverridePacket::encode, TaczRecipeNetwork::handleSaveDataOverride),
+                () -> registerServerbound(11, ResetDataOverridePacket.class, ResetDataOverridePacket::new, ResetDataOverridePacket::encode, TaczRecipeNetwork::handleResetDataOverride),
+                () -> registerServerbound(12, SetDataRemovedPacket.class, SetDataRemovedPacket::new, SetDataRemovedPacket::encode, TaczRecipeNetwork::handleSetDataRemoved),
+                () -> registerServerbound(13, SetOriginalRecipeDisabledPacket.class, SetOriginalRecipeDisabledPacket::new, SetOriginalRecipeDisabledPacket::encode, TaczRecipeNetwork::handleSetOriginalRecipeDisabled),
+                () -> registerServerbound(14, RestoreOriginalRecipePacket.class, RestoreOriginalRecipePacket::new, RestoreOriginalRecipePacket::encode, TaczRecipeNetwork::handleRestoreOriginalRecipe),
+                () -> registerClientbound(15, ToastPacket.class, ToastPacket::new, ToastPacket::encode, packet -> TaczClientHandler.handleToast(packet.message())),
+                () -> registerServerbound(16, SaveDataBatchPacket.class, SaveDataBatchPacket::new, SaveDataBatchPacket::encode, TaczRecipeNetwork::handleSaveDataBatch),
+                () -> registerClientbound(17, DataBatchCommitPacket.class, DataBatchCommitPacket::new, DataBatchCommitPacket::encode, packet -> TaczClientHandler.handleDataBatchCommit(packet.batchId())),
+                () -> registerClientbound(18, SavedPacket.class, SavedPacket::new, SavedPacket::encode, packet -> TaczClientHandler.handleSaved())
+        );
+    }
+
+    private static <T> void registerServerbound(
+            int id,
+            Class<T> type,
+            java.util.function.Function<NetworkBuffer, T> decoder,
+            java.util.function.BiConsumer<T, NetworkBuffer> encoder,
+            dev.xyat.kineticcore.api.network.ServerboundPacketHandler<T> handler
+    ) {
+        if (REGISTERED[id]) return;
+        CHANNEL.registerServerbound(
+                id,
+                type,
+                NetworkCodec.of((buffer, message) -> encoder.accept(message, buffer), decoder),
+                handler
+        );
+        REGISTERED[id] = true;
+    }
+
+    private static <T> void registerClientbound(
+            int id,
+            Class<T> type,
+            java.util.function.Function<NetworkBuffer, T> decoder,
+            java.util.function.BiConsumer<T, NetworkBuffer> encoder,
+            java.util.function.Consumer<T> handler
+    ) {
+        if (REGISTERED[id]) return;
+        CHANNEL.registerClientbound(
+                id,
+                type,
+                NetworkCodec.of((buffer, message) -> encoder.accept(message, buffer), decoder),
+                handler
+        );
+        REGISTERED[id] = true;
     }
 
     public static void requestSnapshot() {
@@ -82,7 +112,7 @@ public final class TaczRecipeNetwork {
     }
 
     public static void saveRecord(TaczRecipeRecord record) {
-        byte[] payload = NetworkCompressUtil.compress(TaczRecipeCodec.encodeRecord(record));
+        byte[] payload = compress(TaczRecipeCodec.encodeRecord(record));
         if (payload.length > MAX_COMPRESSED) {
             TaczClientHandler.handleToast(Component.translatable("msg.taczworkshop.save_too_large"));
             return;
@@ -93,7 +123,6 @@ public final class TaczRecipeNetwork {
     public static void deleteRecord(String uuid) {
         CHANNEL.sendToServer(new DeleteRecordPacket(uuid == null ? "" : uuid));
     }
-
 
     public static void setOriginalRecipeDisabled(String originalId, boolean disabled) {
         CHANNEL.sendToServer(new SetOriginalRecipeDisabledPacket(originalId == null ? "" : originalId, disabled));
@@ -113,7 +142,7 @@ public final class TaczRecipeNetwork {
 
     public static void saveDataOverride(TaczDataKind kind, String id, String dataId, boolean removed, JsonObject data) {
         String json = TaczRecipeCodec.GSON.toJson(data == null ? new JsonObject() : data);
-        byte[] payload = NetworkCompressUtil.compress(json);
+        byte[] payload = compress(json);
         if (payload.length > MAX_COMPRESSED) {
             TaczClientHandler.handleToast(Component.translatable("msg.taczworkshop.data_too_large"));
             return;
@@ -131,7 +160,7 @@ public final class TaczRecipeNetwork {
 
     public static void saveDataBatch(JsonObject root) {
         String json = TaczRecipeCodec.GSON.toJson(root == null ? new JsonObject() : root);
-        byte[] payload = NetworkCompressUtil.compress(json);
+        byte[] payload = compress(json);
         if (payload.length > MAX_COMPRESSED) {
             TaczClientHandler.handleToast(Component.translatable("msg.taczworkshop.data_too_large"));
             return;
@@ -141,22 +170,23 @@ public final class TaczRecipeNetwork {
 
     public static void openFor(ServerPlayer player) {
         if (player != null && player.hasPermissions(2)) {
-            CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new OpenEditorPacket());
+            CHANNEL.sendToPlayer(player, new OpenEditorPacket());
         }
     }
 
     public static void sendToast(ServerPlayer player, Component message) {
-        CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new ToastPacket(message));
+        if (player == null) return;
+        CHANNEL.sendToPlayer(player, new ToastPacket(message));
     }
 
     public static void sendSaved(ServerPlayer player) {
         if (player == null) return;
-        CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new SavedPacket());
+        CHANNEL.sendToPlayer(player, new SavedPacket());
     }
 
     public static void completeDataBatchReload(ServerPlayer player, long batchId, int editCount) {
         if (player == null) return;
-        CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new DataBatchCommitPacket(batchId));
+        CHANNEL.sendToPlayer(player, new DataBatchCommitPacket(batchId));
         sendSaved(player);
     }
 
@@ -166,12 +196,12 @@ public final class TaczRecipeNetwork {
     }
 
     private static void sendSnapshot(ServerPlayer player) {
-        byte[] payload = NetworkCompressUtil.compress(TaczRecipeRuntime.combinedSnapshotJson());
+        byte[] payload = compress(TaczRecipeRuntime.combinedSnapshotJson());
         if (payload.length > MAX_COMPRESSED) {
             sendToast(player, Component.translatable("msg.taczworkshop.sync_too_large"));
             return;
         }
-        CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new SnapshotPacket(payload));
+        CHANNEL.sendToPlayer(player, new SnapshotPacket(payload));
     }
 
     private static void broadcastSnapshot(MinecraftServer server) {
@@ -183,9 +213,9 @@ public final class TaczRecipeNetwork {
 
     public static void sendRoutes(ServerPlayer player) {
         if (player == null) return;
-        byte[] payload = NetworkCompressUtil.compress(TaczRecipeRuntime.routeSnapshotJson());
+        byte[] payload = compress(TaczRecipeRuntime.routeSnapshotJson());
         if (payload.length > MAX_COMPRESSED) return;
-        CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new RouteSnapshotPacket(payload));
+        CHANNEL.sendToPlayer(player, new RouteSnapshotPacket(payload));
     }
 
     public static void broadcastRoutes(MinecraftServer server) {
@@ -195,344 +225,236 @@ public final class TaczRecipeNetwork {
 
     public static void sendDataList(ServerPlayer player) {
         if (player == null || !player.hasPermissions(2)) return;
-        byte[] payload = NetworkCompressUtil.compress(TaczRecipeCodec.GSON.toJson(TaczBaseDataCache.listSnapshot()));
+        byte[] payload = compress(TaczRecipeCodec.GSON.toJson(TaczBaseDataCache.listSnapshot()));
         if (payload.length > MAX_COMPRESSED) {
             sendToast(player, Component.translatable("msg.taczworkshop.sync_too_large"));
             return;
         }
-        CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new DataListPacket(payload));
+        CHANNEL.sendToPlayer(player, new DataListPacket(payload));
     }
 
     private static void sendDataDetail(ServerPlayer player, TaczDataKind kind, String id) {
         JsonObject detail = TaczBaseDataCache.detailSnapshot(kind, id);
-        byte[] payload = NetworkCompressUtil.compress(TaczRecipeCodec.GSON.toJson(detail));
+        byte[] payload = compress(TaczRecipeCodec.GSON.toJson(detail));
         if (payload.length > MAX_COMPRESSED) {
             sendToast(player, Component.translatable("msg.taczworkshop.sync_too_large"));
             return;
         }
-        CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new DataDetailPacket(payload));
+        CHANNEL.sendToPlayer(player, new DataDetailPacket(payload));
     }
 
-    public record OpenEditorPacket() {
-        public OpenEditorPacket(FriendlyByteBuf buf) {
-            this();
-        }
-
-        public void encode(FriendlyByteBuf buf) {
-        }
-
-        public void handle(Supplier<NetworkEvent.Context> context) {
-            context.get().enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> TaczClientHandler::openEditor));
-            context.get().setPacketHandled(true);
-        }
+    private static byte[] compress(String value) {
+        return KineticCompression.compressUtf8(value, Integer.MAX_VALUE);
     }
 
-    public record RequestSnapshotPacket() {
-        public RequestSnapshotPacket(FriendlyByteBuf buf) {
-            this();
-        }
-
-        public void encode(FriendlyByteBuf buf) {
-        }
-
-        public void handle(Supplier<NetworkEvent.Context> context) {
-            context.get().enqueueWork(() -> {
-                ServerPlayer player = context.get().getSender();
-                if (player != null && player.hasPermissions(2)) sendSnapshot(player);
-            });
-            context.get().setPacketHandled(true);
-        }
+    private static String decompress(byte[] payload) {
+        return KineticCompression.decompressUtf8(payload, MAX_DECOMPRESSED);
     }
 
-    public record SnapshotPacket(byte[] payload) {
-        public SnapshotPacket(FriendlyByteBuf buf) {
-            this(buf.readByteArray(MAX_COMPRESSED));
-        }
+    private static void handleRequestSnapshot(RequestSnapshotPacket packet, ServerPacketContext context) {
+        ServerPlayer player = context.sender();
+        if (player.hasPermissions(2)) sendSnapshot(player);
+    }
 
-        public void encode(FriendlyByteBuf buf) {
-            buf.writeByteArray(payload);
-        }
-
-        public void handle(Supplier<NetworkEvent.Context> context) {
-            context.get().enqueueWork(() -> {
-                String json = NetworkCompressUtil.decompress(payload, MAX_DECOMPRESSED);
-                DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> TaczClientHandler.handleSnapshot(json));
-            });
-            context.get().setPacketHandled(true);
+    private static void handleSaveRecord(SaveRecordPacket packet, ServerPacketContext context) {
+        ServerPlayer player = context.sender();
+        if (!player.hasPermissions(2)) return;
+        try {
+            String json = decompress(packet.payload());
+            TaczRecipeRecord record = TaczRecipeCodec.decodeRecord(json);
+            TaczRecipeStore.saveEdited(record);
+            TaczRecipeRuntime.applyAndSync(player.getServer());
+            broadcastSnapshot(player.getServer());
+            sendSaved(player);
+        } catch (Exception exception) {
+            TaczWorkshop.LOGGER.warn("Rejected recipe save from {}: {}", player.getGameProfile().getName(), safeMessage(exception));
+            sendToast(player, Component.translatable("msg.taczworkshop.save_failed"));
         }
     }
 
-    public record RouteSnapshotPacket(byte[] payload) {
-        public RouteSnapshotPacket(FriendlyByteBuf buf) {
-            this(buf.readByteArray(MAX_COMPRESSED));
-        }
-
-        public void encode(FriendlyByteBuf buf) {
-            buf.writeByteArray(payload);
-        }
-
-        public void handle(Supplier<NetworkEvent.Context> context) {
-            context.get().enqueueWork(() -> {
-                String json = NetworkCompressUtil.decompress(payload, MAX_DECOMPRESSED);
-                DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> TaczClientHandler.handleRoutes(json));
-            });
-            context.get().setPacketHandled(true);
+    private static void handleDeleteRecord(DeleteRecordPacket packet, ServerPacketContext context) {
+        ServerPlayer player = context.sender();
+        if (!player.hasPermissions(2)) return;
+        try {
+            UUID.fromString(packet.uuid());
+            if (TaczRecipeStore.delete(packet.uuid())) {
+                TaczRecipeRuntime.applyAndSync(player.getServer());
+                broadcastSnapshot(player.getServer());
+                sendSaved(player);
+            }
+        } catch (Exception exception) {
+            sendToast(player, Component.translatable("msg.taczworkshop.delete_failed"));
         }
     }
 
-    public record SaveRecordPacket(byte[] payload) {
-        public SaveRecordPacket(FriendlyByteBuf buf) {
-            this(buf.readByteArray(MAX_COMPRESSED));
+    private static void handleSetOriginalRecipeDisabled(SetOriginalRecipeDisabledPacket packet, ServerPacketContext context) {
+        ServerPlayer player = context.sender();
+        if (!player.hasPermissions(2)) return;
+        try {
+            TaczRecipeStore.setOriginalDisabled(packet.originalId(), packet.disabled());
+            TaczRecipeRuntime.applyAndSync(player.getServer());
+            broadcastSnapshot(player.getServer());
+            sendSaved(player);
+        } catch (Exception exception) {
+            TaczWorkshop.LOGGER.warn("Rejected original recipe state change from {}: {}", player.getGameProfile().getName(), safeMessage(exception));
+            sendToast(player, Component.translatable("msg.taczworkshop.save_failed"));
         }
+    }
 
-        public void encode(FriendlyByteBuf buf) {
-            buf.writeByteArray(payload);
+    private static void handleRestoreOriginalRecipe(RestoreOriginalRecipePacket packet, ServerPacketContext context) {
+        ServerPlayer player = context.sender();
+        if (!player.hasPermissions(2)) return;
+        try {
+            if (TaczRecipeStore.restoreOriginal(packet.originalId(), packet.replacementUuid())) {
+                TaczRecipeRuntime.applyAndSync(player.getServer());
+                broadcastSnapshot(player.getServer());
+                sendSaved(player);
+            }
+        } catch (Exception exception) {
+            TaczWorkshop.LOGGER.warn("Rejected original recipe restore from {}: {}", player.getGameProfile().getName(), safeMessage(exception));
+            sendToast(player, Component.translatable("msg.taczworkshop.save_failed"));
         }
+    }
 
-        public void handle(Supplier<NetworkEvent.Context> context) {
-            context.get().enqueueWork(() -> {
-                ServerPlayer player = context.get().getSender();
-                if (player == null || !player.hasPermissions(2)) return;
-                try {
-                    String json = NetworkCompressUtil.decompress(payload, MAX_DECOMPRESSED);
-                    TaczRecipeRecord record = TaczRecipeCodec.decodeRecord(json);
-                    TaczRecipeStore.saveEdited(record);
-                    TaczRecipeRuntime.applyAndSync(player.getServer());
-                    broadcastSnapshot(player.getServer());
-                    sendSaved(player);
-                } catch (Exception exception) {
-                    TaczWorkshop.LOGGER.warn("Rejected recipe save from {}: {}", player.getGameProfile().getName(), safeMessage(exception));
-                    sendToast(player, Component.translatable("msg.taczworkshop.save_failed"));
+    private static void handleRequestDataList(RequestDataListPacket packet, ServerPacketContext context) {
+        ServerPlayer player = context.sender();
+        if (player.hasPermissions(2)) sendDataList(player);
+    }
+
+    private static void handleRequestDataDetail(RequestDataDetailPacket packet, ServerPacketContext context) {
+        ServerPlayer player = context.sender();
+        if (!player.hasPermissions(2)) return;
+        try {
+            sendDataDetail(player, TaczDataKind.fromWire(packet.kind()), packet.id());
+        } catch (Exception exception) {
+            sendToast(player, Component.translatable("msg.taczworkshop.data_detail_failed"));
+        }
+    }
+
+    private static void handleSaveDataOverride(SaveDataOverridePacket packet, ServerPacketContext context) {
+        ServerPlayer player = context.sender();
+        if (!player.hasPermissions(2)) return;
+        try {
+            TaczDataKind parsedKind = TaczDataKind.fromWire(packet.kind());
+            String json = decompress(packet.payload());
+            JsonElement parsed = JsonParser.parseString(json);
+            if (!parsed.isJsonObject()) throw new IllegalArgumentException("Override data is not an object");
+            JsonObject data = parsed.getAsJsonObject();
+            validateTaczData(parsedKind, data);
+            TaczDataStore.upsert(new TaczDataOverride(parsedKind, packet.id(), packet.dataId(), packet.removed(), data));
+            sendSaved(player);
+            sendDataList(player);
+            TaczDataRuntime.reloadTaczData();
+        } catch (Exception exception) {
+            TaczWorkshop.LOGGER.warn("Rejected TACZ data save from {}: {}", player.getGameProfile().getName(), safeMessage(exception));
+            sendToast(player, Component.translatable("msg.taczworkshop.data_save_failed"));
+        }
+    }
+
+    private static void handleResetDataOverride(ResetDataOverridePacket packet, ServerPacketContext context) {
+        ServerPlayer player = context.sender();
+        if (!player.hasPermissions(2)) return;
+        try {
+            TaczDataKind parsedKind = TaczDataKind.fromWire(packet.kind());
+            TaczDataStore.reset(parsedKind, packet.id());
+            sendSaved(player);
+            sendDataList(player);
+            TaczDataRuntime.reloadTaczData();
+        } catch (Exception exception) {
+            sendToast(player, Component.translatable("msg.taczworkshop.data_reset_failed"));
+        }
+    }
+
+    private static void handleSetDataRemoved(SetDataRemovedPacket packet, ServerPacketContext context) {
+        ServerPlayer player = context.sender();
+        if (!player.hasPermissions(2)) return;
+        try {
+            TaczDataKind parsedKind = TaczDataKind.fromWire(packet.kind());
+            TaczDataOverride existing = TaczDataStore.get(parsedKind, packet.id());
+            if (packet.removed()) {
+                if (existing == null) {
+                    TaczDataStore.upsert(new TaczDataOverride(parsedKind, packet.id(), "", true, null));
+                } else {
+                    TaczDataStore.upsert(new TaczDataOverride(parsedKind, packet.id(), existing.dataId(), true, existing.data()));
                 }
-            });
-            context.get().setPacketHandled(true);
+            } else if (existing != null) {
+                if (existing.data() == null) {
+                    TaczDataStore.reset(parsedKind, packet.id());
+                } else {
+                    TaczDataStore.upsert(new TaczDataOverride(parsedKind, packet.id(), existing.dataId(), false, existing.data()));
+                }
+            }
+            sendSaved(player);
+            sendDataList(player);
+            TaczDataRuntime.reloadTaczData();
+        } catch (Exception exception) {
+            TaczWorkshop.LOGGER.warn("Rejected TACZ disabled-state change from {}: {}", player.getGameProfile().getName(), safeMessage(exception));
+            sendToast(player, Component.translatable("msg.taczworkshop.data_save_failed"));
         }
     }
 
-    public record DeleteRecordPacket(String uuid) {
-        public DeleteRecordPacket(FriendlyByteBuf buf) {
-            this(buf.readUtf(64));
-        }
+    private static void handleSaveDataBatch(SaveDataBatchPacket packet, ServerPacketContext context) {
+        ServerPlayer player = context.sender();
+        if (!player.hasPermissions(2)) return;
+        try {
+            String json = decompress(packet.payload());
+            JsonElement parsed = JsonParser.parseString(json);
+            if (!parsed.isJsonObject()) throw new IllegalArgumentException("Batch payload is not an object");
+            JsonObject root = parsed.getAsJsonObject();
+            long batchId = root.has("batch_id") && root.get("batch_id").isJsonPrimitive() ? root.get("batch_id").getAsLong() : 0L;
+            if (batchId <= 0L) throw new IllegalArgumentException("Invalid data batch id");
+            JsonArray edits = root.has("edits") && root.get("edits").isJsonArray() ? root.getAsJsonArray("edits") : new JsonArray();
+            if (edits.size() > 4096) throw new IllegalArgumentException("Too many data edits");
+            if (!TaczDataRuntime.canStartBatchReload()) throw new IllegalStateException("A server reload is already pending");
 
-        public void encode(FriendlyByteBuf buf) {
-            buf.writeUtf(uuid, 64);
-        }
-
-        public void handle(Supplier<NetworkEvent.Context> context) {
-            context.get().enqueueWork(() -> {
-                ServerPlayer player = context.get().getSender();
-                if (player == null || !player.hasPermissions(2)) return;
-                try {
-                    UUID.fromString(uuid);
-                    if (TaczRecipeStore.delete(uuid)) {
-                        TaczRecipeRuntime.applyAndSync(player.getServer());
-                        broadcastSnapshot(player.getServer());
-                        sendSaved(player);
+            Map<TaczDataKind, Map<String, TaczDataOverride>> previous = TaczDataStore.snapshot();
+            Map<TaczDataKind, Map<String, TaczDataOverride>> next = TaczDataStore.snapshot();
+            for (JsonElement element : edits) {
+                if (!element.isJsonObject()) throw new IllegalArgumentException("Invalid data edit");
+                JsonObject edit = element.getAsJsonObject();
+                TaczDataKind kind = TaczDataKind.fromWire(readString(edit, "kind"));
+                String id = TaczDataCodec.normalizeId(readString(edit, "id"));
+                String op = readString(edit, "op");
+                if ("reset".equals(op)) {
+                    next.get(kind).remove(id);
+                    continue;
+                }
+                if ("removed".equals(op)) {
+                    boolean removed = edit.has("removed") && edit.get("removed").isJsonPrimitive() && edit.get("removed").getAsBoolean();
+                    TaczDataOverride existing = next.get(kind).get(id);
+                    if (removed) {
+                        if (existing == null) next.get(kind).put(id, new TaczDataOverride(kind, id, "", true, null));
+                        else next.get(kind).put(id, new TaczDataOverride(kind, id, existing.dataId(), true, existing.data()));
+                    } else if (existing != null) {
+                        if (existing.data() == null) next.get(kind).remove(id);
+                        else next.get(kind).put(id, new TaczDataOverride(kind, id, existing.dataId(), false, existing.data()));
                     }
-                } catch (Exception exception) {
-                    sendToast(player, Component.translatable("msg.taczworkshop.delete_failed"));
+                    continue;
                 }
-            });
-            context.get().setPacketHandled(true);
-        }
-    }
+                if (!"override".equals(op)) throw new IllegalArgumentException("Unknown data edit operation");
+                if (!edit.has("data") || !edit.get("data").isJsonObject()) throw new IllegalArgumentException("Missing override data");
+                JsonObject data = edit.getAsJsonObject("data");
+                validateTaczData(kind, data);
+                String dataId = readString(edit, "data_id");
+                if (kind.usesInlineData() && dataId.isBlank()) dataId = id;
+                boolean removed = edit.has("removed") && edit.get("removed").isJsonPrimitive() && edit.get("removed").getAsBoolean();
+                next.get(kind).put(id, new TaczDataOverride(kind, id, dataId, removed, data));
+            }
 
-    public record SetOriginalRecipeDisabledPacket(String originalId, boolean disabled) {
-        public SetOriginalRecipeDisabledPacket(FriendlyByteBuf buf) {
-            this(buf.readUtf(512), buf.readBoolean());
-        }
-
-        public void encode(FriendlyByteBuf buf) {
-            buf.writeUtf(originalId, 512);
-            buf.writeBoolean(disabled);
-        }
-
-        public void handle(Supplier<NetworkEvent.Context> context) {
-            context.get().enqueueWork(() -> {
-                ServerPlayer player = context.get().getSender();
-                if (player == null || !player.hasPermissions(2)) return;
+            TaczDataStore.replaceAll(next);
+            try {
+                TaczDataRuntime.requestDataBatchReload(player, batchId, edits.size());
+            } catch (Exception reloadException) {
                 try {
-                    TaczRecipeStore.setOriginalDisabled(originalId, disabled);
-                    TaczRecipeRuntime.applyAndSync(player.getServer());
-                    broadcastSnapshot(player.getServer());
-                    sendSaved(player);
-                } catch (Exception exception) {
-                    TaczWorkshop.LOGGER.warn("Rejected original recipe state change from {}: {}", player.getGameProfile().getName(), safeMessage(exception));
-                    sendToast(player, Component.translatable("msg.taczworkshop.save_failed"));
+                    TaczDataStore.replaceAll(previous);
+                } catch (Exception rollbackException) {
+                    reloadException.addSuppressed(rollbackException);
                 }
-            });
-            context.get().setPacketHandled(true);
-        }
-    }
-
-    public record RestoreOriginalRecipePacket(String originalId, String replacementUuid) {
-        public RestoreOriginalRecipePacket(FriendlyByteBuf buf) {
-            this(buf.readUtf(512), buf.readUtf(64));
-        }
-
-        public void encode(FriendlyByteBuf buf) {
-            buf.writeUtf(originalId, 512);
-            buf.writeUtf(replacementUuid, 64);
-        }
-
-        public void handle(Supplier<NetworkEvent.Context> context) {
-            context.get().enqueueWork(() -> {
-                ServerPlayer player = context.get().getSender();
-                if (player == null || !player.hasPermissions(2)) return;
-                try {
-                    if (TaczRecipeStore.restoreOriginal(originalId, replacementUuid)) {
-                        TaczRecipeRuntime.applyAndSync(player.getServer());
-                        broadcastSnapshot(player.getServer());
-                        sendSaved(player);
-                    }
-                } catch (Exception exception) {
-                    TaczWorkshop.LOGGER.warn("Rejected original recipe restore from {}: {}", player.getGameProfile().getName(), safeMessage(exception));
-                    sendToast(player, Component.translatable("msg.taczworkshop.save_failed"));
-                }
-            });
-            context.get().setPacketHandled(true);
-        }
-    }
-
-    public record RequestDataListPacket() {
-        public RequestDataListPacket(FriendlyByteBuf buf) {
-            this();
-        }
-
-        public void encode(FriendlyByteBuf buf) {
-        }
-
-        public void handle(Supplier<NetworkEvent.Context> context) {
-            context.get().enqueueWork(() -> {
-                ServerPlayer player = context.get().getSender();
-                if (player != null && player.hasPermissions(2)) sendDataList(player);
-            });
-            context.get().setPacketHandled(true);
-        }
-    }
-
-    public record DataListPacket(byte[] payload) {
-        public DataListPacket(FriendlyByteBuf buf) {
-            this(buf.readByteArray(MAX_COMPRESSED));
-        }
-
-        public void encode(FriendlyByteBuf buf) {
-            buf.writeByteArray(payload);
-        }
-
-        public void handle(Supplier<NetworkEvent.Context> context) {
-            context.get().enqueueWork(() -> {
-                String json = NetworkCompressUtil.decompress(payload, MAX_DECOMPRESSED);
-                DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> TaczClientHandler.handleDataList(json));
-            });
-            context.get().setPacketHandled(true);
-        }
-    }
-
-    public record RequestDataDetailPacket(String kind, String id) {
-        public RequestDataDetailPacket(FriendlyByteBuf buf) {
-            this(buf.readUtf(16), buf.readUtf(256));
-        }
-
-        public void encode(FriendlyByteBuf buf) {
-            buf.writeUtf(kind, 16);
-            buf.writeUtf(id, 256);
-        }
-
-        public void handle(Supplier<NetworkEvent.Context> context) {
-            context.get().enqueueWork(() -> {
-                ServerPlayer player = context.get().getSender();
-                if (player == null || !player.hasPermissions(2)) return;
-                try {
-                    sendDataDetail(player, TaczDataKind.fromWire(kind), id);
-                } catch (Exception exception) {
-                    sendToast(player, Component.translatable("msg.taczworkshop.data_detail_failed"));
-                }
-            });
-            context.get().setPacketHandled(true);
-        }
-    }
-
-    public record DataDetailPacket(byte[] payload) {
-        public DataDetailPacket(FriendlyByteBuf buf) {
-            this(buf.readByteArray(MAX_COMPRESSED));
-        }
-
-        public void encode(FriendlyByteBuf buf) {
-            buf.writeByteArray(payload);
-        }
-
-        public void handle(Supplier<NetworkEvent.Context> context) {
-            context.get().enqueueWork(() -> {
-                String json = NetworkCompressUtil.decompress(payload, MAX_DECOMPRESSED);
-                DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> TaczClientHandler.handleDataDetail(json));
-            });
-            context.get().setPacketHandled(true);
-        }
-    }
-
-    public record SaveDataOverridePacket(String kind, String id, String dataId, boolean removed, byte[] payload) {
-        public SaveDataOverridePacket(FriendlyByteBuf buf) {
-            this(buf.readUtf(16), buf.readUtf(256), buf.readUtf(256), buf.readBoolean(), buf.readByteArray(MAX_COMPRESSED));
-        }
-
-        public void encode(FriendlyByteBuf buf) {
-            buf.writeUtf(kind, 16);
-            buf.writeUtf(id, 256);
-            buf.writeUtf(dataId, 256);
-            buf.writeBoolean(removed);
-            buf.writeByteArray(payload);
-        }
-
-        public void handle(Supplier<NetworkEvent.Context> context) {
-            context.get().enqueueWork(() -> {
-                ServerPlayer player = context.get().getSender();
-                if (player == null || !player.hasPermissions(2)) return;
-                try {
-                    TaczDataKind parsedKind = TaczDataKind.fromWire(kind);
-                    String json = NetworkCompressUtil.decompress(payload, MAX_DECOMPRESSED);
-                    JsonElement parsed = JsonParser.parseString(json);
-                    if (!parsed.isJsonObject()) throw new IllegalArgumentException("Override data is not an object");
-                    JsonObject data = parsed.getAsJsonObject();
-                    validateTaczData(parsedKind, data);
-                    TaczDataStore.upsert(new TaczDataOverride(parsedKind, id, dataId, removed, data));
-                    sendSaved(player);
-                    sendDataList(player);
-                    TaczDataRuntime.reloadTaczData();
-                } catch (Exception exception) {
-                    TaczWorkshop.LOGGER.warn("Rejected TACZ data save from {}: {}", player.getGameProfile().getName(), safeMessage(exception));
-                    sendToast(player, Component.translatable("msg.taczworkshop.data_save_failed"));
-                }
-            });
-            context.get().setPacketHandled(true);
-        }
-    }
-
-    public record ResetDataOverridePacket(String kind, String id) {
-        public ResetDataOverridePacket(FriendlyByteBuf buf) {
-            this(buf.readUtf(16), buf.readUtf(256));
-        }
-
-        public void encode(FriendlyByteBuf buf) {
-            buf.writeUtf(kind, 16);
-            buf.writeUtf(id, 256);
-        }
-
-        public void handle(Supplier<NetworkEvent.Context> context) {
-            context.get().enqueueWork(() -> {
-                ServerPlayer player = context.get().getSender();
-                if (player == null || !player.hasPermissions(2)) return;
-                try {
-                    TaczDataKind parsedKind = TaczDataKind.fromWire(kind);
-                    TaczDataStore.reset(parsedKind, id);
-                    sendSaved(player);
-                    sendDataList(player);
-                    TaczDataRuntime.reloadTaczData();
-                } catch (Exception exception) {
-                    sendToast(player, Component.translatable("msg.taczworkshop.data_reset_failed"));
-                }
-            });
-            context.get().setPacketHandled(true);
+                throw reloadException;
+            }
+        } catch (Exception exception) {
+            TaczWorkshop.LOGGER.warn("Rejected TACZ data batch save from {}: {}", player.getGameProfile().getName(), safeMessage(exception));
+            sendToast(player, Component.translatable("msg.taczworkshop.data_save_failed"));
         }
     }
 
@@ -547,157 +469,6 @@ public final class TaczRecipeNetwork {
         }
     }
 
-    public record SetDataRemovedPacket(String kind, String id, boolean removed) {
-        public SetDataRemovedPacket(FriendlyByteBuf buf) {
-            this(buf.readUtf(16), buf.readUtf(256), buf.readBoolean());
-        }
-
-        public void encode(FriendlyByteBuf buf) {
-            buf.writeUtf(kind, 16);
-            buf.writeUtf(id, 256);
-            buf.writeBoolean(removed);
-        }
-
-        public void handle(Supplier<NetworkEvent.Context> context) {
-            context.get().enqueueWork(() -> {
-                ServerPlayer player = context.get().getSender();
-                if (player == null || !player.hasPermissions(2)) return;
-                try {
-                    TaczDataKind parsedKind = TaczDataKind.fromWire(kind);
-                    TaczDataOverride existing = TaczDataStore.get(parsedKind, id);
-                    if (removed) {
-                        if (existing == null) {
-                            TaczDataStore.upsert(new TaczDataOverride(parsedKind, id, "", true, null));
-                        } else {
-                            TaczDataStore.upsert(new TaczDataOverride(parsedKind, id, existing.dataId(), true, existing.data()));
-                        }
-                    } else if (existing != null) {
-                        if (existing.data() == null) {
-                            TaczDataStore.reset(parsedKind, id);
-                        } else {
-                            TaczDataStore.upsert(new TaczDataOverride(parsedKind, id, existing.dataId(), false, existing.data()));
-                        }
-                    }
-                    sendSaved(player);
-                    sendDataList(player);
-                    TaczDataRuntime.reloadTaczData();
-                } catch (Exception exception) {
-                    TaczWorkshop.LOGGER.warn("Rejected TACZ disabled-state change from {}: {}", player.getGameProfile().getName(), safeMessage(exception));
-                    sendToast(player, Component.translatable("msg.taczworkshop.data_save_failed"));
-                }
-            });
-            context.get().setPacketHandled(true);
-        }
-    }
-
-    public record SaveDataBatchPacket(byte[] payload) {
-        public SaveDataBatchPacket(FriendlyByteBuf buf) {
-            this(buf.readByteArray(MAX_COMPRESSED));
-        }
-
-        public void encode(FriendlyByteBuf buf) {
-            buf.writeByteArray(payload);
-        }
-
-        public void handle(Supplier<NetworkEvent.Context> context) {
-            context.get().enqueueWork(() -> {
-                ServerPlayer player = context.get().getSender();
-                if (player == null || !player.hasPermissions(2)) return;
-                try {
-                    String json = NetworkCompressUtil.decompress(payload, MAX_DECOMPRESSED);
-                    JsonElement parsed = JsonParser.parseString(json);
-                    if (!parsed.isJsonObject()) throw new IllegalArgumentException("Batch payload is not an object");
-                    JsonObject root = parsed.getAsJsonObject();
-                    long batchId = root.has("batch_id") && root.get("batch_id").isJsonPrimitive() ? root.get("batch_id").getAsLong() : 0L;
-                    if (batchId <= 0L) throw new IllegalArgumentException("Invalid data batch id");
-                    JsonArray edits = root.has("edits") && root.get("edits").isJsonArray() ? root.getAsJsonArray("edits") : new JsonArray();
-                    if (edits.size() > 4096) throw new IllegalArgumentException("Too many data edits");
-                    if (!TaczDataRuntime.canStartBatchReload()) throw new IllegalStateException("A server reload is already pending");
-
-                    Map<TaczDataKind, Map<String, TaczDataOverride>> previous = TaczDataStore.snapshot();
-                    Map<TaczDataKind, Map<String, TaczDataOverride>> next = TaczDataStore.snapshot();
-                    for (JsonElement element : edits) {
-                        if (!element.isJsonObject()) throw new IllegalArgumentException("Invalid data edit");
-                        JsonObject edit = element.getAsJsonObject();
-                        TaczDataKind kind = TaczDataKind.fromWire(readString(edit, "kind"));
-                        String id = TaczDataCodec.normalizeId(readString(edit, "id"));
-                        String op = readString(edit, "op");
-                        if ("reset".equals(op)) {
-                            next.get(kind).remove(id);
-                            continue;
-                        }
-                        if ("removed".equals(op)) {
-                            boolean removed = edit.has("removed") && edit.get("removed").isJsonPrimitive() && edit.get("removed").getAsBoolean();
-                            TaczDataOverride existing = next.get(kind).get(id);
-                            if (removed) {
-                                if (existing == null) next.get(kind).put(id, new TaczDataOverride(kind, id, "", true, null));
-                                else next.get(kind).put(id, new TaczDataOverride(kind, id, existing.dataId(), true, existing.data()));
-                            } else if (existing != null) {
-                                if (existing.data() == null) next.get(kind).remove(id);
-                                else next.get(kind).put(id, new TaczDataOverride(kind, id, existing.dataId(), false, existing.data()));
-                            }
-                            continue;
-                        }
-                        if (!"override".equals(op)) throw new IllegalArgumentException("Unknown data edit operation");
-                        if (!edit.has("data") || !edit.get("data").isJsonObject()) throw new IllegalArgumentException("Missing override data");
-                        JsonObject data = edit.getAsJsonObject("data");
-                        validateTaczData(kind, data);
-                        String dataId = readString(edit, "data_id");
-                        if (kind.usesInlineData() && dataId.isBlank()) dataId = id;
-                        boolean removed = edit.has("removed") && edit.get("removed").isJsonPrimitive() && edit.get("removed").getAsBoolean();
-                        next.get(kind).put(id, new TaczDataOverride(kind, id, dataId, removed, data));
-                    }
-
-                    TaczDataStore.replaceAll(next);
-                    try {
-                        TaczDataRuntime.requestDataBatchReload(player, batchId, edits.size());
-                    } catch (Exception reloadException) {
-                        try {
-                            TaczDataStore.replaceAll(previous);
-                        } catch (Exception rollbackException) {
-                            reloadException.addSuppressed(rollbackException);
-                        }
-                        throw reloadException;
-                    }
-                } catch (Exception exception) {
-                    TaczWorkshop.LOGGER.warn("Rejected TACZ data batch save from {}: {}", player.getGameProfile().getName(), safeMessage(exception));
-                    sendToast(player, Component.translatable("msg.taczworkshop.data_save_failed"));
-                }
-            });
-            context.get().setPacketHandled(true);
-        }
-    }
-
-    public record DataBatchCommitPacket(long batchId) {
-        public DataBatchCommitPacket(FriendlyByteBuf buf) {
-            this(buf.readLong());
-        }
-
-        public void encode(FriendlyByteBuf buf) {
-            buf.writeLong(batchId);
-        }
-
-        public void handle(Supplier<NetworkEvent.Context> context) {
-            context.get().enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> TaczClientHandler.handleDataBatchCommit(batchId)));
-            context.get().setPacketHandled(true);
-        }
-    }
-
-    public record ToastPacket(Component message) {
-        public ToastPacket(FriendlyByteBuf buf) {
-            this(buf.readComponent());
-        }
-
-        public void encode(FriendlyByteBuf buf) {
-            buf.writeComponent(message);
-        }
-
-        public void handle(Supplier<NetworkEvent.Context> context) {
-            context.get().enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> TaczClientHandler.handleToast(message)));
-            context.get().setPacketHandled(true);
-        }
-    }
-
     private static String readString(JsonObject object, String key) {
         if (object == null || !object.has(key) || !object.get(key).isJsonPrimitive()) return "";
         return object.get(key).getAsString().trim();
@@ -709,21 +480,106 @@ public final class TaczRecipeNetwork {
         return message == null || message.isBlank() ? throwable.getClass().getSimpleName() : message;
     }
 
-    public record SavedPacket() {
-        public SavedPacket(FriendlyByteBuf buf) {
-            this();
-        }
+    public record OpenEditorPacket() {
+        private OpenEditorPacket(NetworkBuffer buffer) { this(); }
+        private void encode(NetworkBuffer buffer) { }
+    }
 
-        public void encode(FriendlyByteBuf buf) {
-        }
+    public record RequestSnapshotPacket() {
+        private RequestSnapshotPacket(NetworkBuffer buffer) { this(); }
+        private void encode(NetworkBuffer buffer) { }
+    }
 
-        public void handle(Supplier<NetworkEvent.Context> context) {
-            context.get().enqueueWork(() -> DistExecutor.unsafeRunWhenOn(
-                    Dist.CLIENT,
-                    () -> TaczClientHandler::handleSaved
-            ));
-            context.get().setPacketHandled(true);
+    public record SnapshotPacket(byte[] payload) {
+        private SnapshotPacket(NetworkBuffer buffer) { this(buffer.readByteArray(MAX_COMPRESSED)); }
+        private void encode(NetworkBuffer buffer) { buffer.writeByteArray(payload, MAX_COMPRESSED); }
+    }
+
+    public record RouteSnapshotPacket(byte[] payload) {
+        private RouteSnapshotPacket(NetworkBuffer buffer) { this(buffer.readByteArray(MAX_COMPRESSED)); }
+        private void encode(NetworkBuffer buffer) { buffer.writeByteArray(payload, MAX_COMPRESSED); }
+    }
+
+    public record SaveRecordPacket(byte[] payload) {
+        private SaveRecordPacket(NetworkBuffer buffer) { this(buffer.readByteArray(MAX_COMPRESSED)); }
+        private void encode(NetworkBuffer buffer) { buffer.writeByteArray(payload, MAX_COMPRESSED); }
+    }
+
+    public record DeleteRecordPacket(String uuid) {
+        private DeleteRecordPacket(NetworkBuffer buffer) { this(buffer.readUtf(64)); }
+        private void encode(NetworkBuffer buffer) { buffer.writeUtf(uuid, 64); }
+    }
+
+    public record SetOriginalRecipeDisabledPacket(String originalId, boolean disabled) {
+        private SetOriginalRecipeDisabledPacket(NetworkBuffer buffer) { this(buffer.readUtf(512), buffer.readBoolean()); }
+        private void encode(NetworkBuffer buffer) { buffer.writeUtf(originalId, 512); buffer.writeBoolean(disabled); }
+    }
+
+    public record RestoreOriginalRecipePacket(String originalId, String replacementUuid) {
+        private RestoreOriginalRecipePacket(NetworkBuffer buffer) { this(buffer.readUtf(512), buffer.readUtf(64)); }
+        private void encode(NetworkBuffer buffer) { buffer.writeUtf(originalId, 512); buffer.writeUtf(replacementUuid, 64); }
+    }
+
+    public record RequestDataListPacket() {
+        private RequestDataListPacket(NetworkBuffer buffer) { this(); }
+        private void encode(NetworkBuffer buffer) { }
+    }
+
+    public record DataListPacket(byte[] payload) {
+        private DataListPacket(NetworkBuffer buffer) { this(buffer.readByteArray(MAX_COMPRESSED)); }
+        private void encode(NetworkBuffer buffer) { buffer.writeByteArray(payload, MAX_COMPRESSED); }
+    }
+
+    public record RequestDataDetailPacket(String kind, String id) {
+        private RequestDataDetailPacket(NetworkBuffer buffer) { this(buffer.readUtf(16), buffer.readUtf(256)); }
+        private void encode(NetworkBuffer buffer) { buffer.writeUtf(kind, 16); buffer.writeUtf(id, 256); }
+    }
+
+    public record DataDetailPacket(byte[] payload) {
+        private DataDetailPacket(NetworkBuffer buffer) { this(buffer.readByteArray(MAX_COMPRESSED)); }
+        private void encode(NetworkBuffer buffer) { buffer.writeByteArray(payload, MAX_COMPRESSED); }
+    }
+
+    public record SaveDataOverridePacket(String kind, String id, String dataId, boolean removed, byte[] payload) {
+        private SaveDataOverridePacket(NetworkBuffer buffer) {
+            this(buffer.readUtf(16), buffer.readUtf(256), buffer.readUtf(256), buffer.readBoolean(), buffer.readByteArray(MAX_COMPRESSED));
+        }
+        private void encode(NetworkBuffer buffer) {
+            buffer.writeUtf(kind, 16);
+            buffer.writeUtf(id, 256);
+            buffer.writeUtf(dataId, 256);
+            buffer.writeBoolean(removed);
+            buffer.writeByteArray(payload, MAX_COMPRESSED);
         }
     }
 
+    public record ResetDataOverridePacket(String kind, String id) {
+        private ResetDataOverridePacket(NetworkBuffer buffer) { this(buffer.readUtf(16), buffer.readUtf(256)); }
+        private void encode(NetworkBuffer buffer) { buffer.writeUtf(kind, 16); buffer.writeUtf(id, 256); }
+    }
+
+    public record SetDataRemovedPacket(String kind, String id, boolean removed) {
+        private SetDataRemovedPacket(NetworkBuffer buffer) { this(buffer.readUtf(16), buffer.readUtf(256), buffer.readBoolean()); }
+        private void encode(NetworkBuffer buffer) { buffer.writeUtf(kind, 16); buffer.writeUtf(id, 256); buffer.writeBoolean(removed); }
+    }
+
+    public record ToastPacket(Component message) {
+        private ToastPacket(NetworkBuffer buffer) { this(buffer.readComponent()); }
+        private void encode(NetworkBuffer buffer) { buffer.writeComponent(message); }
+    }
+
+    public record SaveDataBatchPacket(byte[] payload) {
+        private SaveDataBatchPacket(NetworkBuffer buffer) { this(buffer.readByteArray(MAX_COMPRESSED)); }
+        private void encode(NetworkBuffer buffer) { buffer.writeByteArray(payload, MAX_COMPRESSED); }
+    }
+
+    public record DataBatchCommitPacket(long batchId) {
+        private DataBatchCommitPacket(NetworkBuffer buffer) { this(buffer.readLong()); }
+        private void encode(NetworkBuffer buffer) { buffer.writeLong(batchId); }
+    }
+
+    public record SavedPacket() {
+        private SavedPacket(NetworkBuffer buffer) { this(); }
+        private void encode(NetworkBuffer buffer) { }
+    }
 }

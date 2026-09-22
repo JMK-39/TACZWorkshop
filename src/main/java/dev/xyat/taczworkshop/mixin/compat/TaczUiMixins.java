@@ -1,6 +1,6 @@
 package dev.xyat.taczworkshop.mixin.compat;
 
-import dev.xyat.kineticcore.api.client.overlay.GuiOverlay;
+import dev.xyat.kineticcore.api.client.overlay.KineticOverlays;
 import com.tacz.guns.api.TimelessAPI;
 import com.tacz.guns.api.DefaultAssets;
 import com.tacz.guns.config.sync.SyncConfig;
@@ -20,7 +20,7 @@ import com.tacz.guns.resource.pojo.data.block.TabConfig;
 import com.tacz.guns.resource.pojo.data.gun.GunData;
 import com.tacz.guns.util.AllowAttachmentTagMatcher;
 import dev.xyat.taczworkshop.client.TaczRouteClientState;
-import net.minecraft.client.Minecraft;
+import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
@@ -79,8 +79,8 @@ public final class TaczUiMixins {
 
         @Inject(method = "classifyRecipes", at = @At("RETURN"))
         private void taczworkshop_tacz$addRoutedRecipes(CallbackInfo ci) {
-            Minecraft minecraft = Minecraft.getInstance();
-            if (minecraft.level == null) return;
+            var level = KineticClientRuntime.currentLevel();
+            if (level == null) return;
             GunSmithTableScreen screen = (GunSmithTableScreen) (Object) this;
             ResourceLocation blockId = screen.getMenu().getBlockId();
             if (blockId == null) return;
@@ -95,7 +95,7 @@ public final class TaczUiMixins {
                     .orElse(List.of());
             if (tabs.isEmpty()) return;
 
-            RecipeManager manager = minecraft.level.getRecipeManager();
+            RecipeManager manager = level.getRecipeManager();
             Set<String> namespaces = filterList == null ? null : filterList.namespaceList();
 
             recipes.values().forEach(list -> list.removeIf(recipeId ->
@@ -132,7 +132,7 @@ public final class TaczUiMixins {
         private void taczworkshop_tacz$renderIngredient(GuiGraphics graphics, ItemStack stack, int x, int y) {
             graphics.renderItem(stack, x, y);
             if (taczworkshop_tacz$mousePos[0] >= x && taczworkshop_tacz$mousePos[0] <= x + 16 && taczworkshop_tacz$mousePos[1] >= y && taczworkshop_tacz$mousePos[1] <= y + 16) {
-                GuiOverlay.requestItemTooltip(stack, taczworkshop_tacz$mousePos[0], taczworkshop_tacz$mousePos[1]);
+                KineticOverlays.requestItemTooltip(stack, taczworkshop_tacz$mousePos[0], taczworkshop_tacz$mousePos[1]);
             }
         }
 
@@ -152,7 +152,7 @@ public final class TaczUiMixins {
 
         @Redirect(method = "lambda$addText$5", at = @At(value = "INVOKE", target = "Lcom/tacz/guns/api/modifier/JsonProperty;getComponents()Ljava/util/List;"))
         private List<Component> taczworkshop_tacz$modifyAttachmentDetail(JsonProperty<?> value) {
-            LocalPlayer player = Minecraft.getInstance().player;
+            LocalPlayer player = KineticClientRuntime.localPlayer();
             if (player == null) return value.getComponents();
             ItemStack gunItem = player.getMainHandItem().copy();
             IGun gun = IGun.getIGunOrNull(gunItem);

@@ -7,7 +7,7 @@ import dev.xyat.taczworkshop.TaczWorkshop;
 import dev.xyat.taczworkshop.data.TaczDataCodec;
 import dev.xyat.taczworkshop.data.TaczDataKind;
 import dev.xyat.taczworkshop.data.TaczDataOverride;
-import net.minecraftforge.fml.loading.FMLPaths;
+import dev.xyat.kineticcore.api.runtime.KineticPaths;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -17,7 +17,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.Map;
 
 public final class TaczDataStore {
-    private static final Path DIRECTORY = FMLPaths.CONFIGDIR.get().resolve("kineticcore");
+    private static final Path DIRECTORY = KineticPaths.configDirectory().resolve("kineticcore");
     private static final Path FILE = DIRECTORY.resolve("taczdata.json");
     private static final Path BACKUP = DIRECTORY.resolve("taczdata.json.bak");
     private static Map<TaczDataKind, Map<String, TaczDataOverride>> cache = TaczDataCodec.emptyMap();

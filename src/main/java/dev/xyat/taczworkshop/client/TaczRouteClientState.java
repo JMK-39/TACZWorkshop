@@ -1,5 +1,6 @@
 package dev.xyat.taczworkshop.client;
 
+import dev.xyat.kineticcore.api.resource.KineticResourceIds;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -21,12 +22,12 @@ public final class TaczRouteClientState {
         if (!parsed.isJsonObject()) return;
         Map<ResourceLocation, Set<ResourceLocation>> next = new HashMap<>();
         for (Map.Entry<String, JsonElement> entry : parsed.getAsJsonObject().entrySet()) {
-            ResourceLocation recipeId = ResourceLocation.tryParse(entry.getKey());
+            ResourceLocation recipeId = KineticResourceIds.tryParse(entry.getKey());
             if (recipeId == null || !entry.getValue().isJsonArray()) continue;
             Set<ResourceLocation> workbenches = new HashSet<>();
             for (JsonElement value : entry.getValue().getAsJsonArray()) {
                 if (!value.isJsonPrimitive()) continue;
-                ResourceLocation blockId = ResourceLocation.tryParse(value.getAsString());
+                ResourceLocation blockId = KineticResourceIds.tryParse(value.getAsString());
                 if (blockId != null) workbenches.add(blockId);
             }
             if (!workbenches.isEmpty()) next.put(recipeId, Set.copyOf(workbenches));

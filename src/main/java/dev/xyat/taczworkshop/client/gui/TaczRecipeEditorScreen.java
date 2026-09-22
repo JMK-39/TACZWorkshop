@@ -1,7 +1,10 @@
 package dev.xyat.taczworkshop.client.gui;
 
+import dev.xyat.kineticcore.api.client.input.KineticMouseButtons;
+import dev.xyat.kineticcore.api.resource.KineticResourceIds;
+import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import dev.xyat.kineticcore.api.client.text.KineticText;
-import dev.xyat.kineticcore.api.client.overlay.GuiOverlay;
+import dev.xyat.kineticcore.api.client.overlay.KineticOverlays;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -9,12 +12,10 @@ import com.tacz.guns.api.TimelessAPI;
 import com.tacz.guns.api.item.builder.BlockItemBuilder;
 import com.tacz.guns.init.ModItems;
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
-import dev.xyat.kineticcore.api.client.search.ItemSearchIndex;
-import dev.xyat.kineticcore.api.client.selector.ItemSelectorScreen;
+import dev.xyat.kineticcore.api.client.selector.KineticSelectors;
 import dev.xyat.kineticcore.api.client.screen.KineticScreen;
-import dev.xyat.kineticcore.api.client.widget.KineticWidgets.GridScrollController;
-import dev.xyat.kineticcore.api.client.selector.NbtEditorScreen;
-import dev.xyat.kineticcore.api.client.widget.KineticWidgets.NumericEditBox;
+import dev.xyat.kineticcore.api.client.widget.scroll.KineticScroll.GridScrollController;
+import dev.xyat.kineticcore.api.client.widget.input.KineticNumericFields.NumericEditBox;
 import dev.xyat.taczworkshop.client.TaczDataClientState;
 import dev.xyat.taczworkshop.client.TaczDataListEntry;
 import dev.xyat.taczworkshop.client.TaczDataStackUtil;
@@ -26,17 +27,16 @@ import dev.xyat.taczworkshop.data.TaczRecipeCodec;
 import dev.xyat.taczworkshop.data.TaczRecipeRecord;
 import dev.xyat.taczworkshop.network.TaczRecipeNetwork;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.EditBox;
+import dev.xyat.kineticcore.api.client.widget.button.KineticButtons.HighZButton;
+import dev.xyat.kineticcore.api.client.widget.button.KineticButtons.StateButton;
+import dev.xyat.kineticcore.api.client.widget.input.KineticTextFields.KineticEditBox;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -71,10 +71,10 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
     private final TaczRecipeRecord record;
     private final GridScrollController materialScroll = new GridScrollController();
     private int selectedMaterial = -1;
-    private EditBox idBox;
-    private EditBox commentBox;
-    private EditBox groupBox;
-    private Button resultTypeButton;
+    private KineticEditBox idBox;
+    private KineticEditBox commentBox;
+    private KineticEditBox groupBox;
+    private HighZButton resultTypeButton;
     private boolean hoveredResult;
     private int hoveredMaterialIndex = -1;
     private boolean hoveredAttachmentSummary;
@@ -82,9 +82,9 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
 
     public TaczRecipeEditorScreen(Screen parent, TaczRecipeRecord record) {
         super(Component.translatable("gui.taczworkshop.editor.title"));
+        setParentScreen(parent);
         this.parent = parent;
         this.record = record.copy();
-        useStandardCanvas();
         configureStandaloneDraft(this::captureRecipeSnapshot, this::restoreRecipeSnapshot);
     }
 
@@ -122,10 +122,10 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
 
         idBox = addTextField(72, 14, 244, Component.translatable("gui.taczworkshop.recipe_id"));
         idBox.setValue(record.id());
-        idBox.active = !record.isOriginal();
+        idBox.setEnabled(!record.isOriginal());
         idBox.setResponder(record::setId);
 
-        commentBox = addTextField(324, 14, 302, Component.translatable("gui.taczworkshop.comment"));
+        commentBox = addTextField(324, 14, 302, Component.translatable("gui.taczworkshop.comment"), Component.translatable("gui.taczworkshop.comment.hint"), null, null);
         commentBox.setValue(record.comment());
         commentBox.setResponder(record::setComment);
 
@@ -168,13 +168,13 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
         addButton(238, 251, 76, Component.translatable("gui.taczworkshop.material.replace"), Component.translatable("tip.taczworkshop.material.select"), () -> selectMaterial(selectedMaterial));
         JsonObject ingredientObject = ingredientObject(material);
         boolean canEditNbt = ingredientObject != null && ingredientObject.has("item");
-        Button nbt = addButton(
+        StateButton nbt = addButton(
                 322, 251, 76,
                 Component.translatable("gui.taczworkshop.nbt"),
                 Component.translatable(canEditNbt ? "tip.taczworkshop.material.nbt" : "tip.taczworkshop.material.nbt_tag"),
                 () -> editMaterialNbt(selectedMaterial)
         );
-        nbt.active = canEditNbt;
+        nbt.setEnabled(canEditNbt);
         addButton(238, 277, 160, Component.translatable("gui.taczworkshop.remove"), Component.translatable("tip.taczworkshop.material.remove"), () -> removeMaterial(selectedMaterial));
     }
 
@@ -189,7 +189,7 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
 
         addButton(548, 101, 68, Component.translatable("gui.taczworkshop.nbt"), Component.translatable("tip.taczworkshop.result_nbt"), this::editResultNbt);
 
-        groupBox = addTextField(500, 162, 116, Component.translatable("gui.taczworkshop.group"));
+        groupBox = addTextField(500, 162, 116, Component.translatable("gui.taczworkshop.group"), Component.translatable("gui.taczworkshop.group.hint"), null, null);
         groupBox.setValue(getString(record.result(), "group"));
         groupBox.setResponder(value -> setOptionalString(record.result(), "group", value));
 
@@ -215,7 +215,7 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
     @Override
     protected void renderCanvasBackground(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         GuiTheme.panel(graphics, 6, 6, 628, 348);
-        if (record.hasIssue()) graphics.renderOutline(6, 6, 628, 348, 0xFFFF3030);
+        if (record.hasIssue()) GuiTheme.indicatorOutline(graphics, 6, 6, 628, 348, GuiTheme.Indicator.DANGER);
         renderWorkbenchSlot(graphics, mouseX, mouseY);
         GuiTheme.panelAlt(graphics, 12, 72, 390, 276);
         GuiTheme.panelAlt(graphics, 410, 72, 216, 276);
@@ -233,8 +233,6 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
             String warning = Component.translatable("gui.taczworkshop.recipe.error.editor", Component.translatable("gui.taczworkshop.recipe.error." + code)).getString();
             KineticText.drawScrollingLeft(graphics, font, warning, 286, 48, 230, 0xFFFF5656, true);
         }
-        renderTextFieldPlaceholder(graphics, commentBox, Component.translatable("gui.taczworkshop.comment.hint"));
-        renderTextFieldPlaceholder(graphics, groupBox, Component.translatable("gui.taczworkshop.group.hint"));
 
         graphics.drawString(font, Component.translatable("gui.taczworkshop.materials", record.materials().size()), 20, 82, 0xFFFFFFFF, true);
         graphics.drawString(font, Component.translatable("gui.taczworkshop.result"), 418, 82, 0xFFFFFFFF, true);
@@ -274,7 +272,7 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
         int visibleSlots = MATERIAL_COLS * (MATERIAL_ROWS + 1);
         int total = record.materials().size() + (record.materials().size() < 64 ? 1 : 0);
         int last = Math.min(total, first + visibleSlots);
-        enableCanvasScissor(graphics, MATERIAL_GRID_X, MATERIAL_GRID_Y, MATERIAL_GRID_X + MATERIAL_GRID_W, MATERIAL_GRID_Y + MATERIAL_GRID_H);
+        enableUiScissor(graphics, MATERIAL_GRID_X, MATERIAL_GRID_Y, MATERIAL_GRID_X + MATERIAL_GRID_W, MATERIAL_GRID_Y + MATERIAL_GRID_H);
         for (int index = first; index < last; index++) {
             int visible = index - first;
             int col = visible % MATERIAL_COLS;
@@ -282,7 +280,7 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
             int x = MATERIAL_GRID_X + col * CELL_SIZE;
             int y = MATERIAL_GRID_Y + row * CELL_SIZE - shift;
             boolean addSlot = index == record.materials().size();
-            boolean hovered = GuiTheme.hovering(mouseX, mouseY, x, y, SLOT_SIZE, SLOT_SIZE) && !overlays().blocksInput();
+            boolean hovered = GuiTheme.hovering(mouseX, mouseY, x, y, SLOT_SIZE, SLOT_SIZE) && !overlayBlocksInput();
             GuiTheme.itemSlot(graphics, x, y, hovered);
             if (addSlot) {
                 graphics.drawCenteredString(font, "+", x + 9, y + 5, 0xFFFFFFFF);
@@ -290,11 +288,11 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
                 TaczMaterial material = record.materials().get(index);
                 ItemStack preview = TaczRecipeCodec.materialPreview(material);
                 if (!preview.isEmpty()) renderItemWithPreviewContext(graphics, preview, x, y);
-                if (index == selectedMaterial) graphics.renderOutline(x, y, SLOT_SIZE, SLOT_SIZE, 0xFFFFAA00);
+                if (index == selectedMaterial) GuiTheme.stateOutline(graphics, x, y, SLOT_SIZE, SLOT_SIZE, true, false, false);
                 if (hovered) hoveredMaterialIndex = index;
             }
         }
-        disableCanvasScissor(graphics);
+        disableUiScissor(graphics);
     }
 
     private void renderResultSlot(GuiGraphics graphics, int mouseX, int mouseY) {
@@ -325,7 +323,7 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
         if (ingredient != null && ingredient.has("tag")) return Component.literal("#" + ingredient.get("tag").getAsString());
         if (!preview.isEmpty()) {
             TaczDataListEntry entry = dataEntryForStack(preview);
-            if (entry != null && !entry.nameKey().isBlank() && I18n.exists(entry.nameKey())) return Component.translatable(entry.nameKey());
+            if (entry != null && !entry.nameKey().isBlank() && KineticText.hasTranslation(entry.nameKey())) return Component.translatable(entry.nameKey());
             Component name = entry == null ? preview.getHoverName() : TaczPreviewIndexContext.withResult(entry.kind(), entry.id(), entry.previewIndex(), preview::getHoverName);
             String text = name.getString();
             if (!text.isBlank() && !text.equals(preview.getDescriptionId()) && !text.startsWith("item.")) return name;
@@ -335,7 +333,7 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
 
     private Component resultDisplayName(ItemStack resultStack) {
         TaczDataListEntry entry = resultDataEntry();
-        if (entry != null && !entry.nameKey().isBlank() && I18n.exists(entry.nameKey())) return Component.translatable(entry.nameKey());
+        if (entry != null && !entry.nameKey().isBlank() && KineticText.hasTranslation(entry.nameKey())) return Component.translatable(entry.nameKey());
         if (!resultStack.isEmpty()) {
             Component name = entry == null ? resultStack.getHoverName() : TaczPreviewIndexContext.withResult(entry.kind(), entry.id(), entry.previewIndex(), resultStack::getHoverName);
             String text = name.getString();
@@ -415,27 +413,27 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
         JsonObject object = attachments();
         for (String type : ATTACHMENT_TYPES) if (!getString(object, type).isBlank()) count++;
         graphics.drawString(font, Component.translatable("gui.taczworkshop.recipe.attachments.summary", count, ATTACHMENT_TYPES.size()), ATTACHMENT_SUMMARY_X + 7, ATTACHMENT_SUMMARY_Y + 7, 0xFFFFFFFF, false);
-        if (hoveredAttachmentSummary) graphics.renderOutline(ATTACHMENT_SUMMARY_X, ATTACHMENT_SUMMARY_Y, ATTACHMENT_SUMMARY_W, ATTACHMENT_SUMMARY_H, 0xFFFFFFFF);
+        if (hoveredAttachmentSummary) GuiTheme.stateOutline(graphics, ATTACHMENT_SUMMARY_X, ATTACHMENT_SUMMARY_Y, ATTACHMENT_SUMMARY_W, ATTACHMENT_SUMMARY_H, false, true, false);
     }
 
     @Override
     protected boolean canvasMouseClicked(double mouseX, double mouseY, int button) {
         boolean widget = super.canvasMouseClicked(mouseX, mouseY, button);
-        if (button == 0 && materialScroll.beginDrag(mouseX, mouseY, MATERIAL_SCROLL_X, MATERIAL_GRID_Y, MATERIAL_SCROLL_W, MATERIAL_GRID_H, 18, 2)) return true;
+        if (KineticMouseButtons.isPrimary(button) && materialScroll.beginDrag(mouseX, mouseY, MATERIAL_SCROLL_X, MATERIAL_GRID_Y, MATERIAL_SCROLL_W, MATERIAL_GRID_H, 18, 2)) return true;
 
         int materialIndex = materialIndexAt(mouseX, mouseY);
         if (materialIndex >= 0) {
             if (materialIndex == record.materials().size() && record.materials().size() < 64) {
-                if (button == 0) selectMaterial(-1);
+                if (KineticMouseButtons.isPrimary(button)) selectMaterial(-1);
                 return true;
             }
             if (materialIndex < record.materials().size()) {
-                if (button == 0) {
+                if (KineticMouseButtons.isPrimary(button)) {
                     selectedMaterial = materialIndex;
                     refreshEditorWidgets();
                     return true;
                 }
-                if (button == 1) {
+                if (KineticMouseButtons.isSecondary(button)) {
                     openMaterialContext(materialIndex, (int) mouseX, (int) mouseY);
                     return true;
                 }
@@ -443,22 +441,22 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
         }
 
         if (GuiTheme.hovering(mouseX, mouseY, RESULT_SLOT_X, RESULT_SLOT_Y, SLOT_SIZE, SLOT_SIZE)) {
-            if (button == 0) {
+            if (KineticMouseButtons.isPrimary(button)) {
                 selectResult();
                 return true;
             }
-            if (button == 1) {
+            if (KineticMouseButtons.isSecondary(button)) {
                 openResultContext((int) mouseX, (int) mouseY);
                 return true;
             }
         }
 
-        if (button == 0 && GuiTheme.hovering(mouseX, mouseY, WORKBENCH_SLOT_X, WORKBENCH_SLOT_Y, SLOT_SIZE, SLOT_SIZE)) {
+        if (KineticMouseButtons.isPrimary(button) && GuiTheme.hovering(mouseX, mouseY, WORKBENCH_SLOT_X, WORKBENCH_SLOT_Y, SLOT_SIZE, SLOT_SIZE)) {
             openWorkbenchSelector();
             return true;
         }
 
-        if ("gun".equals(record.resultType()) && GuiTheme.hovering(mouseX, mouseY, ATTACHMENT_SUMMARY_X, ATTACHMENT_SUMMARY_Y, ATTACHMENT_SUMMARY_W, ATTACHMENT_SUMMARY_H) && button == 1) {
+        if ("gun".equals(record.resultType()) && GuiTheme.hovering(mouseX, mouseY, ATTACHMENT_SUMMARY_X, ATTACHMENT_SUMMARY_Y, ATTACHMENT_SUMMARY_W, ATTACHMENT_SUMMARY_H) && KineticMouseButtons.isSecondary(button)) {
             openAttachmentContext((int) mouseX, (int) mouseY);
             return true;
         }
@@ -479,36 +477,36 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
     }
 
     private void openMaterialContext(int index, int mouseX, int mouseY) {
-        List<GuiOverlay.MenuItem> entries = new ArrayList<>();
-        entries.add(GuiOverlay.MenuItem.action(Component.translatable("gui.taczworkshop.material.replace"), Component.translatable("tip.taczworkshop.material.select"), () -> selectMaterial(index)));
+        List<KineticOverlays.MenuItem> entries = new ArrayList<>();
+        entries.add(KineticOverlays.MenuItem.action(Component.translatable("gui.taczworkshop.material.replace"), Component.translatable("tip.taczworkshop.material.select"), () -> selectMaterial(index)));
         JsonObject ingredientObject = ingredientObject(record.materials().get(index));
         if (ingredientObject != null && ingredientObject.has("item")) {
-            entries.add(GuiOverlay.MenuItem.action(Component.translatable("gui.taczworkshop.nbt"), Component.translatable("tip.taczworkshop.material.nbt"), () -> editMaterialNbt(index)));
+            entries.add(KineticOverlays.MenuItem.action(Component.translatable("gui.taczworkshop.nbt"), Component.translatable("tip.taczworkshop.material.nbt"), () -> editMaterialNbt(index)));
         }
-        entries.add(GuiOverlay.MenuItem.separator());
-        entries.add(GuiOverlay.MenuItem.danger(Component.translatable("gui.taczworkshop.remove"), Component.translatable("tip.taczworkshop.material.remove"), () -> removeMaterial(index)));
+        entries.add(KineticOverlays.MenuItem.separator());
+        entries.add(KineticOverlays.MenuItem.danger(Component.translatable("gui.taczworkshop.remove"), Component.translatable("tip.taczworkshop.material.remove"), () -> removeMaterial(index)));
         openContextMenu(mouseX, mouseY, entries);
     }
 
     private void openResultContext(int mouseX, int mouseY) {
-        List<GuiOverlay.MenuItem> entries = new ArrayList<>();
-        entries.add(GuiOverlay.MenuItem.action(Component.translatable("gui.taczworkshop.result.select"), Component.translatable("tip.taczworkshop.result_select"), this::selectResult));
-        entries.add(GuiOverlay.MenuItem.action(Component.translatable("gui.taczworkshop.nbt"), Component.translatable("tip.taczworkshop.result_nbt"), this::editResultNbt));
+        List<KineticOverlays.MenuItem> entries = new ArrayList<>();
+        entries.add(KineticOverlays.MenuItem.action(Component.translatable("gui.taczworkshop.result.select"), Component.translatable("tip.taczworkshop.result_select"), this::selectResult));
+        entries.add(KineticOverlays.MenuItem.action(Component.translatable("gui.taczworkshop.nbt"), Component.translatable("tip.taczworkshop.result_nbt"), this::editResultNbt));
         openContextMenu(mouseX, mouseY, entries);
     }
 
     private void openAttachmentContext(int mouseX, int mouseY) {
-        List<GuiOverlay.MenuItem> entries = new ArrayList<>();
+        List<KineticOverlays.MenuItem> entries = new ArrayList<>();
         JsonObject object = attachments();
         for (String type : ATTACHMENT_TYPES) {
             String current = getString(object, type);
-            entries.add(GuiOverlay.MenuItem.action(
+            entries.add(KineticOverlays.MenuItem.action(
                     attachmentComponent(type, object),
                     Component.translatable("tip.taczworkshop.attachment.select"),
                     () -> selectAttachment(type)
             ));
             if (!current.isBlank()) {
-                entries.add(GuiOverlay.MenuItem.danger(
+                entries.add(KineticOverlays.MenuItem.danger(
                         Component.translatable("gui.taczworkshop.attachment.clear_one", Component.translatable("gui.taczworkshop.attachment." + type)),
                         Component.translatable("tip.taczworkshop.attachment.clear"),
                         () -> clearAttachment(type)
@@ -539,7 +537,7 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
 
     @Override
     protected void renderTooltips(GuiGraphics graphics, int scaledMouseX, int scaledMouseY, int mouseX, int mouseY) {
-        if (overlays().blocksInput()) return;
+        if (overlayBlocksInput()) return;
         if (hoveredMaterialIndex >= 0 && hoveredMaterialIndex < record.materials().size()) {
             TaczMaterial material = record.materials().get(hoveredMaterialIndex);
             ItemStack preview = TaczRecipeCodec.materialPreview(material);
@@ -579,10 +577,10 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
     }
 
     private void openResultTypeMenu() {
-        List<GuiOverlay.MenuItem> entries = new ArrayList<>();
+        List<KineticOverlays.MenuItem> entries = new ArrayList<>();
         String current = record.resultType();
         for (String type : RESULT_TYPES) {
-            entries.add(GuiOverlay.MenuItem.toggle(
+            entries.add(KineticOverlays.MenuItem.toggle(
                     Component.translatable("gui.taczworkshop.type.short." + type),
                     Component.empty(),
                     type.equals(current),
@@ -624,22 +622,21 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
     }
 
     private void selectResult() {
-        if (minecraft == null) return;
-        ItemSearchIndex.prepareCache(() -> {
-            if (minecraft == null) return;
-            primeResultSelectorForTacz();
-            minecraft.setScreen(new ItemSelectorScreen(this, selection -> {
-                if (selection == null || !selection.isItem()) {
-                    clientMessage("msg.taczworkshop.result_requires_item");
-                    return;
+        KineticSelectors.openItemSelector(
+                this,
+                KineticSelectors.ItemSelectorPreset.modCategory("tacz"),
+                selection -> {
+                    if (selection == null || !selection.isItem()) {
+                        clientMessage("msg.taczworkshop.result_requires_item");
+                        return;
+                    }
+                    if (applySelectedResult(selection.stack())) {
+                        KineticClientRuntime.execute(() -> {
+                            if (KineticClientRuntime.currentScreen() == this) refreshEditorWidgets();
+                        });
+                    }
                 }
-                if (applySelectedResult(selection.stack()) && minecraft != null) {
-                    minecraft.execute(() -> {
-                        if (minecraft.screen == this) refreshEditorWidgets();
-                    });
-                }
-            }));
-        });
+        );
     }
 
     private boolean applySelectedResult(ItemStack stack) {
@@ -650,28 +647,8 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
         return !record.resultId().isBlank();
     }
 
-    private static void primeResultSelectorForTacz() {
-        setItemSelectorStaticField("rememberedMode", 0);
-        setItemSelectorStaticField("rememberedFilterValue", null);
-        setItemSelectorStaticField("rememberedFilterType", 0);
-        boolean categoryReady = setItemSelectorStaticField("rememberedCategoryKey", "mod:tacz");
-        setItemSelectorStaticField("rememberedSearch", categoryReady ? "" : "@tacz");
-    }
-
-    private static boolean setItemSelectorStaticField(String name, Object value) {
-        try {
-            Field field = ItemSelectorScreen.class.getDeclaredField(name);
-            field.setAccessible(true);
-            field.set(null, value);
-            return true;
-        } catch (ReflectiveOperationException ignored) {
-            return false;
-        }
-    }
-
     private void selectMaterial(int index) {
-        if (minecraft == null) return;
-        minecraft.setScreen(new ItemSelectorScreen(this, selection -> {
+        KineticSelectors.openItemSelector(this, selection -> {
             TaczMaterial material;
             if (selection.isItem()) material = new TaczMaterial(TaczStackUtil.ingredientFromStack(selection.stack()), 1);
             else if (selection.isTag()) material = new TaczMaterial(TaczStackUtil.ingredientFromTag(selection.value()), 1);
@@ -692,16 +669,16 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
             int selectedRow = selectedMaterial < 0 ? 0 : selectedMaterial / MATERIAL_COLS;
             if (selectedRow >= materialScroll.offset() + MATERIAL_ROWS) materialScroll.setOffset(selectedRow - MATERIAL_ROWS + 1);
             refreshEditorWidgets();
-        }));
+        });
     }
 
     private void editMaterialNbt(int index) {
-        if (index < 0 || index >= record.materials().size() || minecraft == null) return;
+        if (index < 0 || index >= record.materials().size()) return;
         TaczMaterial material = record.materials().get(index);
         JsonObject ingredient = ingredientObject(material);
         if (ingredient == null || !ingredient.has("item")) return;
         String initial = ingredient.has("nbt") ? TaczRecipeCodec.nbtString(ingredient.get("nbt")) : "";
-        minecraft.setScreen(new NbtEditorScreen(initial, value -> {
+        KineticSelectors.openNbtEditor(this, initial, value -> {
             if (value == null || value.isBlank()) {
                 ingredient.remove("nbt");
                 if ("forge:partial_nbt".equals(getString(ingredient, "type"))) ingredient.remove("type");
@@ -709,11 +686,10 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
                 ingredient.addProperty("type", "forge:partial_nbt");
                 ingredient.addProperty("nbt", value);
             }
-        }, this));
+        });
     }
 
     private void editResultNbt() {
-        if (minecraft == null) return;
         JsonObject target = record.result();
         if ("custom".equals(record.resultType())) {
             if (!record.result().has("item") || !record.result().get("item").isJsonObject()) record.result().add("item", new JsonObject());
@@ -721,15 +697,14 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
         }
         JsonObject finalTarget = target;
         String initial = finalTarget.has("nbt") ? TaczRecipeCodec.nbtString(finalTarget.get("nbt")) : "";
-        minecraft.setScreen(new NbtEditorScreen(initial, value -> {
+        KineticSelectors.openNbtEditor(this, initial, value -> {
             if (value == null || value.isBlank()) finalTarget.remove("nbt");
             else finalTarget.addProperty("nbt", value);
-        }, this));
+        });
     }
 
     private void selectAttachment(String type) {
-        if (minecraft == null) return;
-        minecraft.setScreen(new ItemSelectorScreen(this, selection -> {
+        KineticSelectors.openItemSelector(this, selection -> {
             if (!selection.isItem()) {
                 clientMessage("msg.taczworkshop.attachment_requires_item");
                 return;
@@ -741,7 +716,7 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
             }
             attachments().addProperty(type, id);
             refreshEditorWidgets();
-        }));
+        });
     }
 
     private void clearAttachment(String type) {
@@ -765,7 +740,7 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
     private void save() {
         TaczRecipeNetwork.saveRecord(record.copy());
         commitDraft();
-        if (record.isOriginal() && minecraft != null) navigateBack();
+        if (record.isOriginal()) navigateBack();
     }
 
     private void refreshEditorWidgets() {
@@ -839,7 +814,7 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
 
     private ItemStack workbenchPreviewStack() {
         if (record.workbenches().isEmpty()) return ModItems.GUN_SMITH_TABLE.get().getDefaultInstance();
-        ResourceLocation id = ResourceLocation.tryParse(record.workbenches().get(0));
+        ResourceLocation id = KineticResourceIds.tryParse(record.workbenches().get(0));
         if (id == null) return ModItems.GUN_SMITH_TABLE.get().getDefaultInstance();
         return TimelessAPI.getCommonBlockIndex(id).map(index -> {
             try {
@@ -851,8 +826,7 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
     }
 
     private void openWorkbenchSelector() {
-        if (minecraft == null) return;
-        minecraft.setScreen(new TaczWorkbenchSelectorScreen(this, record.workbenches(), selected -> {
+        KineticClientRuntime.openScreen(new TaczWorkbenchSelectorScreen(this, record.workbenches(), selected -> {
             record.setWorkbenches(selected);
             refreshEditorWidgets();
         }));
@@ -860,13 +834,13 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
 
 
     private void clientMessage(String key) {
-        if (minecraft != null && minecraft.player != null) minecraft.player.displayClientMessage(Component.translatable(key), false);
+        KineticClientRuntime.displayClientMessage(Component.translatable(key), false);
     }
 
     @Override
-    public void onClose() {
+    protected boolean handleCloseRequest() {
         if (parent instanceof TaczRecipeListScreen list) list.refreshFromState();
-        if (minecraft != null) navigateBack();
+        return false;
     }
 
     private static int parseCount(String value, int fallback) {

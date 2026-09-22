@@ -1,5 +1,7 @@
 package dev.xyat.taczworkshop.data;
 
+import dev.xyat.kineticcore.api.registry.KineticRegistries;
+import dev.xyat.kineticcore.api.resource.KineticResourceIds;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
@@ -24,7 +26,6 @@ import net.minecraft.nbt.TagParser;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -159,7 +160,7 @@ public final class TaczRecipeCodec {
 
     public static GunSmithTableRecipe validateAndBuild(TaczRecipeRecord record) {
         validateRecordShape(record);
-        ResourceLocation recipeId = ResourceLocation.tryParse(record.id());
+        ResourceLocation recipeId = KineticResourceIds.tryParse(record.id());
         if (recipeId == null) throw new IllegalArgumentException("invalid recipe id: " + record.id());
 
         TableRecipe tableRecipe = CommonAssetsManager.GSON.fromJson(nativeRecipeJson(record), TableRecipe.class);
@@ -254,7 +255,7 @@ public final class TaczRecipeCodec {
 
         result.addProperty("type", "custom");
         JsonObject item = new JsonObject();
-        ResourceLocation itemId = stack.isEmpty() ? null : ForgeRegistries.ITEMS.getKey(stack.getItem());
+        ResourceLocation itemId = stack.isEmpty() ? null : KineticRegistries.items().id(stack.getItem());
         item.addProperty("item", itemId == null ? "minecraft:air" : itemId.toString());
         item.addProperty("count", safeCount);
         if (!stack.isEmpty() && stack.hasTag() && stack.getTag() != null && !stack.getTag().isEmpty()) {
@@ -348,7 +349,7 @@ public final class TaczRecipeCodec {
 
         result.addProperty("type", "custom");
         JsonObject item = new JsonObject();
-        ResourceLocation itemId = ForgeRegistries.ITEMS.getKey(stack.getItem());
+        ResourceLocation itemId = KineticRegistries.items().id(stack.getItem());
         item.addProperty("item", itemId == null ? "minecraft:air" : itemId.toString());
         item.addProperty("count", Math.max(1, stack.getCount()));
         if (stack.hasTag() && stack.getTag() != null && !stack.getTag().isEmpty()) item.addProperty("nbt", stack.getTag().toString());
@@ -361,13 +362,13 @@ public final class TaczRecipeCodec {
         for (String type : List.of("melee", "throwable", "consumable")) {
             String key = externalIdTag(type);
             String id = stack.getTag().getString(key);
-            if (ResourceLocation.tryParse(id) == null) continue;
+            if (KineticResourceIds.tryParse(id) == null) continue;
 
             JsonObject result = new JsonObject();
             result.addProperty("type", type);
             result.addProperty("id", id);
             result.addProperty("count", Math.max(1, count));
-            ResourceLocation baseId = ForgeRegistries.ITEMS.getKey(stack.getItem());
+            ResourceLocation baseId = KineticRegistries.items().id(stack.getItem());
             result.addProperty("base_item", baseId == null ? defaultExternalBaseItem(type) : baseId.toString());
             CompoundTag extra = stack.getTag().copy();
             extra.remove(key);
@@ -413,12 +414,12 @@ public final class TaczRecipeCodec {
             JsonObject customItem = record.result().getAsJsonObject("item");
             if (customItem.has("nbt")) validateNbt(nbtString(customItem.get("nbt")));
         } else {
-            if (!record.result().has("id") || ResourceLocation.tryParse(record.result().get("id").getAsString()) == null) {
+            if (!record.result().has("id") || KineticResourceIds.tryParse(record.result().get("id").getAsString()) == null) {
                 throw new IllegalArgumentException("result id is invalid");
             }
             if (isExternalResultType(type) && record.result().has("base_item")) {
                 String baseItem = record.result().get("base_item").getAsString();
-                if (ResourceLocation.tryParse(baseItem) == null) throw new IllegalArgumentException("external result base item is invalid");
+                if (KineticResourceIds.tryParse(baseItem) == null) throw new IllegalArgumentException("external result base item is invalid");
             }
         }
         if (record.result().has("count")) {
@@ -427,7 +428,7 @@ public final class TaczRecipeCodec {
         }
         if (record.result().has("nbt")) validateNbt(nbtString(record.result().get("nbt")));
         for (String workbench : record.workbenches()) {
-            if (ResourceLocation.tryParse(workbench) == null) throw new IllegalArgumentException("invalid workbench id: " + workbench);
+            if (KineticResourceIds.tryParse(workbench) == null) throw new IllegalArgumentException("invalid workbench id: " + workbench);
         }
     }
 
@@ -438,8 +439,8 @@ public final class TaczRecipeCodec {
         } catch (Exception exception) {
             throw new IllegalArgumentException("invalid uuid");
         }
-        if (ResourceLocation.tryParse(record.id()) == null) throw new IllegalArgumentException("invalid recipe id");
-        if (record.isReplacement() && ResourceLocation.tryParse(record.originalId()) == null) {
+        if (KineticResourceIds.tryParse(record.id()) == null) throw new IllegalArgumentException("invalid recipe id");
+        if (record.isReplacement() && KineticResourceIds.tryParse(record.originalId()) == null) {
             throw new IllegalArgumentException("replacement original id is invalid");
         }
     }

@@ -1,5 +1,6 @@
 package dev.xyat.taczworkshop.client;
 
+import dev.xyat.kineticcore.api.resource.KineticResourceIds;
 import com.google.gson.JsonObject;
 import com.tacz.guns.client.resource.index.ClientAmmoIndex;
 import com.tacz.guns.client.resource.index.ClientAttachmentIndex;
@@ -42,7 +43,7 @@ public final class TaczPreviewIndexContext {
     }
 
     public static <T> T withResult(TaczDataKind kind, String id, JsonObject index, Supplier<T> action) {
-        ResourceLocation resourceId = ResourceLocation.tryParse(id);
+        ResourceLocation resourceId = KineticResourceIds.tryParse(id);
         if (kind == null || resourceId == null || index == null || index.entrySet().isEmpty()) return action.get();
         Preview previous = CURRENT.get();
         CURRENT.set(new Preview(kind, resourceId, index));
@@ -56,7 +57,7 @@ public final class TaczPreviewIndexContext {
 
     public static Optional<CommonGunIndex> gun(ResourceLocation id) {
         Preview preview = CURRENT.get();
-        if (!matches(preview, TaczDataKind.GUN, id)) return Optional.empty();
+        if (doesNotMatch(preview, TaczDataKind.GUN, id)) return Optional.empty();
         try {
             GunIndexPOJO pojo = CommonAssetsManager.GSON.fromJson(preview.index(), GunIndexPOJO.class);
             return Optional.of(CommonGunIndex.getInstance(pojo));
@@ -67,7 +68,7 @@ public final class TaczPreviewIndexContext {
 
     public static Optional<CommonAttachmentIndex> attachment(ResourceLocation id) {
         Preview preview = CURRENT.get();
-        if (!matches(preview, TaczDataKind.ATTACHMENT, id)) return Optional.empty();
+        if (doesNotMatch(preview, TaczDataKind.ATTACHMENT, id)) return Optional.empty();
         try {
             AttachmentIndexPOJO pojo = CommonAssetsManager.GSON.fromJson(preview.index(), AttachmentIndexPOJO.class);
             return Optional.of(CommonAttachmentIndex.getInstance(pojo));
@@ -78,7 +79,7 @@ public final class TaczPreviewIndexContext {
 
     public static Optional<CommonAmmoIndex> ammo(ResourceLocation id) {
         Preview preview = CURRENT.get();
-        if (!matches(preview, TaczDataKind.AMMO, id)) return Optional.empty();
+        if (doesNotMatch(preview, TaczDataKind.AMMO, id)) return Optional.empty();
         try {
             AmmoIndexPOJO pojo = CommonAssetsManager.GSON.fromJson(preview.index(), AmmoIndexPOJO.class);
             return Optional.of(CommonAmmoIndex.getInstance(pojo));
@@ -118,7 +119,7 @@ public final class TaczPreviewIndexContext {
         });
     }
 
-    private static boolean matches(Preview preview, TaczDataKind kind, ResourceLocation id) {
-        return preview != null && preview.kind() == kind && preview.id().equals(id);
+    private static boolean doesNotMatch(Preview preview, TaczDataKind kind, ResourceLocation id) {
+        return preview == null || preview.kind() != kind || !preview.id().equals(id);
     }
 }

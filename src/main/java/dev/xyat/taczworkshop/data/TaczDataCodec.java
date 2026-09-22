@@ -1,5 +1,6 @@
 package dev.xyat.taczworkshop.data;
 
+import dev.xyat.kineticcore.api.resource.KineticResourceIds;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
@@ -67,7 +68,7 @@ public final class TaczDataCodec {
 
     public static String normalizeId(String value) {
         String id = value == null ? "" : value.trim();
-        ResourceLocation parsed = ResourceLocation.tryParse(id);
+        ResourceLocation parsed = KineticResourceIds.tryParse(id);
         if (parsed == null) throw new IllegalArgumentException("Invalid resource id: " + id);
         return parsed.toString();
     }

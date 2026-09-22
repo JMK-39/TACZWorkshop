@@ -1,5 +1,6 @@
 package dev.xyat.taczworkshop.mixin.compat;
 
+import dev.xyat.kineticcore.api.registry.KineticRegistries;
 import com.tacz.guns.api.item.gun.AbstractGunItem;
 import com.tacz.guns.client.animation.statemachine.GunAnimationStateContext;
 import com.tacz.guns.client.gui.overlay.GunHudOverlay;
@@ -20,7 +21,6 @@ import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.items.IItemHandler;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -71,7 +71,7 @@ public final class TaczBackpackMixins {
             final int[] remaining = {requested};
             SophisticatedBackpacksCompat.getAllInventoryBackpack(player).forEach(backpack -> {
                 if (backpack.isEmpty() || remaining[0] <= 0) return;
-                ResourceLocation itemId = ForgeRegistries.ITEMS.getKey(backpack.getItem());
+                ResourceLocation itemId = KineticRegistries.items().id(backpack.getItem());
                 if (itemId == null || !"sophisticatedbackpacks".equals(itemId.getNamespace()) || !itemId.getPath().contains("backpack")) return;
                 final int[] used = new int[1];
                 SophisticatedBackpacksCompat.modifyInventoryBackpack(player, backpack, handler -> used[0] = gun.findAndExtractInventoryAmmo(handler, gunItem, remaining[0]));

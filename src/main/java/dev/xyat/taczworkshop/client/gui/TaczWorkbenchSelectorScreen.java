@@ -1,14 +1,15 @@
 package dev.xyat.taczworkshop.client.gui;
 
+import dev.xyat.kineticcore.api.client.input.KineticMouseButtons;
 import dev.xyat.kineticcore.api.client.text.KineticText;
 import com.tacz.guns.api.TimelessAPI;
 import com.tacz.guns.api.item.builder.BlockItemBuilder;
 import com.tacz.guns.resource.index.CommonBlockIndex;
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
 import dev.xyat.kineticcore.api.client.screen.KineticScreen;
-import dev.xyat.kineticcore.api.client.widget.KineticWidgets.GridScrollController;
+import dev.xyat.kineticcore.api.client.widget.scroll.KineticScroll.GridScrollController;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.EditBox;
+import dev.xyat.kineticcore.api.client.widget.input.KineticTextFields.KineticEditBox;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
@@ -47,16 +48,16 @@ public final class TaczWorkbenchSelectorScreen extends KineticScreen {
     private final List<Entry> source = new ArrayList<>();
     private final List<Entry> filtered = new ArrayList<>();
     private final GridScrollController scroll = new GridScrollController();
-    private EditBox search;
+    private KineticEditBox search;
     private Entry hovered;
 
     public TaczWorkbenchSelectorScreen(TaczRecipeEditorScreen parent, List<String> selected, Consumer<List<String>> onSave) {
         super(Component.translatable("gui.taczworkshop.workbench.title"));
+        setParentScreen(parent);
         this.parent = parent;
         this.onSave = onSave;
         this.originalSelection = selected == null ? List.of() : List.copyOf(selected);
         if (selected != null) this.selected.addAll(selected);
-        useStandardCanvas();
         loadEntries();
     }
 
@@ -82,7 +83,7 @@ public final class TaczWorkbenchSelectorScreen extends KineticScreen {
     @Override
     protected void buildUi() {
         String oldSearch = search == null ? "" : search.getValue();
-        search = addTextField(14, 12, 224, Component.translatable("gui.taczworkshop.search"));
+        search = addTextField(14, 12, 224, Component.translatable("gui.taczworkshop.search"), Component.translatable("gui.taczworkshop.workbench.search.hint"), null, null);
         search.setMaxLength(256);
         search.setValue(oldSearch);
         search.setResponder(value -> {
@@ -128,7 +129,6 @@ public final class TaczWorkbenchSelectorScreen extends KineticScreen {
 
     @Override
     protected void renderCanvasForeground(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderTextFieldPlaceholder(graphics, search, Component.translatable("gui.taczworkshop.workbench.search.hint"));
         graphics.drawString(font, Component.translatable("gui.taczworkshop.workbench.selected_count", selected.size()), 374, 18, 0xFFFFFFFF, true);
         int x = INFO_X + 8;
         int y = GRID_Y + 8;
@@ -157,7 +157,7 @@ public final class TaczWorkbenchSelectorScreen extends KineticScreen {
         int visualShift = scroll.visualShift(CELL_SIZE);
         int first = baseRow * COLUMNS;
         int last = Math.min(filtered.size(), first + (ROWS + 2) * COLUMNS);
-        enableCanvasScissor(graphics, GRID_X, GRID_Y, GRID_X + GRID_W, GRID_Y + GRID_H);
+        enableUiScissor(graphics, GRID_X, GRID_Y, GRID_X + GRID_W, GRID_Y + GRID_H);
         for (int index = first; index < last; index++) {
             int visible = index - first;
             int x = GRID_X + (visible % COLUMNS) * CELL_SIZE;
@@ -166,18 +166,18 @@ public final class TaczWorkbenchSelectorScreen extends KineticScreen {
             boolean hover = GuiTheme.hovering(mouseX, mouseY, x, y, SLOT_SIZE, SLOT_SIZE);
             GuiTheme.itemSlot(graphics, x, y, hover);
             if (!entry.stack().isEmpty()) GuiTheme.item(graphics, font, entry.stack(), x, y, SLOT_SIZE, 1.0F, false);
-            if (selected.contains(entry.id().toString())) graphics.renderOutline(x, y, SLOT_SIZE, SLOT_SIZE, 0xFF35D06F);
+            if (selected.contains(entry.id().toString())) GuiTheme.stateOutline(graphics, x, y, SLOT_SIZE, SLOT_SIZE, true, false, false);
             if (hover) hovered = entry;
         }
-        disableCanvasScissor(graphics);
+        disableUiScissor(graphics);
     }
 
     @Override
     protected boolean canvasMouseClicked(double mouseX, double mouseY, int button) {
         boolean widget = super.canvasMouseClicked(mouseX, mouseY, button);
-        if (button == 0 && scroll.beginDrag(mouseX, mouseY, SCROLL_X, GRID_Y, SCROLL_W, GRID_H, 18, 2)) return true;
+        if (KineticMouseButtons.isPrimary(button) && scroll.beginDrag(mouseX, mouseY, SCROLL_X, GRID_Y, SCROLL_W, GRID_H, 18, 2)) return true;
         int index = indexAt(mouseX, mouseY);
-        if (button == 0 && index >= 0) {
+        if (KineticMouseButtons.isPrimary(button) && index >= 0) {
             String id = filtered.get(index).id().toString();
             if (!selected.add(id)) selected.remove(id);
             return true;
@@ -215,12 +215,8 @@ public final class TaczWorkbenchSelectorScreen extends KineticScreen {
 
     private void saveAndClose() {
         if (onSave != null) onSave.accept(new ArrayList<>(selected));
-        if (minecraft != null) navigateBack();
+        navigateBack();
     }
 
 
-    @Override
-    public void onClose() {
-        if (minecraft != null) navigateBack();
-    }
 }

@@ -1,77 +1,73 @@
 package dev.xyat.taczworkshop.server;
 
+import dev.xyat.kineticcore.api.event.KineticEventPriority;
+import dev.xyat.kineticcore.api.runtime.KineticServerRuntime;
+import dev.xyat.kineticcore.api.server.event.KineticServerEvents;
 import dev.xyat.taczworkshop.TaczWorkshop;
 import dev.xyat.taczworkshop.network.TaczRecipeNetwork;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.event.OnDatapackSyncEvent;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.server.ServerStartedEvent;
-import net.minecraftforge.event.server.ServerStoppingEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.server.ServerLifecycleHooks;
 
 import java.util.UUID;
 
-@Mod.EventBusSubscriber(modid = TaczWorkshop.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class TaczDataRuntime {
     private static final int RELOAD_TIMEOUT_TICKS = 20 * 60 * 5;
     private static PendingBatchReload pendingBatchReload;
     private static int reloadTimeoutTicks;
+    private static boolean registered;
 
     private TaczDataRuntime() {
     }
 
-    @SubscribeEvent
-    public static void onServerStarted(ServerStartedEvent event) {
+    public static synchronized void register() {
+        if (registered) return;
+        registered = true;
+        KineticServerEvents.onStarted(KineticEventPriority.NORMAL, TaczDataRuntime::onServerStarted);
+        KineticServerEvents.onStopping(KineticEventPriority.NORMAL, server -> onServerStopping());
+        KineticServerEvents.onDatapackSync(KineticEventPriority.NORMAL, TaczDataRuntime::onDatapackSync);
+        KineticServerEvents.onTick(KineticEventPriority.NORMAL, KineticServerEvents.TickPhase.END, TaczDataRuntime::onServerTick);
+    }
+
+    private static void onServerStarted(MinecraftServer server) {
         clearPendingReload();
         TaczDataStore.snapshot();
     }
 
-    @SubscribeEvent
-    public static void onServerStopping(ServerStoppingEvent event) {
+    private static void onServerStopping() {
         clearPendingReload();
     }
 
-    @SubscribeEvent
-    public static void onDatapackSync(OnDatapackSyncEvent event) {
-        if (event.getPlayer() != null) {
-            if (event.getPlayer().hasPermissions(2)) TaczRecipeNetwork.sendDataList(event.getPlayer());
+    private static void onDatapackSync(MinecraftServer server, ServerPlayer player) {
+        if (player != null) {
+            if (player.hasPermissions(2)) TaczRecipeNetwork.sendDataList(player);
             return;
         }
 
-        MinecraftServer server = event.getPlayerList().getServer();
         PendingBatchReload completed = takePendingReload();
         if (completed != null) {
-            ServerPlayer player = server.getPlayerList().getPlayer(completed.playerId());
-            if (player != null) {
-                TaczRecipeNetwork.completeDataBatchReload(player, completed.batchId(), completed.editCount());
+            ServerPlayer target = server.getPlayerList().getPlayer(completed.playerId());
+            if (target != null) {
+                TaczRecipeNetwork.completeDataBatchReload(target, completed.batchId(), completed.editCount());
             }
             TaczWorkshop.LOGGER.info("TACZ data batch reload completed: batchId={}, edits={}", completed.batchId(), completed.editCount());
         }
 
-        event.getPlayerList().getPlayers().stream()
-                .filter(player -> player.hasPermissions(2))
+        server.getPlayerList().getPlayers().stream()
+                .filter(target -> target.hasPermissions(2))
                 .forEach(TaczRecipeNetwork::sendDataList);
     }
 
-    @SubscribeEvent
-    public static void onServerTick(TickEvent.ServerTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
+    private static void onServerTick(MinecraftServer server) {
         PendingBatchReload timedOut = tickPendingReload();
         if (timedOut == null) return;
 
-        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
-        if (server != null) {
-            ServerPlayer player = server.getPlayerList().getPlayer(timedOut.playerId());
-            if (player != null) TaczRecipeNetwork.failDataBatchReload(player);
-        }
+        ServerPlayer player = server.getPlayerList().getPlayer(timedOut.playerId());
+        if (player != null) TaczRecipeNetwork.failDataBatchReload(player);
         TaczWorkshop.LOGGER.warn("Timed out waiting for server /reload after TACZ data save: batchId={}, edits={}", timedOut.batchId(), timedOut.editCount());
     }
 
     public static void reloadTaczData() {
-        executeReloadCommand(ServerLifecycleHooks.getCurrentServer());
+        executeReloadCommand(KineticServerRuntime.currentServer());
     }
 
     public static void reloadManagedData(MinecraftServer server, boolean includeExternalPacks) {

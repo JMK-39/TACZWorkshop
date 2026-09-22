@@ -1,29 +1,29 @@
 package dev.xyat.taczworkshop.compat;
 
-import dev.xyat.taczworkshop.TaczWorkshop;
+import dev.xyat.kineticcore.api.client.event.KineticClientEvents;
+import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import dev.xyat.taczworkshop.compat.sophisticated.SophisticatedBackpacksCompat;
-import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
 
 import java.util.ArrayList;
 
-@Mod.EventBusSubscriber(modid = TaczWorkshop.MODID, value = Dist.CLIENT)
 public final class ClientAmmoTickEvent {
     public static VirtualInventory virtualInventory;
     private static boolean backpackSynced;
+    private static boolean registered;
 
     private ClientAmmoTickEvent() {
     }
 
-    @SubscribeEvent
-    public static void storageBackpack(TickEvent.ClientTickEvent event) {
-        if (event.phase == TickEvent.Phase.END) return;
-        Player player = Minecraft.getInstance().player;
+    public static synchronized void register() {
+        if (registered) return;
+        registered = true;
+        KineticClientEvents.onTick(KineticClientEvents.TickPhase.START, ClientAmmoTickEvent::storageBackpack);
+    }
+
+    private static void storageBackpack() {
+        Player player = KineticClientRuntime.localPlayer();
         if (player == null) {
             virtualInventory = null;
             backpackSynced = false;
