@@ -41,7 +41,6 @@ public final class TaczWorkbenchSelectorScreen extends KineticScreen {
     private record Entry(ResourceLocation id, ItemStack stack, String name) {
     }
 
-    private final TaczRecipeEditorScreen parent;
     private final Consumer<List<String>> onSave;
     private final List<String> originalSelection;
     private final Set<String> selected = new LinkedHashSet<>();
@@ -54,7 +53,6 @@ public final class TaczWorkbenchSelectorScreen extends KineticScreen {
     public TaczWorkbenchSelectorScreen(TaczRecipeEditorScreen parent, List<String> selected, Consumer<List<String>> onSave) {
         super(Component.translatable("gui.taczworkshop.workbench.title"));
         setParentScreen(parent);
-        this.parent = parent;
         this.onSave = onSave;
         this.originalSelection = selected == null ? List.of() : List.copyOf(selected);
         if (selected != null) this.selected.addAll(selected);
@@ -97,7 +95,7 @@ public final class TaczWorkbenchSelectorScreen extends KineticScreen {
                 Component.translatable("tip.taczworkshop.workbench.restore_original"),
                 this::restoreOriginal
         );
-        addButton(492, 328, 62, Component.translatable("gui.taczworkshop.save"), Component.translatable("tip.taczworkshop.save"), this::saveAndClose);
+        addButton(492, 328, 62, Component.translatable("gui.taczworkshop.save"), Component.translatable("tip.taczworkshop.save"), this::saveSelection);
         addButton(560, 328, 66, Component.translatable("gui.taczworkshop.back"), Component.translatable("tip.taczworkshop.back.recipe_editor"), this::onClose);
         rebuildFiltered();
     }
@@ -192,7 +190,7 @@ public final class TaczWorkbenchSelectorScreen extends KineticScreen {
         int ly = (int) Math.floor(mouseY - GRID_Y + visualShift);
         int col = lx / CELL_SIZE;
         int row = ly / CELL_SIZE;
-        if (col < 0 || col >= COLUMNS || row < 0 || row > ROWS || lx % CELL_SIZE >= SLOT_SIZE || ly % CELL_SIZE >= SLOT_SIZE) return -1;
+        if (col < 0 || col >= COLUMNS || row < 0 || row > ROWS || lx % CELL_SIZE == SLOT_SIZE || ly % CELL_SIZE == SLOT_SIZE) return -1;
         int index = (scroll.smoothIndexOffset() + row) * COLUMNS + col;
         return index < filtered.size() ? index : -1;
     }
@@ -213,9 +211,8 @@ public final class TaczWorkbenchSelectorScreen extends KineticScreen {
         return super.canvasMouseScrolled(mouseX, mouseY, delta);
     }
 
-    private void saveAndClose() {
+    private void saveSelection() {
         if (onSave != null) onSave.accept(new ArrayList<>(selected));
-        navigateBack();
     }
 
 

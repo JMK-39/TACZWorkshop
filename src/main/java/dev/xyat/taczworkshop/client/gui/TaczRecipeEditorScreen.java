@@ -71,13 +71,9 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
     private final TaczRecipeRecord record;
     private final GridScrollController materialScroll = new GridScrollController();
     private int selectedMaterial = -1;
-    private KineticEditBox idBox;
-    private KineticEditBox commentBox;
-    private KineticEditBox groupBox;
     private HighZButton resultTypeButton;
     private boolean hoveredResult;
     private int hoveredMaterialIndex = -1;
-    private boolean hoveredAttachmentSummary;
     private boolean hoveredWorkbench;
 
     public TaczRecipeEditorScreen(Screen parent, TaczRecipeRecord record) {
@@ -120,12 +116,12 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
         closeContextMenu();
         updateMaterialScroll();
 
-        idBox = addTextField(72, 14, 244, Component.translatable("gui.taczworkshop.recipe_id"));
+        KineticEditBox idBox = addTextField(72, 14, 244, Component.translatable("gui.taczworkshop.recipe_id"));
         idBox.setValue(record.id());
         idBox.setEnabled(!record.isOriginal());
         idBox.setResponder(record::setId);
 
-        commentBox = addTextField(324, 14, 302, Component.translatable("gui.taczworkshop.comment"), Component.translatable("gui.taczworkshop.comment.hint"), null, null);
+        KineticEditBox commentBox = addTextField(324, 14, 302, Component.translatable("gui.taczworkshop.comment"), Component.translatable("gui.taczworkshop.comment.hint"), null, null);
         commentBox.setValue(record.comment());
         commentBox.setResponder(record::setComment);
 
@@ -189,9 +185,9 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
 
         addButton(548, 101, 68, Component.translatable("gui.taczworkshop.nbt"), Component.translatable("tip.taczworkshop.result_nbt"), this::editResultNbt);
 
-        groupBox = addTextField(500, 162, 116, Component.translatable("gui.taczworkshop.group"), Component.translatable("gui.taczworkshop.group.hint"), null, null);
+        KineticEditBox groupBox = addTextField(500, 162, 116, Component.translatable("gui.taczworkshop.group"), Component.translatable("gui.taczworkshop.group.hint"), null, null);
         groupBox.setValue(getString(record.result(), "group"));
-        groupBox.setResponder(value -> setOptionalString(record.result(), "group", value));
+        groupBox.setResponder(value -> setOptionalString(record.result(), value));
 
         if ("gun".equals(record.resultType())) {
             NumericEditBox ammoCount = addIntegerField(
@@ -407,7 +403,7 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
     }
 
     private void renderAttachmentSummary(GuiGraphics graphics, int mouseX, int mouseY) {
-        hoveredAttachmentSummary = GuiTheme.hovering(mouseX, mouseY, ATTACHMENT_SUMMARY_X, ATTACHMENT_SUMMARY_Y, ATTACHMENT_SUMMARY_W, ATTACHMENT_SUMMARY_H);
+        boolean hoveredAttachmentSummary = GuiTheme.hovering(mouseX, mouseY, ATTACHMENT_SUMMARY_X, ATTACHMENT_SUMMARY_Y, ATTACHMENT_SUMMARY_W, ATTACHMENT_SUMMARY_H);
         GuiTheme.panel(graphics, ATTACHMENT_SUMMARY_X, ATTACHMENT_SUMMARY_Y, ATTACHMENT_SUMMARY_W, ATTACHMENT_SUMMARY_H);
         int count = 0;
         JsonObject object = attachments();
@@ -552,8 +548,7 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
         }
         if (hoveredWorkbench) {
             ItemStack stack = workbenchPreviewStack();
-            List<FormattedCharSequence> lines = new ArrayList<>();
-            lines.addAll(font.split(Component.translatable("gui.taczworkshop.workbench.button"), 280));
+            List<FormattedCharSequence> lines = new ArrayList<>(font.split(Component.translatable("gui.taczworkshop.workbench.button"), 280));
             if (!stack.isEmpty()) lines.addAll(font.split(stack.getHoverName(), 280));
             if (!record.workbenches().isEmpty()) {
                 lines.addAll(font.split(Component.literal(record.workbenches().get(0)), 280));
@@ -615,7 +610,7 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
             String baseItem = TaczRecipeCodec.defaultExternalBaseItem(next);
             if (!baseItem.isBlank()) result.addProperty("base_item", baseItem);
         }
-        setOptionalString(result, "group", group);
+        setOptionalString(result, group);
         if (!"custom".equals(next) && !nbt.isBlank()) result.addProperty("nbt", nbt);
         record.setResult(result);
         refreshEditorWidgets();
@@ -740,7 +735,6 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
     private void save() {
         TaczRecipeNetwork.saveRecord(record.copy());
         commitDraft();
-        if (record.isOriginal()) navigateBack();
     }
 
     private void refreshEditorWidgets() {
@@ -874,10 +868,10 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
         }
     }
 
-    private static void setOptionalString(JsonObject object, String key, String value) {
+    private static void setOptionalString(JsonObject object, String value) {
         String clean = value == null ? "" : value.trim();
-        if (clean.isBlank()) object.remove(key);
-        else object.addProperty(key, clean);
+        if (clean.isBlank()) object.remove("group");
+        else object.addProperty("group", clean);
     }
 
     private static String shorten(String value, int max) {
