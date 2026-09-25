@@ -12,7 +12,7 @@ TACZ Workshop provides in-game tools for adjusting installed TACZ content and ma
 
 | Component | Requirement |
 | --- | --- |
-| Minecraft | This source targets 1.20.1 |
+| Minecraft | 1.20.1 |
 | Forge | 47.4.2 or newer |
 | KineticCore | 26.9.20 or newer; required |
 | Timeless and Classics Zero (TACZ) | Required |
@@ -91,10 +91,6 @@ These are instance-level configuration files. Keep the original TACZ/LR Tactical
 
 If a save fails, inspect the server message/log and check IDs, material counts, NBT, and whether the referenced content is loaded. If a recipe is missing from a bench, also check its enabled state, original/replacement status, and workbench selection.
 
-Implementation references: [data kinds](src/main/java/dev/xyat/taczworkshop/data/TaczDataKind.java), [staged edits](src/main/java/dev/xyat/taczworkshop/client/TaczDataClientState.java), [recipe store](src/main/java/dev/xyat/taczworkshop/server/TaczRecipeStore.java), and [server validation and saving](src/main/java/dev/xyat/taczworkshop/network/TaczRecipeNetwork.java).
-
-License: LGPLv3. Dependencies: [mods.toml](src/main/resources/META-INF/mods.toml).
-
 [Back to language selection](#tacz-workshop)
 
 <a id="chinese"></a>
@@ -107,7 +103,7 @@ TACZ Workshop 提供游戏内 TACZ 内容调整与枪匠工作台配方管理工
 
 | 组件 | 要求 |
 | --- | --- |
-| Minecraft | 当前源码目标为 1.20.1 |
+| Minecraft | 1.20.1 |
 | Forge | 47.4.2 或更新版本 |
 | KineticCore | 必需，26.9.20 或更新版本 |
 | Timeless and Classics Zero（TACZ） | 必需 |
@@ -185,9 +181,5 @@ TACZ Workshop 提供游戏内 TACZ 内容调整与枪匠工作台配方管理工
 这些文件属于游戏或服务器实例配置。原有 TACZ/LR Tactical 内容包仍需保留，因为覆盖记录引用其中的内容 ID。分发整合包时，应同时携带对应内容包和 Workshop 配置。
 
 保存失败时，检查服务端提示/日志、ID、材料数量、NBT，以及引用内容是否已加载。若工作台中找不到配方，还应检查启用状态、原始/替代关系和工作台勾选范围。
-
-实现参考：[数据分类](src/main/java/dev/xyat/taczworkshop/data/TaczDataKind.java)、[修改暂存](src/main/java/dev/xyat/taczworkshop/client/TaczDataClientState.java)、[配方存储](src/main/java/dev/xyat/taczworkshop/server/TaczRecipeStore.java)、[服务端校验与保存](src/main/java/dev/xyat/taczworkshop/network/TaczRecipeNetwork.java)。
-
-许可证：LGPLv3。依赖声明：[mods.toml](src/main/resources/META-INF/mods.toml)。
 
 [返回语言选择](#tacz-workshop)
