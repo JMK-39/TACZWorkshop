@@ -91,7 +91,6 @@ These are instance-level configuration files. Keep the original TACZ/LR Tactical
 
 If a save fails, inspect the server message/log and check IDs, material counts, NBT, and whether the referenced content is loaded. If a recipe is missing from a bench, also check its enabled state, original/replacement status, and workbench selection.
 
-[Back to language selection](#tacz-workshop)
 
 <a id="chinese"></a>
 
@@ -181,5 +180,3 @@ TACZ Workshop 提供游戏内 TACZ 内容调整与枪匠工作台配方管理工
 这些文件属于游戏或服务器实例配置。原有 TACZ/LR Tactical 内容包仍需保留，因为覆盖记录引用其中的内容 ID。分发整合包时，应同时携带对应内容包和 Workshop 配置。
 
 保存失败时，检查服务端提示/日志、ID、材料数量、NBT，以及引用内容是否已加载。若工作台中找不到配方，还应检查启用状态、原始/替代关系和工作台勾选范围。
-
-[返回语言选择](#tacz-workshop)
