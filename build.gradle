@@ -40,7 +40,7 @@ def pVersion = getDynamicVersion()
 def pGroup = project.findProperty('mod_group_id')?.toString() ?: 'dev.xyat.taczworkshop'
 def pModId = project.findProperty('mod_id')?.toString() ?: 'taczworkshop'
 def primaryInternalModId = 'taczworkshop'
-def mixinConfigList = ['mixins/taczworkshop.tacz.mixins.json']
+def mixinConfigList = ['taczworkshop.tacz.mixins.json']
 
 version = pVersion
 group = pGroup
@@ -103,7 +103,7 @@ repositories {
 
     ivy {
         name = 'KineticCoreGitHubReleases'
-        url = 'https://github.com/JMK-39/kineticCore/releases/download'
+        url = 'https://github.com/JMK-39/KineticCore/releases/download'
         patternLayout { artifact 'v[revision]/[artifact]-[revision].[ext]' }
         metadataSources { artifact() }
         content { includeModule 'dev.xyat.kineticcore', 'kineticcore' }
