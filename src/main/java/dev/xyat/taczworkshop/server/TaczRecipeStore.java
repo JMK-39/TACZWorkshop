@@ -9,7 +9,7 @@ import com.mojang.logging.LogUtils;
 import dev.xyat.taczworkshop.data.TaczRecipeCodec;
 import dev.xyat.taczworkshop.data.TaczRecipeRecord;
 import net.minecraft.resources.ResourceLocation;
-import dev.xyat.kineticcore.api.runtime.KineticPaths;
+import dev.xyat.kineticcore.api.runtime.KineticPlatform;
 import org.slf4j.Logger;
 
 import java.io.IOException;
@@ -24,7 +24,7 @@ import java.util.Set;
 
 public final class TaczRecipeStore {
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static final Path DIRECTORY = KineticPaths.configDirectory().resolve("kineticcore");
+    private static final Path DIRECTORY = KineticPlatform.configDirectory().resolve("kineticcore");
     private static final Path FILE = DIRECTORY.resolve("taczrecipes.json");
     private static final Path BACKUP = DIRECTORY.resolve("taczrecipes.json.bak");
     private static boolean lastLoadHealthy = true;

@@ -1,6 +1,7 @@
 package dev.xyat.taczworkshop.mixin.compat;
 
-import dev.xyat.kineticcore.api.client.overlay.KineticOverlays;
+import dev.xyat.kineticcore.api.text.KineticI18n;
+import dev.xyat.kineticcore.api.client.gui.overlay.KineticOverlays;
 import com.tacz.guns.api.TimelessAPI;
 import com.tacz.guns.api.DefaultAssets;
 import com.tacz.guns.config.sync.SyncConfig;
@@ -138,9 +139,9 @@ public final class TaczUiMixins {
 
         @ModifyArg(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphics;drawString(Lnet/minecraft/client/gui/Font;Lnet/minecraft/network/chat/Component;IIIZ)I", ordinal = 0), index = 1, remap = true)
         private Component taczworkshop_tacz$renderPageInfo(Component original) {
-            String typeName = Component.translatable(String.format("tacz.type.%s.name", selectedType.getPath())).getString();
+            String typeName = KineticI18n.translatable(String.format("tacz.type.%s.name", selectedType.getPath())).getString();
             int maxPage = Math.max(1, (int) Math.ceil(selectedRecipeList.size() / 6.0));
-            return Component.translatable("gui.taczworkshop.tacz_page", typeName, indexPage + 1, maxPage);
+            return KineticI18n.translatable("gui.taczworkshop.tacz_page", typeName, indexPage + 1, maxPage);
         }
     }
 
@@ -192,7 +193,7 @@ public final class TaczUiMixins {
                 double rounded = Math.round(offset * 100d) / 100d;
                 String signed = (offset > 0 ? "+" : "") + rounded + taczworkshop_tacz$unit(titleKey);
                 String percent = defaultValue == 0 ? "0" : Long.toString((long) Math.ceil(offset / defaultValue * 100));
-                changes.put(titleKey, Component.translatable("tip.taczworkshop.attachment.change.value", signed, (offset > 0 ? "+" : "") + percent).getString());
+                changes.put(titleKey, KineticI18n.translatable("tip.taczworkshop.attachment.change.value", signed, (offset > 0 ? "+" : "") + percent).getString());
             });
 
             value.getComponents().forEach(component -> {
@@ -203,11 +204,11 @@ public final class TaczUiMixins {
                 String titleKey = split[3];
                 if ("inaccuracy".equals(titleKey)) titleKey = "hipfire_inaccuracy";
                 String title = "hipfire_inaccuracy".equals(titleKey)
-                        ? Component.translatable("gui.tacz.gun_refit.property_diagrams.hipfire_inaccuracy").getString()
+                        ? KineticI18n.translatable("gui.tacz.gun_refit.property_diagrams.hipfire_inaccuracy").getString()
                         : component.getString().replace("+ ", "").replace("- ", "");
                 String remark = changes.getOrDefault(titleKey, component.getString().split(" ")[0]);
                 boolean negative = component.getStyle().getColor() != null && "red".equals(component.getStyle().getColor().toString());
-                result.add(Component.translatable(negative ? "tip.taczworkshop.attachment.change.negative" : "tip.taczworkshop.attachment.change.positive", title, remark));
+                result.add(KineticI18n.translatable(negative ? "tip.taczworkshop.attachment.change.negative" : "tip.taczworkshop.attachment.change.positive", title, remark));
             });
             return result;
         }
@@ -247,7 +248,7 @@ public final class TaczUiMixins {
             else if ("rpm".equals(titleKey)) key = "unit.taczworkshop.rpm";
             else if ("effective_range".equals(titleKey)) key = "unit.taczworkshop.meter";
             else if (titleKey.contains("ammo_speed")) key = "unit.taczworkshop.meter_per_second";
-            return key == null ? "" : Component.translatable(key).getString();
+            return key == null ? "" : KineticI18n.translatable(key).getString();
         }
     }
 }

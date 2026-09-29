@@ -1,21 +1,31 @@
 package dev.xyat.taczworkshop.client.gui;
 
+import dev.xyat.kineticcore.api.client.gui.ui.NumberType;
+
+import dev.xyat.kineticcore.api.client.gui.input.ScrollInput;
+import dev.xyat.kineticcore.api.client.gui.input.MouseDragInput;
+import dev.xyat.kineticcore.api.client.gui.input.MouseInput;
+import dev.xyat.kineticcore.api.client.gui.text.KineticText;
+import dev.xyat.kineticcore.api.client.gui.overlay.KineticOverlays;
+import dev.xyat.kineticcore.api.client.gui.page.KineticPage;
+import dev.xyat.kineticcore.api.client.gui.render.KineticGraphics;
+import dev.xyat.kineticcore.api.client.gui.scroll.KineticScrollController;
+import dev.xyat.kineticcore.api.client.gui.selector.KineticSelectors;
+import dev.xyat.kineticcore.api.client.gui.theme.KineticTheme;
+import dev.xyat.kineticcore.api.client.gui.ui.KineticUi;
+import dev.xyat.kineticcore.api.client.gui.widget.*;
+import dev.xyat.kineticcore.api.client.gui.widget.list.*;
+import dev.xyat.kineticcore.api.text.KineticI18n;
+
 import dev.xyat.kineticcore.api.client.input.KineticMouseButtons;
 import dev.xyat.kineticcore.api.resource.KineticResourceIds;
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
-import dev.xyat.kineticcore.api.client.text.KineticText;
-import dev.xyat.kineticcore.api.client.overlay.KineticOverlays;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.tacz.guns.api.TimelessAPI;
 import com.tacz.guns.api.item.builder.BlockItemBuilder;
 import com.tacz.guns.init.ModItems;
-import dev.xyat.kineticcore.api.client.theme.GuiTheme;
-import dev.xyat.kineticcore.api.client.selector.KineticSelectors;
-import dev.xyat.kineticcore.api.client.screen.KineticScreen;
-import dev.xyat.kineticcore.api.client.widget.scroll.KineticScroll.GridScrollController;
-import dev.xyat.kineticcore.api.client.widget.input.KineticNumericFields.NumericEditBox;
 import dev.xyat.taczworkshop.client.TaczDataClientState;
 import dev.xyat.taczworkshop.client.TaczDataListEntry;
 import dev.xyat.taczworkshop.client.TaczDataStackUtil;
@@ -26,21 +36,17 @@ import dev.xyat.taczworkshop.data.TaczMaterial;
 import dev.xyat.taczworkshop.data.TaczRecipeCodec;
 import dev.xyat.taczworkshop.data.TaczRecipeRecord;
 import dev.xyat.taczworkshop.network.TaczRecipeNetwork;
-import net.minecraft.client.gui.GuiGraphics;
-import dev.xyat.kineticcore.api.client.widget.button.KineticButtons.HighZButton;
-import dev.xyat.kineticcore.api.client.widget.button.KineticButtons.StateButton;
-import dev.xyat.kineticcore.api.client.widget.input.KineticTextFields.KineticEditBox;
+import dev.xyat.kineticcore.api.client.gui.render.KineticGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.ItemStack;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public final class TaczRecipeEditorScreen extends KineticScreen {
+public final class TaczRecipeEditorPage extends KineticPage {
     private static final List<String> RESULT_TYPES = List.of("gun", "attachment", "ammo", "melee", "throwable", "consumable", "custom");
     private static final List<String> ATTACHMENT_TYPES = List.of("scope", "muzzle", "stock", "grip", "laser", "extended_mag");
 
@@ -67,18 +73,18 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
     private static final int ATTACHMENT_SUMMARY_W = 198;
     private static final int ATTACHMENT_SUMMARY_H = 22;
 
-    private final Screen parent;
+    /** 返回后需要刷新的列表页，可为 null / List page refreshed after saving; nullable. */
+    private final TaczRecipeListPage parent;
     private final TaczRecipeRecord record;
-    private final GridScrollController materialScroll = new GridScrollController();
+    private final KineticScrollController materialScroll = new KineticScrollController();
     private int selectedMaterial = -1;
-    private HighZButton resultTypeButton;
+    private KineticButton resultTypeButton;
     private boolean hoveredResult;
     private int hoveredMaterialIndex = -1;
     private boolean hoveredWorkbench;
 
-    public TaczRecipeEditorScreen(Screen parent, TaczRecipeRecord record) {
-        super(Component.translatable("gui.taczworkshop.editor.title"));
-        setParentScreen(parent);
+    public TaczRecipeEditorPage(TaczRecipeListPage parent, TaczRecipeRecord record) {
+        super(KineticI18n.translatable("gui.taczworkshop.editor.title"));
         this.parent = parent;
         this.record = record.copy();
         configureStandaloneDraft(this::captureRecipeSnapshot, this::restoreRecipeSnapshot);
@@ -112,38 +118,25 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
     }
 
     @Override
-    protected void buildUi() {
+    protected void build(KineticUi ui) {
         closeContextMenu();
         updateMaterialScroll();
 
-        KineticEditBox idBox = addTextField(72, 14, 244, Component.translatable("gui.taczworkshop.recipe_id"));
-        idBox.setValue(record.id());
+        KineticTextField idBox = ui().textField(72, 14, 244).label(KineticI18n.translatable("gui.taczworkshop.recipe_id")).firstShownTextAsDefault().build();
+        idBox.setTextValue(record.id());
         idBox.setEnabled(!record.isOriginal());
-        idBox.setResponder(record::setId);
+        idBox.onTextChange(record::setId);
 
-        KineticEditBox commentBox = addTextField(324, 14, 302, Component.translatable("gui.taczworkshop.comment"), Component.translatable("gui.taczworkshop.comment.hint"), null, null);
-        commentBox.setValue(record.comment());
-        commentBox.setResponder(record::setComment);
+        KineticTextField commentBox = ui().textField(324, 14, 302).label(KineticI18n.translatable("gui.taczworkshop.comment")).placeholder(KineticI18n.translatable("gui.taczworkshop.comment.hint")).firstShownTextAsDefault().build();
+        commentBox.setTextValue(record.comment());
+        commentBox.onTextChange(record::setComment);
 
-        addToggleButton(
-                14, 42, 72,
-                record.enabled(),
-                Component.translatable("gui.taczworkshop.enabled"),
-                Component.translatable("gui.taczworkshop.disabled"),
-                Component.translatable("tip.taczworkshop.enabled"),
-                record::setEnabled
-        );
+        ui().toggle(14, 42, 72).value(record.enabled()).labels(KineticI18n.translatable("gui.taczworkshop.enabled"), KineticI18n.translatable("gui.taczworkshop.disabled")).tooltip(KineticI18n.translatable("tip.taczworkshop.enabled")).onChange(record::setEnabled).build();
 
-        resultTypeButton = addHighZButton(
-                90, 42, 86,
-                resultTypeComponent(),
-                null,
-                40,
-                this::openResultTypeMenu
-        );
-        addButton(WORKBENCH_BUTTON_X, WORKBENCH_BUTTON_Y, WORKBENCH_BUTTON_W, Component.translatable("gui.taczworkshop.workbench.button"), Component.translatable("tip.taczworkshop.workbench.select"), this::openWorkbenchSelector);
-        addButton(524, 42, 48, Component.translatable("gui.taczworkshop.save"), Component.translatable("tip.taczworkshop.save"), this::save);
-        addButton(578, 42, 48, Component.translatable("gui.taczworkshop.back"), Component.translatable("tip.taczworkshop.back.recipe_list"), this::onClose);
+        resultTypeButton = ui().button(90, 42, 86).text(resultTypeComponent()).layer(1).onClick(this::openResultTypeMenu).build();
+        ui().button(WORKBENCH_BUTTON_X, WORKBENCH_BUTTON_Y, WORKBENCH_BUTTON_W).text(KineticI18n.translatable("gui.taczworkshop.workbench.button")).tooltip(KineticI18n.translatable("tip.taczworkshop.workbench.select")).onClick(this::openWorkbenchSelector).build();
+        ui().button(524, 42, 48).text(KineticI18n.translatable("gui.taczworkshop.save")).tooltip(KineticI18n.translatable("tip.taczworkshop.save")).onClick(this::save).build();
+        ui().button(578, 42, 48).text(KineticI18n.translatable("gui.taczworkshop.back")).tooltip(KineticI18n.translatable("tip.taczworkshop.back.recipe_list")).onClick(this::close).build();
 
         createSelectedMaterialWidgets();
         createResultWidgets();
@@ -153,50 +146,33 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
         if (selectedMaterial < 0 || selectedMaterial >= record.materials().size()) return;
         TaczMaterial material = record.materials().get(selectedMaterial);
 
-        NumericEditBox count = addIntegerField(
-                325, 139, 74,
-                Component.translatable("gui.taczworkshop.count"),
-                true, 1, 9999, null
-        );
-        count.setValue(Integer.toString(material.count()));
-        count.setResponder(value -> material.setCount(parseCount(value, material.count())));
+        KineticNumberField count = ui().numberField(325, 139, 74, NumberType.INT).label(KineticI18n.translatable("gui.taczworkshop.count")).allowNegative(true).range(1, 9999).firstShownTextAsDefault().build();
+        count.setTextValue(Integer.toString(material.count()));
+        count.onTextChange(value -> material.setCount(parseCount(value, material.count())));
 
-        addButton(238, 251, 76, Component.translatable("gui.taczworkshop.material.replace"), Component.translatable("tip.taczworkshop.material.select"), () -> selectMaterial(selectedMaterial));
+        ui().button(238, 251, 76).text(KineticI18n.translatable("gui.taczworkshop.material.replace")).tooltip(KineticI18n.translatable("tip.taczworkshop.material.select")).onClick(() -> selectMaterial(selectedMaterial)).build();
         JsonObject ingredientObject = ingredientObject(material);
         boolean canEditNbt = ingredientObject != null && ingredientObject.has("item");
-        StateButton nbt = addButton(
-                322, 251, 76,
-                Component.translatable("gui.taczworkshop.nbt"),
-                Component.translatable(canEditNbt ? "tip.taczworkshop.material.nbt" : "tip.taczworkshop.material.nbt_tag"),
-                () -> editMaterialNbt(selectedMaterial)
-        );
+        KineticButton nbt = ui().button(322, 251, 76).text(KineticI18n.translatable("gui.taczworkshop.nbt")).tooltip(KineticI18n.translatable(canEditNbt ? "tip.taczworkshop.material.nbt" : "tip.taczworkshop.material.nbt_tag")).onClick(() -> editMaterialNbt(selectedMaterial)).build();
         nbt.setEnabled(canEditNbt);
-        addButton(238, 277, 160, Component.translatable("gui.taczworkshop.remove"), Component.translatable("tip.taczworkshop.material.remove"), () -> removeMaterial(selectedMaterial));
+        ui().button(238, 277, 160).text(KineticI18n.translatable("gui.taczworkshop.remove")).tooltip(KineticI18n.translatable("tip.taczworkshop.material.remove")).onClick(() -> removeMaterial(selectedMaterial)).build();
     }
 
     private void createResultWidgets() {
-        NumericEditBox resultCount = addIntegerField(
-                516, 137, 100,
-                Component.translatable("gui.taczworkshop.count"),
-                true, 1, 9999, null
-        );
-        resultCount.setValue(Integer.toString(resultCount()));
-        resultCount.setResponder(value -> setResultCount(parseCount(value, resultCount())));
+        KineticNumberField resultCount = ui().numberField(516, 137, 100, NumberType.INT).label(KineticI18n.translatable("gui.taczworkshop.count")).allowNegative(true).range(1, 9999).firstShownTextAsDefault().build();
+        resultCount.setTextValue(Integer.toString(resultCount()));
+        resultCount.onTextChange(value -> setResultCount(parseCount(value, resultCount())));
 
-        addButton(548, 101, 68, Component.translatable("gui.taczworkshop.nbt"), Component.translatable("tip.taczworkshop.result_nbt"), this::editResultNbt);
+        ui().button(548, 101, 68).text(KineticI18n.translatable("gui.taczworkshop.nbt")).tooltip(KineticI18n.translatable("tip.taczworkshop.result_nbt")).onClick(this::editResultNbt).build();
 
-        KineticEditBox groupBox = addTextField(500, 162, 116, Component.translatable("gui.taczworkshop.group"), Component.translatable("gui.taczworkshop.group.hint"), null, null);
-        groupBox.setValue(getString(record.result(), "group"));
-        groupBox.setResponder(value -> setOptionalString(record.result(), value));
+        KineticTextField groupBox = ui().textField(500, 162, 116).label(KineticI18n.translatable("gui.taczworkshop.group")).placeholder(KineticI18n.translatable("gui.taczworkshop.group.hint")).firstShownTextAsDefault().build();
+        groupBox.setTextValue(getString(record.result(), "group"));
+        groupBox.onTextChange(value -> setOptionalString(record.result(), value));
 
         if ("gun".equals(record.resultType())) {
-            NumericEditBox ammoCount = addIntegerField(
-                    530, 187, 86,
-                    Component.translatable("gui.taczworkshop.ammo_count"),
-                    true, 0, 9999, null
-            );
-            ammoCount.setValue(Integer.toString(getInt(record.result(), "ammo_count", 0)));
-            ammoCount.setResponder(value -> record.result().addProperty("ammo_count", Math.max(0, parseInt(value, 0))));
+            KineticNumberField ammoCount = ui().numberField(530, 187, 86, NumberType.INT).label(KineticI18n.translatable("gui.taczworkshop.ammo_count")).allowNegative(true).range(0, 9999).firstShownTextAsDefault().build();
+            ammoCount.setTextValue(Integer.toString(getInt(record.result(), "ammo_count", 0)));
+            ammoCount.onTextChange(value -> record.result().addProperty("ammo_count", Math.max(0, parseInt(value, 0))));
         }
     }
 
@@ -209,58 +185,58 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
     }
 
     @Override
-    protected void renderCanvasBackground(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        GuiTheme.panel(graphics, 6, 6, 628, 348);
-        if (record.hasIssue()) GuiTheme.indicatorOutline(graphics, 6, 6, 628, 348, GuiTheme.Indicator.DANGER);
+    protected void renderBackground(KineticGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        KineticTheme.panel(graphics, 6, 6, 628, 348);
+        if (record.hasIssue()) KineticTheme.indicatorOutline(graphics, 6, 6, 628, 348, KineticTheme.Indicator.DANGER);
         renderWorkbenchSlot(graphics, mouseX, mouseY);
-        GuiTheme.panelAlt(graphics, 12, 72, 390, 276);
-        GuiTheme.panelAlt(graphics, 410, 72, 216, 276);
+        KineticTheme.panelAlt(graphics, 12, 72, 390, 276);
+        KineticTheme.panelAlt(graphics, 410, 72, 216, 276);
         renderMaterials(graphics, mouseX, mouseY);
-        GuiTheme.scrollbar(materialScroll, graphics, mouseX, mouseY, MATERIAL_SCROLL_X, MATERIAL_GRID_Y, MATERIAL_SCROLL_W, MATERIAL_GRID_H, 18);
+        materialScroll.render(graphics, mouseX, mouseY, MATERIAL_SCROLL_X, MATERIAL_GRID_Y, MATERIAL_SCROLL_W, MATERIAL_GRID_H, 18);
         renderResultSlot(graphics, mouseX, mouseY);
         if ("gun".equals(record.resultType())) renderAttachmentSummary(graphics, mouseX, mouseY);
     }
 
     @Override
-    protected void renderCanvasForeground(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        graphics.drawString(font, Component.translatable("gui.taczworkshop.recipe_id"), 14, 20, 0xFFFFFFFF, true);
+    protected void renderForeground(KineticGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        graphics.text(KineticI18n.translatable("gui.taczworkshop.recipe_id"), 14, 20, 0xFFFFFFFF, true);
         if (record.hasIssue()) {
             String code = record.issueCode().isBlank() ? "tacz_deserialize_failed" : record.issueCode();
-            String warning = Component.translatable("gui.taczworkshop.recipe.error.editor", Component.translatable("gui.taczworkshop.recipe.error." + code)).getString();
-            KineticText.drawScrollingLeft(graphics, font, warning, 286, 48, 230, 0xFFFF5656, true);
+            String warning = KineticI18n.translatable("gui.taczworkshop.recipe.error.editor", KineticI18n.translatable("gui.taczworkshop.recipe.error." + code)).getString();
+            graphics.scrollingText(Component.literal(warning), 286, 48, 230, 0xFFFF5656, true);
         }
 
-        graphics.drawString(font, Component.translatable("gui.taczworkshop.materials", record.materials().size()), 20, 82, 0xFFFFFFFF, true);
-        graphics.drawString(font, Component.translatable("gui.taczworkshop.result"), 418, 82, 0xFFFFFFFF, true);
+        graphics.text(KineticI18n.translatable("gui.taczworkshop.materials", record.materials().size()), 20, 82, 0xFFFFFFFF, true);
+        graphics.text(KineticI18n.translatable("gui.taczworkshop.result"), 418, 82, 0xFFFFFFFF, true);
 
         if (selectedMaterial >= 0 && selectedMaterial < record.materials().size()) {
             TaczMaterial material = record.materials().get(selectedMaterial);
             ItemStack preview = TaczRecipeCodec.materialPreview(material);
-            graphics.drawString(font, Component.translatable("gui.taczworkshop.material.selected"), 238, 103, 0xFFFFFFFF, true);
-            KineticText.drawScrollingLeft(graphics, font, materialDisplayName(material, preview), 238, 116, 160, 0xFFFFFFFF, false);
-            KineticText.drawScrollingLeft(graphics, font, materialLabel(material), 238, 129, 160, 0xFFAAAAAA, false);
-            graphics.drawString(font, Component.translatable("gui.taczworkshop.material.count_label"), 238, 145, 0xFFCCCCCC, false);
-            graphics.drawString(font, Component.translatable("gui.taczworkshop.item_nbt"), 238, 173, 0xFFCCCCCC, false);
+            graphics.text(KineticI18n.translatable("gui.taczworkshop.material.selected"), 238, 103, 0xFFFFFFFF, true);
+            graphics.scrollingText(materialDisplayName(material, preview), 238, 116, 160, 0xFFFFFFFF, false);
+            graphics.scrollingText(Component.literal(materialLabel(material)), 238, 129, 160, 0xFFAAAAAA, false);
+            graphics.text(KineticI18n.translatable("gui.taczworkshop.material.count_label"), 238, 145, 0xFFCCCCCC, false);
+            graphics.text(KineticI18n.translatable("gui.taczworkshop.item_nbt"), 238, 173, 0xFFCCCCCC, false);
             renderNbtBlock(graphics, 238, 186, 160, 5, materialNbtText(material, preview));
         } else {
-            graphics.drawString(font, Component.translatable("gui.taczworkshop.material.select_hint"), 238, 107, 0xFFAAAAAA, false);
+            graphics.text(KineticI18n.translatable("gui.taczworkshop.material.select_hint"), 238, 107, 0xFFAAAAAA, false);
         }
 
         ItemStack resultStack = resultPreviewStack();
-        KineticText.drawScrollingLeft(graphics, font, resultDisplayName(resultStack), 442, 101, 96, 0xFFFFFFFF, true);
-        KineticText.drawScrollingLeft(graphics, font, record.resultId(), 442, 114, 96, 0xFFAAAAAA, false);
-        graphics.drawString(font, Component.translatable("gui.taczworkshop.type." + record.resultType()), 418, 126, 0xFFCCCCCC, false);
-        graphics.drawString(font, Component.translatable("gui.taczworkshop.result.count_label"), 418, 143, 0xFFCCCCCC, false);
-        graphics.drawString(font, Component.translatable("gui.taczworkshop.group"), 418, 168, 0xFFCCCCCC, false);
+        graphics.scrollingText(resultDisplayName(resultStack), 442, 101, 96, 0xFFFFFFFF, true);
+        graphics.scrollingText(Component.literal(record.resultId()), 442, 114, 96, 0xFFAAAAAA, false);
+        graphics.text(KineticI18n.translatable("gui.taczworkshop.type." + record.resultType()), 418, 126, 0xFFCCCCCC, false);
+        graphics.text(KineticI18n.translatable("gui.taczworkshop.result.count_label"), 418, 143, 0xFFCCCCCC, false);
+        graphics.text(KineticI18n.translatable("gui.taczworkshop.group"), 418, 168, 0xFFCCCCCC, false);
         if ("gun".equals(record.resultType())) {
-            graphics.drawString(font, Component.translatable("gui.taczworkshop.ammo_count"), 418, 193, 0xFFCCCCCC, false);
+            graphics.text(KineticI18n.translatable("gui.taczworkshop.ammo_count"), 418, 193, 0xFFCCCCCC, false);
         }
         int nbtLabelY = "gun".equals(record.resultType()) ? 216 : 193;
-        graphics.drawString(font, Component.translatable("gui.taczworkshop.item_nbt"), 418, nbtLabelY, 0xFFCCCCCC, false);
+        graphics.text(KineticI18n.translatable("gui.taczworkshop.item_nbt"), 418, nbtLabelY, 0xFFCCCCCC, false);
         renderNbtBlock(graphics, 418, nbtLabelY + 13, 198, "gun".equals(record.resultType()) ? 8 : 11, resultNbtText(resultStack));
     }
 
-    private void renderMaterials(GuiGraphics graphics, int mouseX, int mouseY) {
+    private void renderMaterials(KineticGraphics graphics, int mouseX, int mouseY) {
         hoveredMaterialIndex = -1;
         int firstRow = materialScroll.smoothIndexOffset();
         int shift = materialScroll.visualShift(CELL_SIZE);
@@ -268,7 +244,7 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
         int visibleSlots = MATERIAL_COLS * (MATERIAL_ROWS + 1);
         int total = record.materials().size() + (record.materials().size() < 64 ? 1 : 0);
         int last = Math.min(total, first + visibleSlots);
-        enableUiScissor(graphics, MATERIAL_GRID_X, MATERIAL_GRID_Y, MATERIAL_GRID_X + MATERIAL_GRID_W, MATERIAL_GRID_Y + MATERIAL_GRID_H);
+        graphics.scissor(MATERIAL_GRID_X, MATERIAL_GRID_Y, MATERIAL_GRID_X + MATERIAL_GRID_W, MATERIAL_GRID_Y + MATERIAL_GRID_H);
         for (int index = first; index < last; index++) {
             int visible = index - first;
             int col = visible % MATERIAL_COLS;
@@ -276,34 +252,34 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
             int x = MATERIAL_GRID_X + col * CELL_SIZE;
             int y = MATERIAL_GRID_Y + row * CELL_SIZE - shift;
             boolean addSlot = index == record.materials().size();
-            boolean hovered = GuiTheme.hovering(mouseX, mouseY, x, y, SLOT_SIZE, SLOT_SIZE) && !overlayBlocksInput();
-            GuiTheme.itemSlot(graphics, x, y, hovered);
+            boolean hovered = KineticTheme.hovering(mouseX, mouseY, x, y, SLOT_SIZE, SLOT_SIZE) && !overlayBlocksInput();
+            KineticTheme.itemSlot(graphics, x, y, hovered);
             if (addSlot) {
-                graphics.drawCenteredString(font, "+", x + 9, y + 5, 0xFFFFFFFF);
+                graphics.centeredText("+", x + 9, y + 5, 0xFFFFFFFF, true);
             } else {
                 TaczMaterial material = record.materials().get(index);
                 ItemStack preview = TaczRecipeCodec.materialPreview(material);
                 if (!preview.isEmpty()) renderItemWithPreviewContext(graphics, preview, x, y);
-                if (index == selectedMaterial) GuiTheme.stateOutline(graphics, x, y, SLOT_SIZE, SLOT_SIZE, true, false, false);
+                if (index == selectedMaterial) KineticTheme.stateOutline(graphics, x, y, SLOT_SIZE, SLOT_SIZE, true, false, false);
                 if (hovered) hoveredMaterialIndex = index;
             }
         }
-        disableUiScissor(graphics);
+        graphics.endScissor();
     }
 
-    private void renderResultSlot(GuiGraphics graphics, int mouseX, int mouseY) {
-        hoveredResult = GuiTheme.hovering(mouseX, mouseY, RESULT_SLOT_X, RESULT_SLOT_Y, SLOT_SIZE, SLOT_SIZE);
-        GuiTheme.itemSlot(graphics, RESULT_SLOT_X, RESULT_SLOT_Y, hoveredResult);
+    private void renderResultSlot(KineticGraphics graphics, int mouseX, int mouseY) {
+        hoveredResult = KineticTheme.hovering(mouseX, mouseY, RESULT_SLOT_X, RESULT_SLOT_Y, SLOT_SIZE, SLOT_SIZE);
+        KineticTheme.itemSlot(graphics, RESULT_SLOT_X, RESULT_SLOT_Y, hoveredResult);
         ItemStack result = resultPreviewStack();
         if (!result.isEmpty()) renderItemWithPreviewContext(graphics, result, RESULT_SLOT_X, RESULT_SLOT_Y);
     }
 
-    private void renderItemWithPreviewContext(GuiGraphics graphics, ItemStack stack, int x, int y) {
+    private void renderItemWithPreviewContext(KineticGraphics graphics, ItemStack stack, int x, int y) {
         TaczDataListEntry entry = dataEntryForStack(stack);
         if (entry == null) {
-            GuiTheme.item(graphics, font, stack, x, y, SLOT_SIZE, 1.0F, true);
+            KineticTheme.item(graphics, stack, x, y, SLOT_SIZE, 1.0F, true);
         } else {
-            TaczPreviewIndexContext.with(entry, () -> GuiTheme.item(graphics, font, stack, x, y, SLOT_SIZE, 1.0F, true));
+            TaczPreviewIndexContext.with(entry, () -> KineticTheme.item(graphics, stack, x, y, SLOT_SIZE, 1.0F, true));
         }
     }
 
@@ -319,7 +295,7 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
         if (ingredient != null && ingredient.has("tag")) return Component.literal("#" + ingredient.get("tag").getAsString());
         if (!preview.isEmpty()) {
             TaczDataListEntry entry = dataEntryForStack(preview);
-            if (entry != null && !entry.nameKey().isBlank() && KineticText.hasTranslation(entry.nameKey())) return Component.translatable(entry.nameKey());
+            if (entry != null && !entry.nameKey().isBlank() && KineticI18n.hasTranslation(entry.nameKey())) return KineticI18n.translatable(entry.nameKey());
             Component name = entry == null ? preview.getHoverName() : TaczPreviewIndexContext.withResult(entry.kind(), entry.id(), entry.previewIndex(), preview::getHoverName);
             String text = name.getString();
             if (!text.isBlank() && !text.equals(preview.getDescriptionId()) && !text.startsWith("item.")) return name;
@@ -329,7 +305,7 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
 
     private Component resultDisplayName(ItemStack resultStack) {
         TaczDataListEntry entry = resultDataEntry();
-        if (entry != null && !entry.nameKey().isBlank() && KineticText.hasTranslation(entry.nameKey())) return Component.translatable(entry.nameKey());
+        if (entry != null && !entry.nameKey().isBlank() && KineticI18n.hasTranslation(entry.nameKey())) return KineticI18n.translatable(entry.nameKey());
         if (!resultStack.isEmpty()) {
             Component name = entry == null ? resultStack.getHoverName() : TaczPreviewIndexContext.withResult(entry.kind(), entry.id(), entry.previewIndex(), resultStack::getHoverName);
             String text = name.getString();
@@ -345,24 +321,24 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
             if (!value.isBlank()) return value;
         }
         if (!preview.isEmpty() && preview.hasTag() && preview.getTag() != null) return preview.getTag().toString();
-        return Component.translatable("gui.taczworkshop.nbt.none").getString();
+        return KineticI18n.translatable("gui.taczworkshop.nbt.none").getString();
     }
 
     private String resultNbtText(ItemStack resultStack) {
         if (!resultStack.isEmpty() && resultStack.hasTag() && resultStack.getTag() != null) return resultStack.getTag().toString();
         String configured = currentResultNbt();
         if (!configured.isBlank()) return configured;
-        return Component.translatable("gui.taczworkshop.nbt.none").getString();
+        return KineticI18n.translatable("gui.taczworkshop.nbt.none").getString();
     }
 
-    private void renderNbtBlock(GuiGraphics graphics, int x, int y, int width, int maxLines, String nbt) {
-        List<FormattedCharSequence> lines = font.split(Component.literal(nbt), width);
+    private void renderNbtBlock(KineticGraphics graphics, int x, int y, int width, int maxLines, String nbt) {
+        List<FormattedCharSequence> lines = KineticText.wrap(Component.literal(nbt), width);
         int count = Math.min(maxLines, lines.size());
         for (int i = 0; i < count; i++) {
             String suffix = i == maxLines - 1 && lines.size() > maxLines ? "..." : "";
-            graphics.drawString(font, lines.get(i), x, y + i * (font.lineHeight + 1), 0xFFAAAAAA, false);
+            graphics.text(lines.get(i), x, y + i * (KineticText.lineHeight() + 1), 0xFFAAAAAA, false);
             if (!suffix.isEmpty()) {
-                graphics.drawString(font, suffix, x + Math.max(0, width - font.width(suffix)), y + i * (font.lineHeight + 1), 0xFFAAAAAA, false);
+                graphics.text(suffix, x + Math.max(0, width - KineticText.width(suffix)), y + i * (KineticText.lineHeight() + 1), 0xFFAAAAAA, false);
             }
         }
     }
@@ -402,20 +378,21 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
         return TaczDataClientState.snapshot(kind).stream().filter(entry -> entry.id().equals(id)).findFirst().orElse(null);
     }
 
-    private void renderAttachmentSummary(GuiGraphics graphics, int mouseX, int mouseY) {
-        boolean hoveredAttachmentSummary = GuiTheme.hovering(mouseX, mouseY, ATTACHMENT_SUMMARY_X, ATTACHMENT_SUMMARY_Y, ATTACHMENT_SUMMARY_W, ATTACHMENT_SUMMARY_H);
-        GuiTheme.panel(graphics, ATTACHMENT_SUMMARY_X, ATTACHMENT_SUMMARY_Y, ATTACHMENT_SUMMARY_W, ATTACHMENT_SUMMARY_H);
+    private void renderAttachmentSummary(KineticGraphics graphics, int mouseX, int mouseY) {
+        boolean hoveredAttachmentSummary = KineticTheme.hovering(mouseX, mouseY, ATTACHMENT_SUMMARY_X, ATTACHMENT_SUMMARY_Y, ATTACHMENT_SUMMARY_W, ATTACHMENT_SUMMARY_H);
+        KineticTheme.panel(graphics, ATTACHMENT_SUMMARY_X, ATTACHMENT_SUMMARY_Y, ATTACHMENT_SUMMARY_W, ATTACHMENT_SUMMARY_H);
         int count = 0;
         JsonObject object = attachments();
         for (String type : ATTACHMENT_TYPES) if (!getString(object, type).isBlank()) count++;
-        graphics.drawString(font, Component.translatable("gui.taczworkshop.recipe.attachments.summary", count, ATTACHMENT_TYPES.size()), ATTACHMENT_SUMMARY_X + 7, ATTACHMENT_SUMMARY_Y + 7, 0xFFFFFFFF, false);
-        if (hoveredAttachmentSummary) GuiTheme.stateOutline(graphics, ATTACHMENT_SUMMARY_X, ATTACHMENT_SUMMARY_Y, ATTACHMENT_SUMMARY_W, ATTACHMENT_SUMMARY_H, false, true, false);
+        graphics.text(KineticI18n.translatable("gui.taczworkshop.recipe.attachments.summary", count, ATTACHMENT_TYPES.size()), ATTACHMENT_SUMMARY_X + 7, ATTACHMENT_SUMMARY_Y + 7, 0xFFFFFFFF, false);
+        if (hoveredAttachmentSummary) KineticTheme.stateOutline(graphics, ATTACHMENT_SUMMARY_X, ATTACHMENT_SUMMARY_Y, ATTACHMENT_SUMMARY_W, ATTACHMENT_SUMMARY_H, false, true, false);
     }
 
     @Override
-    protected boolean canvasMouseClicked(double mouseX, double mouseY, int button) {
-        boolean widget = super.canvasMouseClicked(mouseX, mouseY, button);
-        if (KineticMouseButtons.isPrimary(button) && materialScroll.beginDrag(mouseX, mouseY, MATERIAL_SCROLL_X, MATERIAL_GRID_Y, MATERIAL_SCROLL_W, MATERIAL_GRID_H, 18, 2)) return true;
+    protected boolean onMouseClick(MouseInput input) {
+        double mouseX = input.x(), mouseY = input.y(); int button = input.rawButton();
+        boolean widget = false;
+        if (materialScroll.beginDrag(mouseX, mouseY, input.button(), MATERIAL_SCROLL_X, MATERIAL_GRID_Y, MATERIAL_SCROLL_W, MATERIAL_GRID_H, 18, 2)) return true;
 
         int materialIndex = materialIndexAt(mouseX, mouseY);
         if (materialIndex >= 0) {
@@ -436,7 +413,7 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
             }
         }
 
-        if (GuiTheme.hovering(mouseX, mouseY, RESULT_SLOT_X, RESULT_SLOT_Y, SLOT_SIZE, SLOT_SIZE)) {
+        if (KineticTheme.hovering(mouseX, mouseY, RESULT_SLOT_X, RESULT_SLOT_Y, SLOT_SIZE, SLOT_SIZE)) {
             if (KineticMouseButtons.isPrimary(button)) {
                 selectResult();
                 return true;
@@ -447,12 +424,12 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
             }
         }
 
-        if (KineticMouseButtons.isPrimary(button) && GuiTheme.hovering(mouseX, mouseY, WORKBENCH_SLOT_X, WORKBENCH_SLOT_Y, SLOT_SIZE, SLOT_SIZE)) {
+        if (KineticMouseButtons.isPrimary(button) && KineticTheme.hovering(mouseX, mouseY, WORKBENCH_SLOT_X, WORKBENCH_SLOT_Y, SLOT_SIZE, SLOT_SIZE)) {
             openWorkbenchSelector();
             return true;
         }
 
-        if ("gun".equals(record.resultType()) && GuiTheme.hovering(mouseX, mouseY, ATTACHMENT_SUMMARY_X, ATTACHMENT_SUMMARY_Y, ATTACHMENT_SUMMARY_W, ATTACHMENT_SUMMARY_H) && KineticMouseButtons.isSecondary(button)) {
+        if ("gun".equals(record.resultType()) && KineticTheme.hovering(mouseX, mouseY, ATTACHMENT_SUMMARY_X, ATTACHMENT_SUMMARY_Y, ATTACHMENT_SUMMARY_W, ATTACHMENT_SUMMARY_H) && KineticMouseButtons.isSecondary(button)) {
             openAttachmentContext((int) mouseX, (int) mouseY);
             return true;
         }
@@ -460,7 +437,7 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
     }
 
     private int materialIndexAt(double mouseX, double mouseY) {
-        if (!GuiTheme.hovering(mouseX, mouseY, MATERIAL_GRID_X, MATERIAL_GRID_Y, MATERIAL_GRID_W, MATERIAL_GRID_H)) return -1;
+        if (!KineticTheme.hovering(mouseX, mouseY, MATERIAL_GRID_X, MATERIAL_GRID_Y, MATERIAL_GRID_W, MATERIAL_GRID_H)) return -1;
         int localX = (int) (mouseX - MATERIAL_GRID_X);
         int localY = (int) (mouseY - MATERIAL_GRID_Y + materialScroll.visualShift(CELL_SIZE));
         int col = localX / CELL_SIZE;
@@ -474,20 +451,20 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
 
     private void openMaterialContext(int index, int mouseX, int mouseY) {
         List<KineticOverlays.MenuItem> entries = new ArrayList<>();
-        entries.add(KineticOverlays.MenuItem.action(Component.translatable("gui.taczworkshop.material.replace"), Component.translatable("tip.taczworkshop.material.select"), () -> selectMaterial(index)));
+        entries.add(KineticOverlays.MenuItem.action(KineticI18n.translatable("gui.taczworkshop.material.replace"), KineticI18n.translatable("tip.taczworkshop.material.select"), () -> selectMaterial(index)));
         JsonObject ingredientObject = ingredientObject(record.materials().get(index));
         if (ingredientObject != null && ingredientObject.has("item")) {
-            entries.add(KineticOverlays.MenuItem.action(Component.translatable("gui.taczworkshop.nbt"), Component.translatable("tip.taczworkshop.material.nbt"), () -> editMaterialNbt(index)));
+            entries.add(KineticOverlays.MenuItem.action(KineticI18n.translatable("gui.taczworkshop.nbt"), KineticI18n.translatable("tip.taczworkshop.material.nbt"), () -> editMaterialNbt(index)));
         }
         entries.add(KineticOverlays.MenuItem.separator());
-        entries.add(KineticOverlays.MenuItem.danger(Component.translatable("gui.taczworkshop.remove"), Component.translatable("tip.taczworkshop.material.remove"), () -> removeMaterial(index)));
+        entries.add(KineticOverlays.MenuItem.danger(KineticI18n.translatable("gui.taczworkshop.remove"), KineticI18n.translatable("tip.taczworkshop.material.remove"), () -> removeMaterial(index)));
         openContextMenu(mouseX, mouseY, entries);
     }
 
     private void openResultContext(int mouseX, int mouseY) {
         List<KineticOverlays.MenuItem> entries = new ArrayList<>();
-        entries.add(KineticOverlays.MenuItem.action(Component.translatable("gui.taczworkshop.result.select"), Component.translatable("tip.taczworkshop.result_select"), this::selectResult));
-        entries.add(KineticOverlays.MenuItem.action(Component.translatable("gui.taczworkshop.nbt"), Component.translatable("tip.taczworkshop.result_nbt"), this::editResultNbt));
+        entries.add(KineticOverlays.MenuItem.action(KineticI18n.translatable("gui.taczworkshop.result.select"), KineticI18n.translatable("tip.taczworkshop.result_select"), this::selectResult));
+        entries.add(KineticOverlays.MenuItem.action(KineticI18n.translatable("gui.taczworkshop.nbt"), KineticI18n.translatable("tip.taczworkshop.result_nbt"), this::editResultNbt));
         openContextMenu(mouseX, mouseY, entries);
     }
 
@@ -498,13 +475,13 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
             String current = getString(object, type);
             entries.add(KineticOverlays.MenuItem.action(
                     attachmentComponent(type, object),
-                    Component.translatable("tip.taczworkshop.attachment.select"),
+                    KineticI18n.translatable("tip.taczworkshop.attachment.select"),
                     () -> selectAttachment(type)
             ));
             if (!current.isBlank()) {
                 entries.add(KineticOverlays.MenuItem.danger(
-                        Component.translatable("gui.taczworkshop.attachment.clear_one", Component.translatable("gui.taczworkshop.attachment." + type)),
-                        Component.translatable("tip.taczworkshop.attachment.clear"),
+                        KineticI18n.translatable("gui.taczworkshop.attachment.clear_one", KineticI18n.translatable("gui.taczworkshop.attachment." + type)),
+                        KineticI18n.translatable("tip.taczworkshop.attachment.clear"),
                         () -> clearAttachment(type)
                 ));
             }
@@ -513,48 +490,51 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
     }
 
     @Override
-    protected boolean canvasMouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
-        return materialScroll.drag(mouseY, MATERIAL_GRID_Y, MATERIAL_GRID_H, 18) || super.canvasMouseDragged(mouseX, mouseY, button, dragX, dragY);
+    protected boolean onMouseDrag(MouseDragInput input) {
+        double mouseX = input.x(), mouseY = input.y(); int button = input.rawButton(); double dragX = input.deltaX(), dragY = input.deltaY();
+        return materialScroll.drag(mouseY, MATERIAL_GRID_Y, MATERIAL_GRID_H, 18) || false;
     }
 
     @Override
-    protected boolean canvasMouseReleased(double mouseX, double mouseY, int button) {
-        return materialScroll.release(button) || super.canvasMouseReleased(mouseX, mouseY, button);
+    protected boolean onMouseRelease(MouseInput input) {
+        double mouseX = input.x(), mouseY = input.y(); int button = input.rawButton();
+        return materialScroll.release(input.button()) || false;
     }
 
     @Override
-    protected boolean canvasMouseScrolled(double mouseX, double mouseY, double delta) {
-        if (GuiTheme.hovering(mouseX, mouseY, MATERIAL_GRID_X, MATERIAL_GRID_Y, MATERIAL_GRID_W + 12, MATERIAL_GRID_H) && materialScroll.scroll(delta)) {
+    protected boolean onMouseScroll(ScrollInput input) {
+        double mouseX = input.x(), mouseY = input.y(), delta = input.deltaY();
+        if (KineticTheme.hovering(mouseX, mouseY, MATERIAL_GRID_X, MATERIAL_GRID_Y, MATERIAL_GRID_W + 12, MATERIAL_GRID_H) && materialScroll.scroll(delta)) {
             refreshEditorWidgets();
             return true;
         }
-        return super.canvasMouseScrolled(mouseX, mouseY, delta);
+        return false;
     }
 
     @Override
-    protected void renderTooltips(GuiGraphics graphics, int scaledMouseX, int scaledMouseY, int mouseX, int mouseY) {
+    protected void renderTooltips(int scaledMouseX, int scaledMouseY) {
         if (overlayBlocksInput()) return;
         if (hoveredMaterialIndex >= 0 && hoveredMaterialIndex < record.materials().size()) {
             TaczMaterial material = record.materials().get(hoveredMaterialIndex);
             ItemStack preview = TaczRecipeCodec.materialPreview(material);
             List<FormattedCharSequence> lines = new ArrayList<>();
-            lines.addAll(font.split(materialDisplayName(material, preview), 320));
-            lines.addAll(font.split(Component.literal(materialLabel(material)), 320));
-            lines.addAll(font.split(Component.translatable("gui.taczworkshop.material.count", material.count()), 320));
-            lines.addAll(font.split(Component.translatable("gui.taczworkshop.item_nbt.value", materialNbtText(material, preview)), 320));
-            lines.addAll(font.split(Component.translatable("gui.taczworkshop.material.click_hint"), 320));
+            lines.addAll(KineticText.wrap(materialDisplayName(material, preview), 320));
+            lines.addAll(KineticText.wrap(Component.literal(materialLabel(material)), 320));
+            lines.addAll(KineticText.wrap(KineticI18n.translatable("gui.taczworkshop.material.count", material.count()), 320));
+            lines.addAll(KineticText.wrap(KineticI18n.translatable("gui.taczworkshop.item_nbt.value", materialNbtText(material, preview)), 320));
+            lines.addAll(KineticText.wrap(KineticI18n.translatable("gui.taczworkshop.material.click_hint"), 320));
             showFormattedTooltip(lines);
             return;
         }
         if (hoveredWorkbench) {
             ItemStack stack = workbenchPreviewStack();
-            List<FormattedCharSequence> lines = new ArrayList<>(font.split(Component.translatable("gui.taczworkshop.workbench.button"), 280));
-            if (!stack.isEmpty()) lines.addAll(font.split(stack.getHoverName(), 280));
+            List<FormattedCharSequence> lines = new ArrayList<>(KineticText.wrap(KineticI18n.translatable("gui.taczworkshop.workbench.button"), 280));
+            if (!stack.isEmpty()) lines.addAll(KineticText.wrap(stack.getHoverName(), 280));
             if (!record.workbenches().isEmpty()) {
-                lines.addAll(font.split(Component.literal(record.workbenches().get(0)), 280));
-                if (record.workbenches().size() > 1) lines.addAll(font.split(Component.translatable("gui.taczworkshop.workbench.summary", record.workbenches().size()), 280));
+                lines.addAll(KineticText.wrap(Component.literal(record.workbenches().get(0)), 280));
+                if (record.workbenches().size() > 1) lines.addAll(KineticText.wrap(KineticI18n.translatable("gui.taczworkshop.workbench.summary", record.workbenches().size()), 280));
             } else {
-                lines.addAll(font.split(Component.translatable("gui.taczworkshop.workbench.native"), 280));
+                lines.addAll(KineticText.wrap(KineticI18n.translatable("gui.taczworkshop.workbench.native"), 280));
             }
             showFormattedTooltip(lines);
             return;
@@ -563,10 +543,10 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
         if (hoveredResult) {
             ItemStack resultStack = resultPreviewStack();
             List<FormattedCharSequence> lines = new ArrayList<>();
-            lines.addAll(font.split(resultDisplayName(resultStack), 320));
-            lines.addAll(font.split(Component.literal(record.resultId()), 320));
-            lines.addAll(font.split(Component.translatable("gui.taczworkshop.item_nbt.value", resultNbtText(resultStack)), 320));
-            lines.addAll(font.split(Component.translatable("gui.taczworkshop.result.click_hint"), 320));
+            lines.addAll(KineticText.wrap(resultDisplayName(resultStack), 320));
+            lines.addAll(KineticText.wrap(Component.literal(record.resultId()), 320));
+            lines.addAll(KineticText.wrap(KineticI18n.translatable("gui.taczworkshop.item_nbt.value", resultNbtText(resultStack)), 320));
+            lines.addAll(KineticText.wrap(KineticI18n.translatable("gui.taczworkshop.result.click_hint"), 320));
             showFormattedTooltip(lines);
         }
     }
@@ -576,14 +556,14 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
         String current = record.resultType();
         for (String type : RESULT_TYPES) {
             entries.add(KineticOverlays.MenuItem.toggle(
-                    Component.translatable("gui.taczworkshop.type.short." + type),
+                    KineticI18n.translatable("gui.taczworkshop.type.short." + type),
                     Component.empty(),
                     type.equals(current),
                     () -> setResultType(type)
             ));
         }
-        int x = resultTypeButton == null ? 90 : resultTypeButton.getX();
-        int y = resultTypeButton == null ? 64 : resultTypeButton.getY() + resultTypeButton.getHeight() + 2;
+        int x = resultTypeButton == null ? 90 : resultTypeButton.controlX();
+        int y = resultTypeButton == null ? 64 : resultTypeButton.controlY() + resultTypeButton.controlHeight() + 2;
         openContextMenu(x, y, entries);
     }
 
@@ -617,9 +597,7 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
     }
 
     private void selectResult() {
-        KineticSelectors.openItemSelector(
-                this,
-                KineticSelectors.ItemSelectorPreset.modCategory("tacz"),
+        KineticSelectors.openItemSelector(KineticSelectors.ItemSelectorPreset.modCategory("tacz"),
                 selection -> {
                     if (selection == null || !selection.isItem()) {
                         clientMessage("msg.taczworkshop.result_requires_item");
@@ -627,7 +605,7 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
                     }
                     if (applySelectedResult(selection.stack())) {
                         KineticClientRuntime.execute(() -> {
-                            if (KineticClientRuntime.currentScreen() == this) refreshEditorWidgets();
+                            if (isOpen()) refreshEditorWidgets();
                         });
                     }
                 }
@@ -643,7 +621,7 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
     }
 
     private void selectMaterial(int index) {
-        KineticSelectors.openItemSelector(this, selection -> {
+        KineticSelectors.openItemSelector(selection -> {
             TaczMaterial material;
             if (selection.isItem()) material = new TaczMaterial(TaczStackUtil.ingredientFromStack(selection.stack()), 1);
             else if (selection.isTag()) material = new TaczMaterial(TaczStackUtil.ingredientFromTag(selection.value()), 1);
@@ -673,7 +651,7 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
         JsonObject ingredient = ingredientObject(material);
         if (ingredient == null || !ingredient.has("item")) return;
         String initial = ingredient.has("nbt") ? TaczRecipeCodec.nbtString(ingredient.get("nbt")) : "";
-        KineticSelectors.openNbtEditor(this, initial, value -> {
+        KineticSelectors.openNbtEditor(initial, value -> {
             if (value == null || value.isBlank()) {
                 ingredient.remove("nbt");
                 if ("forge:partial_nbt".equals(getString(ingredient, "type"))) ingredient.remove("type");
@@ -692,14 +670,14 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
         }
         JsonObject finalTarget = target;
         String initial = finalTarget.has("nbt") ? TaczRecipeCodec.nbtString(finalTarget.get("nbt")) : "";
-        KineticSelectors.openNbtEditor(this, initial, value -> {
+        KineticSelectors.openNbtEditor(initial, value -> {
             if (value == null || value.isBlank()) finalTarget.remove("nbt");
             else finalTarget.addProperty("nbt", value);
         });
     }
 
     private void selectAttachment(String type) {
-        KineticSelectors.openItemSelector(this, selection -> {
+        KineticSelectors.openItemSelector(selection -> {
             if (!selection.isItem()) {
                 clientMessage("msg.taczworkshop.attachment_requires_item");
                 return;
@@ -739,7 +717,7 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
 
     private void refreshEditorWidgets() {
         int offset = materialScroll.offset();
-        rebuildUi();
+        rebuild();
         materialScroll.setOffset(offset);
     }
 
@@ -771,12 +749,12 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
     }
 
     private Component resultTypeComponent() {
-        return Component.translatable("gui.taczworkshop.type.short." + record.resultType());
+        return KineticI18n.translatable("gui.taczworkshop.type.short." + record.resultType());
     }
 
     private Component attachmentComponent(String type, JsonObject attachments) {
         String id = getString(attachments, type);
-        Component name = Component.translatable("gui.taczworkshop.attachment." + type);
+        Component name = KineticI18n.translatable("gui.taczworkshop.attachment." + type);
         if (id.isBlank()) return name;
         return Component.literal(shorten(name.getString() + ": " + id, 24));
     }
@@ -796,13 +774,13 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
         return material.ingredient().getAsJsonObject();
     }
 
-    private void renderWorkbenchSlot(GuiGraphics graphics, int mouseX, int mouseY) {
-        hoveredWorkbench = GuiTheme.hovering(mouseX, mouseY, WORKBENCH_SLOT_X, WORKBENCH_SLOT_Y, SLOT_SIZE, SLOT_SIZE);
-        GuiTheme.itemSlot(graphics, WORKBENCH_SLOT_X, WORKBENCH_SLOT_Y, hoveredWorkbench);
+    private void renderWorkbenchSlot(KineticGraphics graphics, int mouseX, int mouseY) {
+        hoveredWorkbench = KineticTheme.hovering(mouseX, mouseY, WORKBENCH_SLOT_X, WORKBENCH_SLOT_Y, SLOT_SIZE, SLOT_SIZE);
+        KineticTheme.itemSlot(graphics, WORKBENCH_SLOT_X, WORKBENCH_SLOT_Y, hoveredWorkbench);
         ItemStack stack = workbenchPreviewStack();
-        if (!stack.isEmpty()) GuiTheme.item(graphics, font, stack, WORKBENCH_SLOT_X, WORKBENCH_SLOT_Y, SLOT_SIZE, 1.0F, false);
+        if (!stack.isEmpty()) KineticTheme.item(graphics, stack, WORKBENCH_SLOT_X, WORKBENCH_SLOT_Y, SLOT_SIZE, 1.0F, false);
         if (record.workbenches().size() > 1) {
-            graphics.drawString(font, Integer.toString(record.workbenches().size()), WORKBENCH_SLOT_X + 13, WORKBENCH_SLOT_Y + 10, 0xFFFFFFFF, true);
+            graphics.text(Integer.toString(record.workbenches().size()), WORKBENCH_SLOT_X + 13, WORKBENCH_SLOT_Y + 10, 0xFFFFFFFF, true);
         }
     }
 
@@ -820,7 +798,7 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
     }
 
     private void openWorkbenchSelector() {
-        KineticClientRuntime.openScreen(new TaczWorkbenchSelectorScreen(this, record.workbenches(), selected -> {
+        openChild(new TaczWorkbenchSelectorPage(record.workbenches(), selected -> {
             record.setWorkbenches(selected);
             refreshEditorWidgets();
         }));
@@ -828,12 +806,12 @@ public final class TaczRecipeEditorScreen extends KineticScreen {
 
 
     private void clientMessage(String key) {
-        KineticClientRuntime.displayClientMessage(Component.translatable(key), false);
+        KineticClientRuntime.displayClientMessage(KineticI18n.translatable(key), false);
     }
 
     @Override
-    protected boolean handleCloseRequest() {
-        if (parent instanceof TaczRecipeListScreen list) list.refreshFromState();
+    protected boolean onCloseRequested() {
+        if (parent != null) parent.refreshFromState();
         return false;
     }
 

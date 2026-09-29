@@ -1,5 +1,6 @@
 package dev.xyat.taczworkshop.network;
 
+import dev.xyat.kineticcore.api.text.KineticI18n;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -114,7 +115,7 @@ public final class TaczRecipeNetwork {
     public static void saveRecord(TaczRecipeRecord record) {
         byte[] payload = compress(TaczRecipeCodec.encodeRecord(record));
         if (payload.length > MAX_COMPRESSED) {
-            TaczClientHandler.handleToast(Component.translatable("msg.taczworkshop.save_too_large"));
+            TaczClientHandler.handleToast(KineticI18n.translatable("msg.taczworkshop.save_too_large"));
             return;
         }
         CHANNEL.sendToServer(new SaveRecordPacket(payload));
@@ -144,7 +145,7 @@ public final class TaczRecipeNetwork {
         String json = TaczRecipeCodec.GSON.toJson(data == null ? new JsonObject() : data);
         byte[] payload = compress(json);
         if (payload.length > MAX_COMPRESSED) {
-            TaczClientHandler.handleToast(Component.translatable("msg.taczworkshop.data_too_large"));
+            TaczClientHandler.handleToast(KineticI18n.translatable("msg.taczworkshop.data_too_large"));
             return;
         }
         CHANNEL.sendToServer(new SaveDataOverridePacket(kind.wireName(), id == null ? "" : id, dataId == null ? "" : dataId, removed, payload));
@@ -162,7 +163,7 @@ public final class TaczRecipeNetwork {
         String json = TaczRecipeCodec.GSON.toJson(root == null ? new JsonObject() : root);
         byte[] payload = compress(json);
         if (payload.length > MAX_COMPRESSED) {
-            TaczClientHandler.handleToast(Component.translatable("msg.taczworkshop.data_too_large"));
+            TaczClientHandler.handleToast(KineticI18n.translatable("msg.taczworkshop.data_too_large"));
             return;
         }
         CHANNEL.sendToServer(new SaveDataBatchPacket(payload));
@@ -192,13 +193,13 @@ public final class TaczRecipeNetwork {
 
     public static void failDataBatchReload(ServerPlayer player) {
         if (player == null) return;
-        sendToast(player, Component.translatable("msg.taczworkshop.data_save_failed"));
+        sendToast(player, KineticI18n.translatable("msg.taczworkshop.data_save_failed"));
     }
 
     private static void sendSnapshot(ServerPlayer player) {
         byte[] payload = compress(TaczRecipeRuntime.combinedSnapshotJson());
         if (payload.length > MAX_COMPRESSED) {
-            sendToast(player, Component.translatable("msg.taczworkshop.sync_too_large"));
+            sendToast(player, KineticI18n.translatable("msg.taczworkshop.sync_too_large"));
             return;
         }
         CHANNEL.sendToPlayer(player, new SnapshotPacket(payload));
@@ -227,7 +228,7 @@ public final class TaczRecipeNetwork {
         if (player == null || !player.hasPermissions(2)) return;
         byte[] payload = compress(TaczRecipeCodec.GSON.toJson(TaczBaseDataCache.listSnapshot()));
         if (payload.length > MAX_COMPRESSED) {
-            sendToast(player, Component.translatable("msg.taczworkshop.sync_too_large"));
+            sendToast(player, KineticI18n.translatable("msg.taczworkshop.sync_too_large"));
             return;
         }
         CHANNEL.sendToPlayer(player, new DataListPacket(payload));
@@ -237,7 +238,7 @@ public final class TaczRecipeNetwork {
         JsonObject detail = TaczBaseDataCache.detailSnapshot(kind, id);
         byte[] payload = compress(TaczRecipeCodec.GSON.toJson(detail));
         if (payload.length > MAX_COMPRESSED) {
-            sendToast(player, Component.translatable("msg.taczworkshop.sync_too_large"));
+            sendToast(player, KineticI18n.translatable("msg.taczworkshop.sync_too_large"));
             return;
         }
         CHANNEL.sendToPlayer(player, new DataDetailPacket(payload));
@@ -268,7 +269,7 @@ public final class TaczRecipeNetwork {
             sendSaved(player);
         } catch (Exception exception) {
             TaczWorkshop.LOGGER.warn("Rejected recipe save from {}: {}", player.getGameProfile().getName(), safeMessage(exception));
-            sendToast(player, Component.translatable("msg.taczworkshop.save_failed"));
+            sendToast(player, KineticI18n.translatable("msg.taczworkshop.save_failed"));
         }
     }
 
@@ -283,7 +284,7 @@ public final class TaczRecipeNetwork {
                 sendSaved(player);
             }
         } catch (Exception exception) {
-            sendToast(player, Component.translatable("msg.taczworkshop.delete_failed"));
+            sendToast(player, KineticI18n.translatable("msg.taczworkshop.delete_failed"));
         }
     }
 
@@ -297,7 +298,7 @@ public final class TaczRecipeNetwork {
             sendSaved(player);
         } catch (Exception exception) {
             TaczWorkshop.LOGGER.warn("Rejected original recipe state change from {}: {}", player.getGameProfile().getName(), safeMessage(exception));
-            sendToast(player, Component.translatable("msg.taczworkshop.save_failed"));
+            sendToast(player, KineticI18n.translatable("msg.taczworkshop.save_failed"));
         }
     }
 
@@ -312,7 +313,7 @@ public final class TaczRecipeNetwork {
             }
         } catch (Exception exception) {
             TaczWorkshop.LOGGER.warn("Rejected original recipe restore from {}: {}", player.getGameProfile().getName(), safeMessage(exception));
-            sendToast(player, Component.translatable("msg.taczworkshop.save_failed"));
+            sendToast(player, KineticI18n.translatable("msg.taczworkshop.save_failed"));
         }
     }
 
@@ -327,7 +328,7 @@ public final class TaczRecipeNetwork {
         try {
             sendDataDetail(player, TaczDataKind.fromWire(packet.kind()), packet.id());
         } catch (Exception exception) {
-            sendToast(player, Component.translatable("msg.taczworkshop.data_detail_failed"));
+            sendToast(player, KineticI18n.translatable("msg.taczworkshop.data_detail_failed"));
         }
     }
 
@@ -347,7 +348,7 @@ public final class TaczRecipeNetwork {
             TaczDataRuntime.reloadTaczData();
         } catch (Exception exception) {
             TaczWorkshop.LOGGER.warn("Rejected TACZ data save from {}: {}", player.getGameProfile().getName(), safeMessage(exception));
-            sendToast(player, Component.translatable("msg.taczworkshop.data_save_failed"));
+            sendToast(player, KineticI18n.translatable("msg.taczworkshop.data_save_failed"));
         }
     }
 
@@ -361,7 +362,7 @@ public final class TaczRecipeNetwork {
             sendDataList(player);
             TaczDataRuntime.reloadTaczData();
         } catch (Exception exception) {
-            sendToast(player, Component.translatable("msg.taczworkshop.data_reset_failed"));
+            sendToast(player, KineticI18n.translatable("msg.taczworkshop.data_reset_failed"));
         }
     }
 
@@ -389,7 +390,7 @@ public final class TaczRecipeNetwork {
             TaczDataRuntime.reloadTaczData();
         } catch (Exception exception) {
             TaczWorkshop.LOGGER.warn("Rejected TACZ disabled-state change from {}: {}", player.getGameProfile().getName(), safeMessage(exception));
-            sendToast(player, Component.translatable("msg.taczworkshop.data_save_failed"));
+            sendToast(player, KineticI18n.translatable("msg.taczworkshop.data_save_failed"));
         }
     }
 
@@ -454,7 +455,7 @@ public final class TaczRecipeNetwork {
             }
         } catch (Exception exception) {
             TaczWorkshop.LOGGER.warn("Rejected TACZ data batch save from {}: {}", player.getGameProfile().getName(), safeMessage(exception));
-            sendToast(player, Component.translatable("msg.taczworkshop.data_save_failed"));
+            sendToast(player, KineticI18n.translatable("msg.taczworkshop.data_save_failed"));
         }
     }
 

@@ -1,28 +1,33 @@
 package dev.xyat.taczworkshop.client.gui;
 
+import dev.xyat.kineticcore.api.client.gui.input.ScrollInput;
+import dev.xyat.kineticcore.api.client.gui.input.MouseDragInput;
+import dev.xyat.kineticcore.api.client.gui.input.MouseInput;
+import dev.xyat.kineticcore.api.client.gui.text.KineticText;
+import dev.xyat.kineticcore.api.client.gui.overlay.KineticOverlays;
+import dev.xyat.kineticcore.api.client.gui.page.KineticPage;
+import dev.xyat.kineticcore.api.client.gui.render.KineticGraphics;
+import dev.xyat.kineticcore.api.client.gui.scroll.KineticScrollController;
+import dev.xyat.kineticcore.api.client.gui.theme.KineticTheme;
+import dev.xyat.kineticcore.api.client.gui.ui.KineticUi;
+import dev.xyat.kineticcore.api.client.gui.ui.NumberType;
+import dev.xyat.kineticcore.api.client.gui.widget.*;
+import dev.xyat.kineticcore.api.client.gui.widget.list.*;
+import dev.xyat.kineticcore.api.text.KineticI18n;
+
 import dev.xyat.kineticcore.api.client.input.KineticMouseButtons;
-import dev.xyat.kineticcore.api.client.text.KineticText;
-import dev.xyat.kineticcore.api.client.overlay.KineticOverlays;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import dev.xyat.kineticcore.api.client.theme.GuiTheme;
-import dev.xyat.kineticcore.api.client.screen.KineticScreen;
-import dev.xyat.kineticcore.api.client.widget.KineticControl;
-import dev.xyat.kineticcore.api.client.widget.button.KineticButtons.ToggleButton;
-import dev.xyat.kineticcore.api.client.widget.input.KineticTextFields.KineticEditBox;
-import dev.xyat.kineticcore.api.client.widget.scroll.KineticScroll.GridScrollController;
-import dev.xyat.kineticcore.api.client.widget.input.KineticNumericFields.NumericEditBox;
 import dev.xyat.taczworkshop.client.TaczDataClientState;
 import dev.xyat.taczworkshop.client.TaczDataStackUtil;
 import dev.xyat.taczworkshop.client.TaczPreviewIndexContext;
 import dev.xyat.taczworkshop.data.TaczDataKind;
-import net.minecraft.client.gui.GuiGraphics;
+import dev.xyat.kineticcore.api.client.gui.render.KineticGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.ItemStack;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.math.BigDecimal;
@@ -32,7 +37,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
-public final class TaczDataDetailScreen extends KineticScreen {
+public final class TaczDataDetailPage extends KineticPage {
     private static final List<String> ATTACHMENT_TYPES = List.of("scope", "muzzle", "stock", "grip", "laser", "extended_mag");
     private static final int FIELDS_PER_ROW = 2;
     private static final int ROW_HEIGHT = 28;
@@ -57,20 +62,19 @@ public final class TaczDataDetailScreen extends KineticScreen {
     private final boolean serverModified;
     private final boolean resourceAvailable;
     private final JsonObject previewIndex;
-    private final GridScrollController fieldScroll = new GridScrollController();
+    private final KineticScrollController fieldScroll = new KineticScrollController();
     private final List<KineticControl> activeFieldWidgets = new ArrayList<>();
     private boolean removed;
     private boolean dirty;
-    private KineticEditBox search;
+    private KineticTextField search;
     private List<TaczJsonLeafModel.Leaf> leaves = List.of();
     private TaczJsonLeafModel.Leaf hoveredLeaf;
     private boolean hoveredHeaderItem;
     private boolean hoveredAttachmentSummary;
     private int fieldWidgetFirstRow = -1;
 
-    public TaczDataDetailScreen(Screen parent, JsonObject detail) {
-        super(Component.translatable("gui.taczworkshop.data.detail.title"));
-        setParentScreen(parent);
+    public TaczDataDetailPage(JsonObject detail) {
+        super(KineticI18n.translatable("gui.taczworkshop.data.detail.title"));
         this.kind = TaczDataKind.fromWire(read(detail, "kind"));
         this.id = read(detail, "id");
         this.dataId = read(detail, "data_id");
@@ -88,27 +92,27 @@ public final class TaczDataDetailScreen extends KineticScreen {
     }
 
     @Override
-    protected void buildUi() {
+    protected void build(KineticUi ui) {
         closeContextMenu();
         activeFieldWidgets.clear();
-        String oldSearch = search == null ? "" : search.getValue();
-        search = addTextField(20, 50, 250, Component.translatable("gui.taczworkshop.search"), Component.translatable("gui.taczworkshop.data.field.search.hint"), null, null);
-        search.setMaxLength(256);
-        search.setValue(oldSearch);
-        search.setResponder(value -> {
+        String oldSearch = search == null ? "" : search.textValue();
+        search = ui().textField(20, 50, 250).label(KineticI18n.translatable("gui.taczworkshop.search")).placeholder(KineticI18n.translatable("gui.taczworkshop.data.field.search.hint")).firstShownTextAsDefault().build();
+        search.limitTextLength(256);
+        search.setTextValue(oldSearch);
+        search.onTextChange(value -> {
             fieldScroll.reset();
             rebuildFieldWidgets();
         });
 
-        addButton(278, 18, 68, Component.translatable(removed ? "gui.taczworkshop.data.restore" : "gui.taczworkshop.data.remove"), Component.translatable("tip.taczworkshop.data.remove"), this::toggleRemoved);
-        addButton(350, 18, 64, Component.translatable("gui.taczworkshop.data.reset"), Component.translatable("tip.taczworkshop.data.reset"), this::confirmReset);
+        ui().button(278, 18, 68).text(KineticI18n.translatable(removed ? "gui.taczworkshop.data.restore" : "gui.taczworkshop.data.remove")).tooltip(KineticI18n.translatable("tip.taczworkshop.data.remove")).onClick(this::toggleRemoved).build();
+        ui().button(350, 18, 64).text(KineticI18n.translatable("gui.taczworkshop.data.reset")).tooltip(KineticI18n.translatable("tip.taczworkshop.data.reset")).onClick(this::confirmReset).build();
         if (hasExpandableCollections()) {
-            addHighZButton(418, 18, 68, Component.translatable("gui.taczworkshop.data.collection.add"), Component.translatable("tip.taczworkshop.data.collection.add"), 40, this::openAddCollectionMenu);
+            ui().button(418, 18, 68).text(KineticI18n.translatable("gui.taczworkshop.data.collection.add")).tooltip(KineticI18n.translatable("tip.taczworkshop.data.collection.add")).layer(1).onClick(this::openAddCollectionMenu).build();
         }
         if (hasRemovableCollections()) {
-            addHighZButton(490, 18, 68, Component.translatable("gui.taczworkshop.data.collection.remove"), Component.translatable("tip.taczworkshop.data.collection.remove"), 40, this::openRemoveCollectionMenu);
+            ui().button(490, 18, 68).text(KineticI18n.translatable("gui.taczworkshop.data.collection.remove")).tooltip(KineticI18n.translatable("tip.taczworkshop.data.collection.remove")).layer(1).onClick(this::openRemoveCollectionMenu).build();
         }
-        addButton(562, 18, 64, Component.translatable("gui.taczworkshop.back"), Component.translatable("tip.taczworkshop.back.data_list"), this::onClose);
+        ui().button(562, 18, 64).text(KineticI18n.translatable("gui.taczworkshop.back")).tooltip(KineticI18n.translatable("tip.taczworkshop.back.data_list")).onClick(this::close).build();
 
         rebuildFieldWidgets();
     }
@@ -122,10 +126,10 @@ public final class TaczDataDetailScreen extends KineticScreen {
     }
 
     private void rebuildFieldWidgets() {
-        activeFieldWidgets.forEach(this::removeKineticControl);
+        activeFieldWidgets.forEach(ui()::remove);
         activeFieldWidgets.clear();
 
-        String query = search == null ? "" : search.getValue().trim().toLowerCase(Locale.ROOT);
+        String query = search == null ? "" : search.textValue().trim().toLowerCase(Locale.ROOT);
         List<TaczJsonLeafModel.Leaf> all = TaczJsonLeafModel.flatten(data, "", kind);
         if (!query.isEmpty()) {
             all.removeIf(leaf -> !TaczJsonLeafModel.matches(leaf, query, fieldLabel(leaf.displayPath()).getString()));
@@ -153,26 +157,19 @@ public final class TaczDataDetailScreen extends KineticScreen {
         Component label = fieldLabel(leaf.displayPath());
         if (leaf.isBoolean()) {
             boolean current = leaf.value().getAsBoolean();
-            ToggleButton button = addToggleButton(
-                    inputX, y + 2, INPUT_WIDTH,
-                    current,
-                    Component.translatable("gui.taczworkshop.data.boolean.true"),
-                    Component.translatable("gui.taczworkshop.data.boolean.false"),
-                    null,
-                    value -> {
+            KineticToggle button = ui().toggle(inputX, y + 2, INPUT_WIDTH).value(current).labels(KineticI18n.translatable("gui.taczworkshop.data.boolean.true"), KineticI18n.translatable("gui.taczworkshop.data.boolean.false")).onChange(value -> {
                         TaczJsonLeafModel.set(data, leaf, Boolean.toString(value));
                         markDirty();
-                    }
-            );
+                    }).build();
             activeFieldWidgets.add(button);
             return;
         }
 
-        KineticEditBox box;
+        KineticTextField box;
         if (leaf.isNumber()) {
-            NumericEditBox numeric = addDecimalField(inputX, y + 2, INPUT_WIDTH, label, true, null, null, null);
-            numeric.setValue(leaf.value().getAsString());
-            numeric.setResponder(value -> {
+            KineticNumberField numeric = ui().numberField(inputX, y + 2, INPUT_WIDTH, NumberType.DECIMAL).label(label).allowNegative(true).firstShownTextAsDefault().build();
+            numeric.setTextValue(leaf.value().getAsString());
+            numeric.onTextChange(value -> {
                 try {
                     if (value.isBlank() || "-".equals(value) || ".".equals(value) || "-.".equals(value)) return;
                     new BigDecimal(value);
@@ -183,14 +180,14 @@ public final class TaczDataDetailScreen extends KineticScreen {
             });
             box = numeric;
         } else {
-            box = addTextField(inputX, y + 2, INPUT_WIDTH, label);
-            box.setValue(leaf.value().getAsString());
-            box.setResponder(value -> {
+            box = ui().textField(inputX, y + 2, INPUT_WIDTH).label(label).firstShownTextAsDefault().build();
+            box.setTextValue(leaf.value().getAsString());
+            box.onTextChange(value -> {
                 TaczJsonLeafModel.set(data, leaf, value);
                 markDirty();
             });
         }
-        box.setMaxLength(2048);
+        box.limitTextLength(2048);
         activeFieldWidgets.add(box);
     }
 
@@ -205,10 +202,10 @@ public final class TaczDataDetailScreen extends KineticScreen {
         for (int i = 0; i < activeFieldWidgets.size(); i++) {
             KineticControl widget = activeFieldWidgets.get(i);
             int row = i / FIELDS_PER_ROW;
-            widget.setY(fieldBaseY() + row * ROW_HEIGHT - shift + 2);
-            boolean intersects = widget.getY() + widget.getHeight() > fieldBaseY()
-                    && widget.getY() < fieldBaseY() + visibleFieldRows() * ROW_HEIGHT;
-            widget.setVisible(intersects);
+            widget.moveControlY(fieldBaseY() + row * ROW_HEIGHT - shift + 2);
+            boolean intersects = widget.controlY() + widget.controlHeight() > fieldBaseY()
+                    && widget.controlY() < fieldBaseY() + visibleFieldRows() * ROW_HEIGHT;
+            widget.setControlVisible(intersects);
         }
     }
 
@@ -239,10 +236,10 @@ public final class TaczDataDetailScreen extends KineticScreen {
 
     private void confirmReset() {
         openDialog(
-                Component.translatable("gui.taczworkshop.data.reset.title"),
-                Component.translatable("gui.taczworkshop.data.reset.message", id),
-                Component.translatable("gui.yes"),
-                Component.translatable("gui.no"),
+                KineticI18n.translatable("gui.taczworkshop.data.reset.title"),
+                KineticI18n.translatable("gui.taczworkshop.data.reset.message", id),
+                KineticI18n.translatable("gui.yes"),
+                KineticI18n.translatable("gui.no"),
                 () -> {
                     TaczDataClientState.stageReset(kind, id);
                     dirty = false;
@@ -253,17 +250,17 @@ public final class TaczDataDetailScreen extends KineticScreen {
     }
 
     private void rebuildWidgetsKeepSearch() {
-        String oldSearch = search == null ? "" : search.getValue();
+        String oldSearch = search == null ? "" : search.textValue();
         search = null;
-        rebuildUi();
-        if (search != null) search.setValue(oldSearch);
+        rebuild();
+        if (search != null) search.setTextValue(oldSearch);
     }
 
     private void rebuildWidgetsKeepSearchAndReveal(String pathPrefix) {
-        String oldSearch = search == null ? "" : search.getValue();
+        String oldSearch = search == null ? "" : search.textValue();
         search = null;
-        rebuildUi();
-        if (search != null) search.setValue(oldSearch);
+        rebuild();
+        if (search != null) search.setTextValue(oldSearch);
         revealField(pathPrefix);
     }
 
@@ -323,10 +320,10 @@ public final class TaczDataDetailScreen extends KineticScreen {
     }
 
     private void addCollectionEntry(List<KineticOverlays.MenuItem> items, String labelKey, boolean add, Runnable action) {
-        Component label = Component.translatable(labelKey);
+        Component label = KineticI18n.translatable(labelKey);
         items.add(KineticOverlays.MenuItem.action(
                 label,
-                Component.translatable(add ? "tip.taczworkshop.data.collection.add_entry" : "tip.taczworkshop.data.collection.remove_entry", label),
+                KineticI18n.translatable(add ? "tip.taczworkshop.data.collection.add_entry" : "tip.taczworkshop.data.collection.remove_entry", label),
                 action
         ));
     }
@@ -538,32 +535,32 @@ public final class TaczDataDetailScreen extends KineticScreen {
     }
 
     @Override
-    protected void renderCanvasBackground(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        GuiTheme.panel(graphics, 6, 6, 628, 348);
+    protected void renderBackground(KineticGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        KineticTheme.panel(graphics, 6, 6, 628, 348);
         updateFieldWidgetPositions();
         int top = kind == TaczDataKind.GUN ? 110 : 78;
-        GuiTheme.panelAlt(graphics, 14, top, 612, 218 - (top - 110));
+        KineticTheme.panelAlt(graphics, 14, top, 612, 218 - (top - 110));
         int scrollHeight = visibleFieldRows() * ROW_HEIGHT - 4;
-        GuiTheme.scrollbar(fieldScroll, graphics, mouseX, mouseY, FIELD_SCROLL_X, fieldBaseY(), FIELD_SCROLL_WIDTH, scrollHeight, 18);
+        fieldScroll.render(graphics, mouseX, mouseY, FIELD_SCROLL_X, fieldBaseY(), FIELD_SCROLL_WIDTH, scrollHeight, 18);
     }
 
     @Override
-    protected void renderCanvasForeground(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    protected void renderForeground(KineticGraphics graphics, int mouseX, int mouseY, float partialTick) {
         ItemStack stack = TaczDataStackUtil.build(kind, id);
-        hoveredHeaderItem = GuiTheme.hovering(mouseX, mouseY, 20, 14, 18, 18);
-        GuiTheme.itemSlot(graphics, 20, 14, hoveredHeaderItem);
+        hoveredHeaderItem = KineticTheme.hovering(mouseX, mouseY, 20, 14, 18, 18);
+        KineticTheme.itemSlot(graphics, 20, 14, hoveredHeaderItem);
         if (resourceAvailable && !stack.isEmpty()) {
-            TaczPreviewIndexContext.with(kind, id, previewIndex, () -> GuiTheme.item(graphics, font, stack, 20, 14, 18, 1.0F, false));
+            TaczPreviewIndexContext.with(kind, id, previewIndex, () -> KineticTheme.item(graphics, stack, 20, 14, 18, 1.0F, false));
         } else {
-            graphics.drawCenteredString(font, Component.translatable("gui.taczworkshop.data.missing_mark"), 29, 19, 0xFFFFCC55);
+            graphics.centeredText(KineticI18n.translatable("gui.taczworkshop.data.missing_mark"), 29, 19, 0xFFFFCC55, true);
         }
-        if (serverModified || dirty) GuiTheme.indicatorOutline(graphics, 20, 14, 18, 18, GuiTheme.Indicator.SUCCESS);
-        if (removed) GuiTheme.indicatorOutline(graphics, 20, 14, 18, 18, GuiTheme.Indicator.DANGER);
+        if (serverModified || dirty) KineticTheme.indicatorOutline(graphics, 20, 14, 18, 18, KineticTheme.Indicator.SUCCESS);
+        if (removed) KineticTheme.indicatorOutline(graphics, 20, 14, 18, 18, KineticTheme.Indicator.DANGER);
 
-        KineticText.drawScrollingLeft(graphics, font, displayName(stack), 44, 14, 280, 0xFFFFFFFF, true);
-        KineticText.drawScrollingLeft(graphics, font, id, 44, 27, 280, 0xFFCCCCCC, false);
-        KineticText.drawScrollingLeft(graphics, font, Component.translatable("gui.taczworkshop.data.detail.data_id", dataId), 44, 40, 290, 0xFFAAAAAA, false);
-        graphics.drawString(font, Component.translatable(removed ? "gui.taczworkshop.data.status.removed" : serverModified || dirty ? "gui.taczworkshop.data.status.modified" : "gui.taczworkshop.data.status.active"), 280, 56, 0xFFFFFFFF, true);
+        graphics.scrollingText(displayName(stack), 44, 14, 280, 0xFFFFFFFF, true);
+        graphics.scrollingText(Component.literal(id), 44, 27, 280, 0xFFCCCCCC, false);
+        graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.data.detail.data_id", dataId), 44, 40, 290, 0xFFAAAAAA, false);
+        graphics.text(KineticI18n.translatable(removed ? "gui.taczworkshop.data.status.removed" : serverModified || dirty ? "gui.taczworkshop.data.status.modified" : "gui.taczworkshop.data.status.active"), 280, 56, 0xFFFFFFFF, true);
 
         hoveredAttachmentSummary = false;
         if (kind == TaczDataKind.GUN) renderAttachmentSummary(graphics, mouseX, mouseY);
@@ -573,7 +570,7 @@ public final class TaczDataDetailScreen extends KineticScreen {
         int shift = fieldScroll.visualShift(ROW_HEIGHT);
         int start = firstRow * FIELDS_PER_ROW;
         int end = Math.min(leaves.size(), start + (visibleFieldRows() + 1) * FIELDS_PER_ROW);
-        enableUiScissor(graphics, 14, fieldBaseY(), 617, fieldBaseY() + visibleFieldRows() * ROW_HEIGHT);
+        graphics.scissor(14, fieldBaseY(), 617, fieldBaseY() + visibleFieldRows() * ROW_HEIGHT);
         for (int i = start; i < end; i++) {
             int local = i - start;
             int col = local % FIELDS_PER_ROW;
@@ -582,60 +579,64 @@ public final class TaczDataDetailScreen extends KineticScreen {
             int y = fieldBaseY() + row * ROW_HEIGHT - shift;
             TaczJsonLeafModel.Leaf leaf = leaves.get(i);
             Component label = fieldLabel(leaf.displayPath());
-            KineticText.drawScrollingLeft(graphics, font, label, x, y + 8, LABEL_WIDTH, 0xFFFFFFFF, false);
-            if (GuiTheme.hovering(mouseX, mouseY, x, y + 2, INPUT_OFFSET + INPUT_WIDTH, 20)) hoveredLeaf = leaf;
+            graphics.scrollingText(label, x, y + 8, LABEL_WIDTH, 0xFFFFFFFF, false);
+            if (KineticTheme.hovering(mouseX, mouseY, x, y + 2, INPUT_OFFSET + INPUT_WIDTH, 20)) hoveredLeaf = leaf;
         }
-        disableUiScissor(graphics);
+        graphics.endScissor();
 
-        graphics.drawString(font, Component.translatable("gui.taczworkshop.data.fields", leaves.size()), 20, 338, 0xFFCCCCCC, false);
+        graphics.text(KineticI18n.translatable("gui.taczworkshop.data.fields", leaves.size()), 20, 338, 0xFFCCCCCC, false);
     }
 
     @Override
-    protected boolean canvasMouseClicked(double mouseX, double mouseY, int button) {
-        if (KineticMouseButtons.isSecondary(button) && kind == TaczDataKind.GUN && GuiTheme.hovering(mouseX, mouseY, ATTACHMENT_SUMMARY_X, ATTACHMENT_SUMMARY_Y, ATTACHMENT_SUMMARY_WIDTH, ATTACHMENT_SUMMARY_HEIGHT)) {
+    protected boolean onMouseClick(MouseInput input) {
+        double mouseX = input.x(), mouseY = input.y(); int button = input.rawButton();
+        if (KineticMouseButtons.isSecondary(button) && kind == TaczDataKind.GUN && KineticTheme.hovering(mouseX, mouseY, ATTACHMENT_SUMMARY_X, ATTACHMENT_SUMMARY_Y, ATTACHMENT_SUMMARY_WIDTH, ATTACHMENT_SUMMARY_HEIGHT)) {
             openAttachmentContextMenu((int) mouseX, (int) mouseY);
             return true;
         }
-        boolean widget = super.canvasMouseClicked(mouseX, mouseY, button);
+        boolean widget = false;
         int scrollHeight = visibleFieldRows() * ROW_HEIGHT - 4;
-        if (KineticMouseButtons.isPrimary(button) && fieldScroll.beginDrag(mouseX, mouseY, FIELD_SCROLL_X, fieldBaseY(), FIELD_SCROLL_WIDTH, scrollHeight, 18, 2)) {
+        if (fieldScroll.beginDrag(mouseX, mouseY, input.button(), FIELD_SCROLL_X, fieldBaseY(), FIELD_SCROLL_WIDTH, scrollHeight, 18, 2)) {
             return true;
         }
         return widget;
     }
 
     @Override
-    protected boolean canvasMouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+    protected boolean onMouseDrag(MouseDragInput input) {
+        double mouseX = input.x(), mouseY = input.y(); int button = input.rawButton(); double dragX = input.deltaX(), dragY = input.deltaY();
         int scrollHeight = visibleFieldRows() * ROW_HEIGHT - 4;
         if (fieldScroll.drag(mouseY, fieldBaseY(), scrollHeight, 18)) {
             return true;
         }
-        return super.canvasMouseDragged(mouseX, mouseY, button, dragX, dragY);
+        return false;
     }
 
     @Override
-    protected boolean canvasMouseReleased(double mouseX, double mouseY, int button) {
-        return fieldScroll.release(button)
-                || super.canvasMouseReleased(mouseX, mouseY, button);
+    protected boolean onMouseRelease(MouseInput input) {
+        double mouseX = input.x(), mouseY = input.y(); int button = input.rawButton();
+        return fieldScroll.release(input.button())
+                || false;
     }
 
     @Override
-    protected boolean canvasMouseScrolled(double mouseX, double mouseY, double delta) {
+    protected boolean onMouseScroll(ScrollInput input) {
+        double mouseX = input.x(), mouseY = input.y(), delta = input.deltaY();
         int scrollHeight = visibleFieldRows() * ROW_HEIGHT - 4;
-        if (GuiTheme.hovering(mouseX, mouseY, 14, fieldBaseY(), 612, scrollHeight) && fieldScroll.scroll(delta)) {
+        if (KineticTheme.hovering(mouseX, mouseY, 14, fieldBaseY(), 612, scrollHeight) && fieldScroll.scroll(delta)) {
             return true;
         }
-        return super.canvasMouseScrolled(mouseX, mouseY, delta);
+        return false;
     }
 
     @Override
-    protected void renderTooltips(GuiGraphics graphics, int scaledMouseX, int scaledMouseY, int mouseX, int mouseY) {
+    protected void renderTooltips(int scaledMouseX, int scaledMouseY) {
         if (overlayBlocksInput()) return;
         if (hoveredLeaf != null) {
             Component label = fieldLabel(hoveredLeaf.displayPath());
-            List<FormattedCharSequence> lines = new ArrayList<>(font.split(label, 320));
+            List<FormattedCharSequence> lines = new ArrayList<>(KineticText.wrap(label, 320));
             if (!label.getString().equals(hoveredLeaf.displayPath())) {
-                lines.addAll(font.split(Component.translatable("gui.taczworkshop.data.tooltip.field_path", hoveredLeaf.displayPath()), 320));
+                lines.addAll(KineticText.wrap(KineticI18n.translatable("gui.taczworkshop.data.tooltip.field_path", hoveredLeaf.displayPath()), 320));
             }
             showFormattedTooltip(lines);
             return;
@@ -648,17 +649,17 @@ public final class TaczDataDetailScreen extends KineticScreen {
             ItemStack stack = TaczDataStackUtil.build(kind, id);
             List<FormattedCharSequence> lines = new ArrayList<>();
             if (resourceAvailable && !stack.isEmpty()) {
-                lines.addAll(font.split(displayName(stack), 320));
-            } else lines.addAll(font.split(Component.translatable("gui.taczworkshop.data.resource_missing"), 320));
-            lines.addAll(font.split(Component.translatable("gui.taczworkshop.data.tooltip.item_id", id), 320));
-            if (!dataId.isBlank()) lines.addAll(font.split(Component.translatable("gui.taczworkshop.data.tooltip.data_id", dataId), 320));
+                lines.addAll(KineticText.wrap(displayName(stack), 320));
+            } else lines.addAll(KineticText.wrap(KineticI18n.translatable("gui.taczworkshop.data.resource_missing"), 320));
+            lines.addAll(KineticText.wrap(KineticI18n.translatable("gui.taczworkshop.data.tooltip.item_id", id), 320));
+            if (!dataId.isBlank()) lines.addAll(KineticText.wrap(KineticI18n.translatable("gui.taczworkshop.data.tooltip.data_id", dataId), 320));
             showFormattedTooltip(lines);
         }
     }
 
 
     private Component displayName(ItemStack stack) {
-        if (!nameKey.isBlank() && KineticText.hasTranslation(nameKey)) return Component.translatable(nameKey);
+        if (!nameKey.isBlank() && KineticI18n.hasTranslation(nameKey)) return KineticI18n.translatable(nameKey);
         if (resourceAvailable && !stack.isEmpty()) {
             Component name = TaczPreviewIndexContext.withResult(kind, id, previewIndex, stack::getHoverName);
             String text = name.getString();
@@ -668,38 +669,31 @@ public final class TaczDataDetailScreen extends KineticScreen {
     }
 
 
-    private void renderAttachmentSummary(GuiGraphics graphics, int mouseX, int mouseY) {
+    private void renderAttachmentSummary(KineticGraphics graphics, int mouseX, int mouseY) {
         Set<String> enabled = attachmentTypes();
-        hoveredAttachmentSummary = GuiTheme.hovering(mouseX, mouseY, ATTACHMENT_SUMMARY_X, ATTACHMENT_SUMMARY_Y, ATTACHMENT_SUMMARY_WIDTH, ATTACHMENT_SUMMARY_HEIGHT);
-        GuiTheme.panel(
+        hoveredAttachmentSummary = KineticTheme.hovering(mouseX, mouseY, ATTACHMENT_SUMMARY_X, ATTACHMENT_SUMMARY_Y, ATTACHMENT_SUMMARY_WIDTH, ATTACHMENT_SUMMARY_HEIGHT);
+        KineticTheme.panel(
                 graphics,
                 ATTACHMENT_SUMMARY_X,
                 ATTACHMENT_SUMMARY_Y,
                 ATTACHMENT_SUMMARY_WIDTH,
                 ATTACHMENT_SUMMARY_HEIGHT
         );
-        if (hoveredAttachmentSummary) GuiTheme.stateOutline(graphics, ATTACHMENT_SUMMARY_X, ATTACHMENT_SUMMARY_Y, ATTACHMENT_SUMMARY_WIDTH, ATTACHMENT_SUMMARY_HEIGHT, false, true, false);
-        graphics.drawString(
-                font,
-                Component.translatable("gui.taczworkshop.data.slot.summary", enabled.size(), ATTACHMENT_TYPES.size()),
-                ATTACHMENT_SUMMARY_X + 8,
-                ATTACHMENT_SUMMARY_Y + 7,
-                0xFFFFFFFF,
-                false
-        );
+        if (hoveredAttachmentSummary) KineticTheme.stateOutline(graphics, ATTACHMENT_SUMMARY_X, ATTACHMENT_SUMMARY_Y, ATTACHMENT_SUMMARY_WIDTH, ATTACHMENT_SUMMARY_HEIGHT, false, true, false);
+        graphics.text(KineticI18n.translatable("gui.taczworkshop.data.slot.summary", enabled.size(), ATTACHMENT_TYPES.size()), ATTACHMENT_SUMMARY_X + 8, ATTACHMENT_SUMMARY_Y + 7, 0xFFFFFFFF, false);
     }
 
     private List<FormattedCharSequence> attachmentSummaryTooltip() {
-        List<FormattedCharSequence> lines = new ArrayList<>(font.split(Component.translatable("gui.taczworkshop.data.slot.summary.title"), 320));
+        List<FormattedCharSequence> lines = new ArrayList<>(KineticText.wrap(KineticI18n.translatable("gui.taczworkshop.data.slot.summary.title"), 320));
         Set<String> enabled = attachmentTypes();
         for (String type : ATTACHMENT_TYPES) {
-            lines.addAll(font.split(Component.translatable(
+            lines.addAll(KineticText.wrap(KineticI18n.translatable(
                     "gui.taczworkshop.data.slot.summary.line",
-                    Component.translatable("gui.taczworkshop.attachment." + type),
-                    Component.translatable(enabled.contains(type) ? "gui.taczworkshop.data.boolean.true" : "gui.taczworkshop.data.boolean.false")
+                    KineticI18n.translatable("gui.taczworkshop.attachment." + type),
+                    KineticI18n.translatable(enabled.contains(type) ? "gui.taczworkshop.data.boolean.true" : "gui.taczworkshop.data.boolean.false")
             ), 320));
         }
-        lines.addAll(font.split(Component.translatable("tip.taczworkshop.data.slot.context"), 320));
+        lines.addAll(KineticText.wrap(KineticI18n.translatable("tip.taczworkshop.data.slot.context"), 320));
         return lines;
     }
 
@@ -709,8 +703,8 @@ public final class TaczDataDetailScreen extends KineticScreen {
         for (String type : ATTACHMENT_TYPES) {
             boolean on = enabled.contains(type);
             items.add(KineticOverlays.MenuItem.toggle(
-                    Component.translatable("gui.taczworkshop.attachment." + type),
-                    Component.translatable(on ? "tip.taczworkshop.data.slot.enabled" : "tip.taczworkshop.data.slot.disabled"),
+                    KineticI18n.translatable("gui.taczworkshop.attachment." + type),
+                    KineticI18n.translatable(on ? "tip.taczworkshop.data.slot.enabled" : "tip.taczworkshop.data.slot.disabled"),
                     on,
                     () -> {
                         toggleAttachmentType(type);
@@ -723,7 +717,7 @@ public final class TaczDataDetailScreen extends KineticScreen {
 
 
     @Override
-    protected boolean handleCloseRequest() {
+    protected boolean onCloseRequested() {
         stageCurrentEdit();
         return false;
     }
@@ -747,11 +741,11 @@ public final class TaczDataDetailScreen extends KineticScreen {
         if (fireModeScoped != null) return fireModeScoped;
         if (path.startsWith("extended_mag_ammo_amount[") && path.endsWith("]")) {
             int index = arrayIndex(path);
-            if (index >= 0) return Component.translatable("gui.taczworkshop.data.field.extended_mag_ammo_amount", index + 1);
+            if (index >= 0) return KineticI18n.translatable("gui.taczworkshop.data.field.extended_mag_ammo_amount", index + 1);
         }
         if (path.startsWith("fire_mode[") && path.endsWith("]")) {
             int index = arrayIndex(path);
-            if (index >= 0) return Component.translatable("gui.taczworkshop.data.field.fire_mode", index + 1);
+            if (index >= 0) return KineticI18n.translatable("gui.taczworkshop.data.field.fire_mode", index + 1);
         }
         Component lrTactical = lrTacticalLabel(path);
         if (lrTactical != null) return lrTactical;
@@ -761,112 +755,112 @@ public final class TaczDataDetailScreen extends KineticScreen {
         if (damageAdjust != null) return damageAdjust;
 
         return switch (path) {
-            case "ammo" -> Component.translatable("gui.taczworkshop.data.field.ammo_id");
-            case "bolt" -> Component.translatable("gui.taczworkshop.data.field.bolt");
-            case "bullet.damage" -> Component.translatable("gui.taczworkshop.data.field.damage");
-            case "bullet.explosion.explode" -> Component.translatable("gui.taczworkshop.data.field.explosion_enabled");
-            case "bullet.explosion.damage" -> Component.translatable("gui.taczworkshop.data.field.explosion_damage");
-            case "bullet.explosion.radius" -> Component.translatable("gui.taczworkshop.data.field.explosion_radius");
-            case "bullet.explosion.knockback" -> Component.translatable("gui.taczworkshop.data.field.explosion_knockback");
-            case "bullet.explosion.destroy_block" -> Component.translatable("gui.taczworkshop.data.field.explosion_destroy_block");
-            case "bullet.explosion.delay" -> Component.translatable("gui.taczworkshop.data.field.explosion_delay");
-            case "bullet.bullet_amount" -> Component.translatable("gui.taczworkshop.data.field.bullet_amount");
-            case "rpm" -> Component.translatable("gui.taczworkshop.data.field.rpm");
-            case "can_crawl" -> Component.translatable("gui.taczworkshop.data.field.can_crawl");
-            case "can_slide" -> Component.translatable("gui.taczworkshop.data.field.can_slide");
-            case "bolt_action_time" -> Component.translatable("gui.taczworkshop.data.field.bolt_action_time");
-            case "bolt_feed_time" -> Component.translatable("gui.taczworkshop.data.field.bolt_feed_time");
-            case "crawl_recoil_multiplier" -> Component.translatable("gui.taczworkshop.data.field.crawl_recoil_multiplier");
-            case "hurt_bob_tweak_multiplier" -> Component.translatable("gui.taczworkshop.data.field.hurt_bob_tweak_multiplier");
-            case "ammo_amount" -> Component.translatable("gui.taczworkshop.data.field.ammo_amount");
-            case "bullet.speed" -> Component.translatable("gui.taczworkshop.data.field.bullet_speed");
-            case "bullet.life" -> Component.translatable("gui.taczworkshop.data.field.bullet_life");
-            case "bullet.gravity" -> Component.translatable("gui.taczworkshop.data.field.gravity");
-            case "bullet.knockback" -> Component.translatable("gui.taczworkshop.data.field.knockback");
-            case "bullet.friction" -> Component.translatable("gui.taczworkshop.data.field.friction");
-            case "bullet.pierce" -> Component.translatable("gui.taczworkshop.data.field.pierce");
-            case "bullet.ignite" -> Component.translatable("gui.taczworkshop.data.field.ignite");
-            case "bullet.ignite.entity" -> Component.translatable("gui.taczworkshop.data.field.ignite_entity");
-            case "bullet.ignite.block" -> Component.translatable("gui.taczworkshop.data.field.ignite_block");
-            case "bullet.ignite_entity_time" -> Component.translatable("gui.taczworkshop.data.field.ignite_entity_time");
-            case "bullet.tracer_count_interval" -> Component.translatable("gui.taczworkshop.data.field.tracer_interval");
-            case "bullet.extra_damage.armor_ignore" -> Component.translatable("gui.taczworkshop.data.field.armor_ignore");
-            case "bullet.extra_damage.head_shot_multiplier" -> Component.translatable("gui.taczworkshop.data.field.headshot");
-            case "inaccuracy.stand" -> Component.translatable("gui.taczworkshop.data.field.spread_stand");
-            case "inaccuracy.move" -> Component.translatable("gui.taczworkshop.data.field.spread_move");
-            case "inaccuracy.sneak" -> Component.translatable("gui.taczworkshop.data.field.spread_sneak");
-            case "inaccuracy.lie" -> Component.translatable("gui.taczworkshop.data.field.spread_lie");
-            case "inaccuracy.aim" -> Component.translatable("gui.taczworkshop.data.field.spread_aim");
-            case "movement_speed.base" -> Component.translatable("gui.taczworkshop.data.field.move_speed_base");
-            case "movement_speed.aim" -> Component.translatable("gui.taczworkshop.data.field.move_speed_aim");
-            case "movement_speed.reload" -> Component.translatable("gui.taczworkshop.data.field.move_speed_reload");
-            case "weight" -> Component.translatable("gui.taczworkshop.data.field.weight");
-            case "draw_time" -> Component.translatable("gui.taczworkshop.data.field.draw_time");
-            case "put_away_time" -> Component.translatable("gui.taczworkshop.data.field.put_away_time");
-            case "aim_time" -> Component.translatable("gui.taczworkshop.data.field.aim_time");
-            case "sprint_time" -> Component.translatable("gui.taczworkshop.data.field.sprint_time");
-            case "reload.type" -> Component.translatable("gui.taczworkshop.data.field.reload_type");
-            case "reload.infinite" -> Component.translatable("gui.taczworkshop.data.field.reload_infinite");
-            case "reload.feed.empty" -> Component.translatable("gui.taczworkshop.data.field.reload_feed_empty");
-            case "reload.feed.tactical" -> Component.translatable("gui.taczworkshop.data.field.reload_feed_tactical");
-            case "reload.cooldown.empty" -> Component.translatable("gui.taczworkshop.data.field.reload_cooldown_empty");
-            case "reload.cooldown.tactical" -> Component.translatable("gui.taczworkshop.data.field.reload_cooldown_tactical");
-            case "fire_sound.fire_multiplier" -> Component.translatable("gui.taczworkshop.data.field.fire_sound_multiplier");
-            case "fire_sound.silence_multiplier" -> Component.translatable("gui.taczworkshop.data.field.silence_sound_multiplier");
-            case "burst_data.continuous_shoot" -> Component.translatable("gui.taczworkshop.data.field.burst_continuous");
-            case "burst_data.count" -> Component.translatable("gui.taczworkshop.data.field.burst_count");
-            case "burst_data.bpm" -> Component.translatable("gui.taczworkshop.data.field.burst_bpm");
-            case "burst_data.min_interval" -> Component.translatable("gui.taczworkshop.data.field.burst_min_interval");
-            case "melee.distance" -> Component.translatable("gui.taczworkshop.data.field.gun_melee_distance");
-            case "melee.cooldown" -> Component.translatable("gui.taczworkshop.data.field.gun_melee_cooldown");
-            case "melee.default.animation_type" -> Component.translatable("gui.taczworkshop.data.field.gun_melee_animation");
-            case "melee.default.distance" -> Component.translatable("gui.taczworkshop.data.field.gun_melee_default_distance");
-            case "melee.default.range_angle" -> Component.translatable("gui.taczworkshop.data.field.gun_melee_range_angle");
-            case "melee.default.cooldown" -> Component.translatable("gui.taczworkshop.data.field.gun_melee_default_cooldown");
-            case "melee.default.damage" -> Component.translatable("gui.taczworkshop.data.field.gun_melee_damage");
-            case "melee.default.knockback" -> Component.translatable("gui.taczworkshop.data.field.gun_melee_knockback");
-            case "melee.default.prep" -> Component.translatable("gui.taczworkshop.data.field.gun_melee_prep");
-            case "heat.max" -> Component.translatable("gui.taczworkshop.data.field.heat_max");
-            case "heat.per_shot" -> Component.translatable("gui.taczworkshop.data.field.heat_per_shot");
-            case "heat.cooling_multiplier" -> Component.translatable("gui.taczworkshop.data.field.heat_cooling_multiplier");
-            case "heat.cooling_delay" -> Component.translatable("gui.taczworkshop.data.field.heat_cooling_delay");
-            case "heat.over_heat_time" -> Component.translatable("gui.taczworkshop.data.field.heat_overheat_time");
-            case "heat.min_inaccuracy" -> Component.translatable("gui.taczworkshop.data.field.heat_min_inaccuracy");
-            case "heat.max_inaccuracy" -> Component.translatable("gui.taczworkshop.data.field.heat_max_inaccuracy");
-            case "heat.min_rpm_mod" -> Component.translatable("gui.taczworkshop.data.field.heat_min_rpm_mod");
-            case "heat.max_rpm_mod" -> Component.translatable("gui.taczworkshop.data.field.heat_max_rpm_mod");
-            case "extended_mag_level" -> Component.translatable("gui.taczworkshop.data.field.extended_mag_level");
-            case "stack_size" -> Component.translatable("gui.taczworkshop.data.field.stack_size");
-            case "sort" -> Component.translatable("gui.taczworkshop.data.field.sort");
-            case "damage.multiplier" -> Component.translatable("gui.taczworkshop.data.field.damage_multiplier");
-            case "damage.addend" -> Component.translatable("gui.taczworkshop.data.field.damage_addend");
-            case "damage.percent" -> Component.translatable("gui.taczworkshop.data.field.damage_percent");
-            case "ads.addend", "ads_addend" -> Component.translatable("gui.taczworkshop.data.field.ads_addend");
-            case "ads.multiplier" -> Component.translatable("gui.taczworkshop.data.field.ads_multiplier");
-            case "ads.percent" -> Component.translatable("gui.taczworkshop.data.field.ads_percent");
-            case "inaccuracy.addend", "inaccuracy_addend" -> Component.translatable("gui.taczworkshop.data.field.inaccuracy_addend");
-            case "inaccuracy.multiplier" -> Component.translatable("gui.taczworkshop.data.field.inaccuracy_multiplier");
-            case "inaccuracy.percent" -> Component.translatable("gui.taczworkshop.data.field.inaccuracy_percent");
-            case "aim_inaccuracy.addend" -> Component.translatable("gui.taczworkshop.data.field.aim_inaccuracy_addend");
-            case "aim_inaccuracy.multiplier" -> Component.translatable("gui.taczworkshop.data.field.aim_inaccuracy_multiplier");
-            case "aim_inaccuracy.percent" -> Component.translatable("gui.taczworkshop.data.field.aim_inaccuracy_percent");
-            case "recoil_modifier.pitch" -> Component.translatable("gui.taczworkshop.data.field.recoil_pitch_modifier");
-            case "recoil_modifier.yaw" -> Component.translatable("gui.taczworkshop.data.field.recoil_yaw_modifier");
-            case "recoil.pitch.multiplier" -> Component.translatable("gui.taczworkshop.data.field.recoil_pitch_multiplier");
-            case "recoil.yaw.multiplier" -> Component.translatable("gui.taczworkshop.data.field.recoil_yaw_multiplier");
-            case "rpm.multiplier" -> Component.translatable("gui.taczworkshop.data.field.rpm_multiplier");
-            case "rpm.addend" -> Component.translatable("gui.taczworkshop.data.field.rpm_addend");
-            case "rpm.percent" -> Component.translatable("gui.taczworkshop.data.field.rpm_percent");
-            case "armor_ignore.addend" -> Component.translatable("gui.taczworkshop.data.field.armor_ignore_addend");
-            case "armor_ignore.multiplier" -> Component.translatable("gui.taczworkshop.data.field.armor_ignore_multiplier");
-            case "armor_ignore.percent" -> Component.translatable("gui.taczworkshop.data.field.armor_ignore_percent");
-            case "head_shot.addend" -> Component.translatable("gui.taczworkshop.data.field.headshot_addend");
-            case "head_shot.multiplier" -> Component.translatable("gui.taczworkshop.data.field.headshot_multiplier");
-            case "pierce.addend" -> Component.translatable("gui.taczworkshop.data.field.pierce_addend");
-            case "pierce.multiplier" -> Component.translatable("gui.taczworkshop.data.field.pierce_multiplier");
-            case "ammo_speed.addend" -> Component.translatable("gui.taczworkshop.data.field.ammo_speed_addend");
-            case "ammo_speed.multiplier" -> Component.translatable("gui.taczworkshop.data.field.ammo_speed_multiplier");
-            case "ammo_speed.percent" -> Component.translatable("gui.taczworkshop.data.field.ammo_speed_percent");
+            case "ammo" -> KineticI18n.translatable("gui.taczworkshop.data.field.ammo_id");
+            case "bolt" -> KineticI18n.translatable("gui.taczworkshop.data.field.bolt");
+            case "bullet.damage" -> KineticI18n.translatable("gui.taczworkshop.data.field.damage");
+            case "bullet.explosion.explode" -> KineticI18n.translatable("gui.taczworkshop.data.field.explosion_enabled");
+            case "bullet.explosion.damage" -> KineticI18n.translatable("gui.taczworkshop.data.field.explosion_damage");
+            case "bullet.explosion.radius" -> KineticI18n.translatable("gui.taczworkshop.data.field.explosion_radius");
+            case "bullet.explosion.knockback" -> KineticI18n.translatable("gui.taczworkshop.data.field.explosion_knockback");
+            case "bullet.explosion.destroy_block" -> KineticI18n.translatable("gui.taczworkshop.data.field.explosion_destroy_block");
+            case "bullet.explosion.delay" -> KineticI18n.translatable("gui.taczworkshop.data.field.explosion_delay");
+            case "bullet.bullet_amount" -> KineticI18n.translatable("gui.taczworkshop.data.field.bullet_amount");
+            case "rpm" -> KineticI18n.translatable("gui.taczworkshop.data.field.rpm");
+            case "can_crawl" -> KineticI18n.translatable("gui.taczworkshop.data.field.can_crawl");
+            case "can_slide" -> KineticI18n.translatable("gui.taczworkshop.data.field.can_slide");
+            case "bolt_action_time" -> KineticI18n.translatable("gui.taczworkshop.data.field.bolt_action_time");
+            case "bolt_feed_time" -> KineticI18n.translatable("gui.taczworkshop.data.field.bolt_feed_time");
+            case "crawl_recoil_multiplier" -> KineticI18n.translatable("gui.taczworkshop.data.field.crawl_recoil_multiplier");
+            case "hurt_bob_tweak_multiplier" -> KineticI18n.translatable("gui.taczworkshop.data.field.hurt_bob_tweak_multiplier");
+            case "ammo_amount" -> KineticI18n.translatable("gui.taczworkshop.data.field.ammo_amount");
+            case "bullet.speed" -> KineticI18n.translatable("gui.taczworkshop.data.field.bullet_speed");
+            case "bullet.life" -> KineticI18n.translatable("gui.taczworkshop.data.field.bullet_life");
+            case "bullet.gravity" -> KineticI18n.translatable("gui.taczworkshop.data.field.gravity");
+            case "bullet.knockback" -> KineticI18n.translatable("gui.taczworkshop.data.field.knockback");
+            case "bullet.friction" -> KineticI18n.translatable("gui.taczworkshop.data.field.friction");
+            case "bullet.pierce" -> KineticI18n.translatable("gui.taczworkshop.data.field.pierce");
+            case "bullet.ignite" -> KineticI18n.translatable("gui.taczworkshop.data.field.ignite");
+            case "bullet.ignite.entity" -> KineticI18n.translatable("gui.taczworkshop.data.field.ignite_entity");
+            case "bullet.ignite.block" -> KineticI18n.translatable("gui.taczworkshop.data.field.ignite_block");
+            case "bullet.ignite_entity_time" -> KineticI18n.translatable("gui.taczworkshop.data.field.ignite_entity_time");
+            case "bullet.tracer_count_interval" -> KineticI18n.translatable("gui.taczworkshop.data.field.tracer_interval");
+            case "bullet.extra_damage.armor_ignore" -> KineticI18n.translatable("gui.taczworkshop.data.field.armor_ignore");
+            case "bullet.extra_damage.head_shot_multiplier" -> KineticI18n.translatable("gui.taczworkshop.data.field.headshot");
+            case "inaccuracy.stand" -> KineticI18n.translatable("gui.taczworkshop.data.field.spread_stand");
+            case "inaccuracy.move" -> KineticI18n.translatable("gui.taczworkshop.data.field.spread_move");
+            case "inaccuracy.sneak" -> KineticI18n.translatable("gui.taczworkshop.data.field.spread_sneak");
+            case "inaccuracy.lie" -> KineticI18n.translatable("gui.taczworkshop.data.field.spread_lie");
+            case "inaccuracy.aim" -> KineticI18n.translatable("gui.taczworkshop.data.field.spread_aim");
+            case "movement_speed.base" -> KineticI18n.translatable("gui.taczworkshop.data.field.move_speed_base");
+            case "movement_speed.aim" -> KineticI18n.translatable("gui.taczworkshop.data.field.move_speed_aim");
+            case "movement_speed.reload" -> KineticI18n.translatable("gui.taczworkshop.data.field.move_speed_reload");
+            case "weight" -> KineticI18n.translatable("gui.taczworkshop.data.field.weight");
+            case "draw_time" -> KineticI18n.translatable("gui.taczworkshop.data.field.draw_time");
+            case "put_away_time" -> KineticI18n.translatable("gui.taczworkshop.data.field.put_away_time");
+            case "aim_time" -> KineticI18n.translatable("gui.taczworkshop.data.field.aim_time");
+            case "sprint_time" -> KineticI18n.translatable("gui.taczworkshop.data.field.sprint_time");
+            case "reload.type" -> KineticI18n.translatable("gui.taczworkshop.data.field.reload_type");
+            case "reload.infinite" -> KineticI18n.translatable("gui.taczworkshop.data.field.reload_infinite");
+            case "reload.feed.empty" -> KineticI18n.translatable("gui.taczworkshop.data.field.reload_feed_empty");
+            case "reload.feed.tactical" -> KineticI18n.translatable("gui.taczworkshop.data.field.reload_feed_tactical");
+            case "reload.cooldown.empty" -> KineticI18n.translatable("gui.taczworkshop.data.field.reload_cooldown_empty");
+            case "reload.cooldown.tactical" -> KineticI18n.translatable("gui.taczworkshop.data.field.reload_cooldown_tactical");
+            case "fire_sound.fire_multiplier" -> KineticI18n.translatable("gui.taczworkshop.data.field.fire_sound_multiplier");
+            case "fire_sound.silence_multiplier" -> KineticI18n.translatable("gui.taczworkshop.data.field.silence_sound_multiplier");
+            case "burst_data.continuous_shoot" -> KineticI18n.translatable("gui.taczworkshop.data.field.burst_continuous");
+            case "burst_data.count" -> KineticI18n.translatable("gui.taczworkshop.data.field.burst_count");
+            case "burst_data.bpm" -> KineticI18n.translatable("gui.taczworkshop.data.field.burst_bpm");
+            case "burst_data.min_interval" -> KineticI18n.translatable("gui.taczworkshop.data.field.burst_min_interval");
+            case "melee.distance" -> KineticI18n.translatable("gui.taczworkshop.data.field.gun_melee_distance");
+            case "melee.cooldown" -> KineticI18n.translatable("gui.taczworkshop.data.field.gun_melee_cooldown");
+            case "melee.default.animation_type" -> KineticI18n.translatable("gui.taczworkshop.data.field.gun_melee_animation");
+            case "melee.default.distance" -> KineticI18n.translatable("gui.taczworkshop.data.field.gun_melee_default_distance");
+            case "melee.default.range_angle" -> KineticI18n.translatable("gui.taczworkshop.data.field.gun_melee_range_angle");
+            case "melee.default.cooldown" -> KineticI18n.translatable("gui.taczworkshop.data.field.gun_melee_default_cooldown");
+            case "melee.default.damage" -> KineticI18n.translatable("gui.taczworkshop.data.field.gun_melee_damage");
+            case "melee.default.knockback" -> KineticI18n.translatable("gui.taczworkshop.data.field.gun_melee_knockback");
+            case "melee.default.prep" -> KineticI18n.translatable("gui.taczworkshop.data.field.gun_melee_prep");
+            case "heat.max" -> KineticI18n.translatable("gui.taczworkshop.data.field.heat_max");
+            case "heat.per_shot" -> KineticI18n.translatable("gui.taczworkshop.data.field.heat_per_shot");
+            case "heat.cooling_multiplier" -> KineticI18n.translatable("gui.taczworkshop.data.field.heat_cooling_multiplier");
+            case "heat.cooling_delay" -> KineticI18n.translatable("gui.taczworkshop.data.field.heat_cooling_delay");
+            case "heat.over_heat_time" -> KineticI18n.translatable("gui.taczworkshop.data.field.heat_overheat_time");
+            case "heat.min_inaccuracy" -> KineticI18n.translatable("gui.taczworkshop.data.field.heat_min_inaccuracy");
+            case "heat.max_inaccuracy" -> KineticI18n.translatable("gui.taczworkshop.data.field.heat_max_inaccuracy");
+            case "heat.min_rpm_mod" -> KineticI18n.translatable("gui.taczworkshop.data.field.heat_min_rpm_mod");
+            case "heat.max_rpm_mod" -> KineticI18n.translatable("gui.taczworkshop.data.field.heat_max_rpm_mod");
+            case "extended_mag_level" -> KineticI18n.translatable("gui.taczworkshop.data.field.extended_mag_level");
+            case "stack_size" -> KineticI18n.translatable("gui.taczworkshop.data.field.stack_size");
+            case "sort" -> KineticI18n.translatable("gui.taczworkshop.data.field.sort");
+            case "damage.multiplier" -> KineticI18n.translatable("gui.taczworkshop.data.field.damage_multiplier");
+            case "damage.addend" -> KineticI18n.translatable("gui.taczworkshop.data.field.damage_addend");
+            case "damage.percent" -> KineticI18n.translatable("gui.taczworkshop.data.field.damage_percent");
+            case "ads.addend", "ads_addend" -> KineticI18n.translatable("gui.taczworkshop.data.field.ads_addend");
+            case "ads.multiplier" -> KineticI18n.translatable("gui.taczworkshop.data.field.ads_multiplier");
+            case "ads.percent" -> KineticI18n.translatable("gui.taczworkshop.data.field.ads_percent");
+            case "inaccuracy.addend", "inaccuracy_addend" -> KineticI18n.translatable("gui.taczworkshop.data.field.inaccuracy_addend");
+            case "inaccuracy.multiplier" -> KineticI18n.translatable("gui.taczworkshop.data.field.inaccuracy_multiplier");
+            case "inaccuracy.percent" -> KineticI18n.translatable("gui.taczworkshop.data.field.inaccuracy_percent");
+            case "aim_inaccuracy.addend" -> KineticI18n.translatable("gui.taczworkshop.data.field.aim_inaccuracy_addend");
+            case "aim_inaccuracy.multiplier" -> KineticI18n.translatable("gui.taczworkshop.data.field.aim_inaccuracy_multiplier");
+            case "aim_inaccuracy.percent" -> KineticI18n.translatable("gui.taczworkshop.data.field.aim_inaccuracy_percent");
+            case "recoil_modifier.pitch" -> KineticI18n.translatable("gui.taczworkshop.data.field.recoil_pitch_modifier");
+            case "recoil_modifier.yaw" -> KineticI18n.translatable("gui.taczworkshop.data.field.recoil_yaw_modifier");
+            case "recoil.pitch.multiplier" -> KineticI18n.translatable("gui.taczworkshop.data.field.recoil_pitch_multiplier");
+            case "recoil.yaw.multiplier" -> KineticI18n.translatable("gui.taczworkshop.data.field.recoil_yaw_multiplier");
+            case "rpm.multiplier" -> KineticI18n.translatable("gui.taczworkshop.data.field.rpm_multiplier");
+            case "rpm.addend" -> KineticI18n.translatable("gui.taczworkshop.data.field.rpm_addend");
+            case "rpm.percent" -> KineticI18n.translatable("gui.taczworkshop.data.field.rpm_percent");
+            case "armor_ignore.addend" -> KineticI18n.translatable("gui.taczworkshop.data.field.armor_ignore_addend");
+            case "armor_ignore.multiplier" -> KineticI18n.translatable("gui.taczworkshop.data.field.armor_ignore_multiplier");
+            case "armor_ignore.percent" -> KineticI18n.translatable("gui.taczworkshop.data.field.armor_ignore_percent");
+            case "head_shot.addend" -> KineticI18n.translatable("gui.taczworkshop.data.field.headshot_addend");
+            case "head_shot.multiplier" -> KineticI18n.translatable("gui.taczworkshop.data.field.headshot_multiplier");
+            case "pierce.addend" -> KineticI18n.translatable("gui.taczworkshop.data.field.pierce_addend");
+            case "pierce.multiplier" -> KineticI18n.translatable("gui.taczworkshop.data.field.pierce_multiplier");
+            case "ammo_speed.addend" -> KineticI18n.translatable("gui.taczworkshop.data.field.ammo_speed_addend");
+            case "ammo_speed.multiplier" -> KineticI18n.translatable("gui.taczworkshop.data.field.ammo_speed_multiplier");
+            case "ammo_speed.percent" -> KineticI18n.translatable("gui.taczworkshop.data.field.ammo_speed_percent");
             default -> genericFieldLabel(path);
         };
     }
@@ -883,11 +877,11 @@ public final class TaczDataDetailScreen extends KineticScreen {
             return null;
         }
         if (close + 1 >= path.length()) {
-            return Component.translatable("gui.taczworkshop.data.field.ammo_type", index);
+            return KineticI18n.translatable("gui.taczworkshop.data.field.ammo_type", index);
         }
         String relative = path.charAt(close + 1) == '.' ? path.substring(close + 2) : path.substring(close + 1);
-        if (relative.isBlank()) return Component.translatable("gui.taczworkshop.data.field.ammo_type", index);
-        return Component.translatable("gui.taczworkshop.data.field.ammo_type.wrap", index, fieldLabel(relative));
+        if (relative.isBlank()) return KineticI18n.translatable("gui.taczworkshop.data.field.ammo_type", index);
+        return KineticI18n.translatable("gui.taczworkshop.data.field.ammo_type.wrap", index, fieldLabel(relative));
     }
 
     private Component fireModeScopedFieldLabel(String path) {
@@ -908,7 +902,7 @@ public final class TaczDataDetailScreen extends KineticScreen {
         if (dot <= 0 || dot + 1 >= remainder.length()) return null;
         String mode = remainder.substring(0, dot);
         String relative = remainder.substring(dot + 1);
-        return Component.translatable(wrapKey, genericSegmentLabel(mode), fieldLabel(relative));
+        return KineticI18n.translatable(wrapKey, genericSegmentLabel(mode), fieldLabel(relative));
     }
 
     private Component genericFieldLabel(String path) {
@@ -921,7 +915,7 @@ public final class TaczDataDetailScreen extends KineticScreen {
         if (open > 0 && close > open + 1) {
             try {
                 int index = Integer.parseInt(segment.substring(open + 1, close)) + 1;
-                return Component.translatable("gui.taczworkshop.data.field.indexed", genericSegmentLabel(segment.substring(0, open)), index);
+                return KineticI18n.translatable("gui.taczworkshop.data.field.indexed", genericSegmentLabel(segment.substring(0, open)), index);
             } catch (NumberFormatException ignored) {
             }
         }
@@ -932,22 +926,22 @@ public final class TaczDataDetailScreen extends KineticScreen {
         if (segment == null || segment.isBlank()) return Component.empty();
         String safe = segment.toLowerCase(Locale.ROOT).replace(':', '_').replace('-', '_');
         String key = "gui.taczworkshop.data.field.generic." + safe;
-        if (KineticText.hasTranslation(key)) return Component.translatable(key);
+        if (KineticI18n.hasTranslation(key)) return KineticI18n.translatable(key);
         String[] parts = safe.split("_+");
         if (parts.length > 1) {
             Component result = genericSimpleSegmentLabel(parts[0]);
             for (int i = 1; i < parts.length; i++) {
-                result = Component.translatable("gui.taczworkshop.data.field.compound", result, genericSimpleSegmentLabel(parts[i]));
+                result = KineticI18n.translatable("gui.taczworkshop.data.field.compound", result, genericSimpleSegmentLabel(parts[i]));
             }
             return result;
         }
-        return Component.translatable("gui.taczworkshop.data.field.custom", segment);
+        return KineticI18n.translatable("gui.taczworkshop.data.field.custom", segment);
     }
 
     private Component genericSimpleSegmentLabel(String segment) {
         String key = "gui.taczworkshop.data.field.generic." + segment;
-        if (KineticText.hasTranslation(key)) return Component.translatable(key);
-        return Component.translatable("gui.taczworkshop.data.field.custom", segment);
+        if (KineticI18n.hasTranslation(key)) return KineticI18n.translatable(key);
+        return KineticI18n.translatable("gui.taczworkshop.data.field.custom", segment);
     }
 
     private Component lrTacticalLabel(String path) {
@@ -955,11 +949,11 @@ public final class TaczDataDetailScreen extends KineticScreen {
 
         if (path.startsWith("attack.attack_left.")) {
             Component label = lrMeleeAttackLabel(path.substring("attack.attack_left.".length()));
-            return label == null ? null : Component.translatable("gui.taczworkshop.data.field.lr.melee.attack.wrap", Component.translatable("gui.taczworkshop.data.field.lr.melee.attack.left"), label);
+            return label == null ? null : KineticI18n.translatable("gui.taczworkshop.data.field.lr.melee.attack.wrap", KineticI18n.translatable("gui.taczworkshop.data.field.lr.melee.attack.left"), label);
         }
         if (path.startsWith("attack.attack_right.")) {
             Component label = lrMeleeAttackLabel(path.substring("attack.attack_right.".length()));
-            return label == null ? null : Component.translatable("gui.taczworkshop.data.field.lr.melee.attack.wrap", Component.translatable("gui.taczworkshop.data.field.lr.melee.attack.right"), label);
+            return label == null ? null : KineticI18n.translatable("gui.taczworkshop.data.field.lr.melee.attack.wrap", KineticI18n.translatable("gui.taczworkshop.data.field.lr.melee.attack.right"), label);
         }
 
         if (path.startsWith("effects[") && path.contains("].")) {
@@ -967,7 +961,7 @@ public final class TaczDataDetailScreen extends KineticScreen {
             int index = arrayIndex(path.substring(0, close + 1));
             if (index >= 0) {
                 String key = getKey(path, close);
-                if (key != null) return Component.translatable(key, index + 1);
+                if (key != null) return KineticI18n.translatable(key, index + 1);
             }
         }
 
@@ -983,64 +977,64 @@ public final class TaczDataDetailScreen extends KineticScreen {
                 }
                 if (index >= 0) {
                     String key = getString(path, close);
-                    if (key != null) return Component.translatable(key, index + 1);
+                    if (key != null) return KineticI18n.translatable(key, index + 1);
                 }
             }
         }
 
         if (path.startsWith("remove_effects[") && path.endsWith("]")) {
             int index = arrayIndex(path);
-            if (index >= 0) return Component.translatable("gui.taczworkshop.data.field.lr.remove_effect", index + 1);
+            if (index >= 0) return KineticI18n.translatable("gui.taczworkshop.data.field.lr.remove_effect", index + 1);
         }
 
         return switch (path) {
-            case "attributes.generic.attack_damage" -> Component.translatable("gui.taczworkshop.data.field.lr.melee.attack_damage");
-            case "attributes.minecraft:generic.movement_speed.amount" -> Component.translatable("gui.taczworkshop.data.field.lr.melee.movement_speed_amount");
-            case "attributes.minecraft:generic.movement_speed.operation" -> Component.translatable("gui.taczworkshop.data.field.lr.melee.movement_speed_operation");
-            case "enchantment_value" -> Component.translatable("gui.taczworkshop.data.field.lr.enchantment_value");
-            case "max_durability" -> Component.translatable("gui.taczworkshop.data.field.lr.max_durability");
-            case "cooldown" -> Component.translatable("gui.taczworkshop.data.field.lr.cooldown");
-            case "cooldown_category" -> Component.translatable("gui.taczworkshop.data.field.lr.cooldown_category");
-            case "durability_damage" -> Component.translatable("gui.taczworkshop.data.field.lr.durability_damage");
-            case "food" -> Component.translatable("gui.taczworkshop.data.field.lr.food");
-            case "heal" -> Component.translatable("gui.taczworkshop.data.field.lr.heal");
-            case "saturation" -> Component.translatable("gui.taczworkshop.data.field.lr.saturation");
-            case "use_duration" -> Component.translatable("gui.taczworkshop.data.field.lr.use_duration");
-            case "use_mode" -> Component.translatable("gui.taczworkshop.data.field.lr.use_mode");
-            case "prepare_time" -> Component.translatable("gui.taczworkshop.data.field.lr.prepare_time");
-            case "cookable" -> Component.translatable("gui.taczworkshop.data.field.lr.cookable");
-            case "initial_speed" -> Component.translatable("gui.taczworkshop.data.field.lr.initial_speed");
-            case "entity.life_time" -> Component.translatable("gui.taczworkshop.data.field.lr.entity.life_time");
-            case "entity.gravity" -> Component.translatable("gui.taczworkshop.data.field.gravity");
-            case "entity.hit_damage" -> Component.translatable("gui.taczworkshop.data.field.lr.entity.hit_damage");
-            case "entity.should_bounce" -> Component.translatable("gui.taczworkshop.data.field.lr.entity.should_bounce");
-            case "entity.broke_on_ground" -> Component.translatable("gui.taczworkshop.data.field.lr.entity.broke_on_ground");
-            case "entity.bounce_factor" -> Component.translatable("gui.taczworkshop.data.field.lr.entity.bounce_factor");
-            case "entity.tail_particles" -> Component.translatable("gui.taczworkshop.data.field.lr.entity.tail_particles");
-            case "explode.radius" -> Component.translatable("gui.taczworkshop.data.field.lr.explode.radius");
-            case "explode.damage" -> Component.translatable("gui.taczworkshop.data.field.lr.explode.damage");
-            case "explode.destroy_blocks" -> Component.translatable("gui.taczworkshop.data.field.lr.explode.destroy_blocks");
-            case "explode.destroy_multiplier" -> Component.translatable("gui.taczworkshop.data.field.lr.explode.destroy_multiplier");
-            case "explode.screen_shake_time" -> Component.translatable("gui.taczworkshop.data.field.lr.explode.screen_shake_time");
-            case "explode.screen_shake_amplitude" -> Component.translatable("gui.taczworkshop.data.field.lr.explode.screen_shake_amplitude");
-            case "explode.trigger_on_explode" -> Component.translatable("gui.taczworkshop.data.field.lr.explode.trigger_on_explode");
-            case "explode.remote_detonation" -> Component.translatable("gui.taczworkshop.data.field.lr.explode.remote_detonation");
-            case "stun.radius" -> Component.translatable("gui.taczworkshop.data.field.lr.stun.radius");
-            case "stun.blind.max_angle" -> Component.translatable("gui.taczworkshop.data.field.lr.stun.blind.max_angle");
-            case "stun.blind.max_duration" -> Component.translatable("gui.taczworkshop.data.field.lr.stun.blind.max_duration");
-            case "stun.blind.min_duration" -> Component.translatable("gui.taczworkshop.data.field.lr.stun.blind.min_duration");
-            case "stun.blind.view_angle_factor" -> Component.translatable("gui.taczworkshop.data.field.lr.stun.blind.view_angle_factor");
-            case "stun.deafened.max_duration" -> Component.translatable("gui.taczworkshop.data.field.lr.stun.deafened.max_duration");
-            case "stun.deafened.min_duration" -> Component.translatable("gui.taczworkshop.data.field.lr.stun.deafened.min_duration");
-            case "cloud.area_cloud" -> Component.translatable("gui.taczworkshop.data.field.lr.cloud.area_cloud");
-            case "cloud.duration" -> Component.translatable("gui.taczworkshop.data.field.lr.cloud.duration");
-            case "cloud.extinguish_by_smoke" -> Component.translatable("gui.taczworkshop.data.field.lr.cloud.extinguish_by_smoke");
-            case "cloud.ignite" -> Component.translatable("gui.taczworkshop.data.field.lr.cloud.ignite");
-            case "cloud.ignite_time" -> Component.translatable("gui.taczworkshop.data.field.lr.cloud.ignite_time");
-            case "cloud.particles" -> Component.translatable("gui.taczworkshop.data.field.lr.cloud.particles");
-            case "cloud.radius" -> Component.translatable("gui.taczworkshop.data.field.lr.cloud.radius");
-            case "cloud.radius_per_tick" -> Component.translatable("gui.taczworkshop.data.field.lr.cloud.radius_per_tick");
-            case "cloud.wait_time" -> Component.translatable("gui.taczworkshop.data.field.lr.cloud.wait_time");
+            case "attributes.generic.attack_damage" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.melee.attack_damage");
+            case "attributes.minecraft:generic.movement_speed.amount" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.melee.movement_speed_amount");
+            case "attributes.minecraft:generic.movement_speed.operation" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.melee.movement_speed_operation");
+            case "enchantment_value" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.enchantment_value");
+            case "max_durability" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.max_durability");
+            case "cooldown" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.cooldown");
+            case "cooldown_category" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.cooldown_category");
+            case "durability_damage" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.durability_damage");
+            case "food" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.food");
+            case "heal" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.heal");
+            case "saturation" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.saturation");
+            case "use_duration" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.use_duration");
+            case "use_mode" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.use_mode");
+            case "prepare_time" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.prepare_time");
+            case "cookable" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.cookable");
+            case "initial_speed" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.initial_speed");
+            case "entity.life_time" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.entity.life_time");
+            case "entity.gravity" -> KineticI18n.translatable("gui.taczworkshop.data.field.gravity");
+            case "entity.hit_damage" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.entity.hit_damage");
+            case "entity.should_bounce" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.entity.should_bounce");
+            case "entity.broke_on_ground" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.entity.broke_on_ground");
+            case "entity.bounce_factor" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.entity.bounce_factor");
+            case "entity.tail_particles" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.entity.tail_particles");
+            case "explode.radius" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.explode.radius");
+            case "explode.damage" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.explode.damage");
+            case "explode.destroy_blocks" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.explode.destroy_blocks");
+            case "explode.destroy_multiplier" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.explode.destroy_multiplier");
+            case "explode.screen_shake_time" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.explode.screen_shake_time");
+            case "explode.screen_shake_amplitude" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.explode.screen_shake_amplitude");
+            case "explode.trigger_on_explode" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.explode.trigger_on_explode");
+            case "explode.remote_detonation" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.explode.remote_detonation");
+            case "stun.radius" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.stun.radius");
+            case "stun.blind.max_angle" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.stun.blind.max_angle");
+            case "stun.blind.max_duration" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.stun.blind.max_duration");
+            case "stun.blind.min_duration" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.stun.blind.min_duration");
+            case "stun.blind.view_angle_factor" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.stun.blind.view_angle_factor");
+            case "stun.deafened.max_duration" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.stun.deafened.max_duration");
+            case "stun.deafened.min_duration" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.stun.deafened.min_duration");
+            case "cloud.area_cloud" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.cloud.area_cloud");
+            case "cloud.duration" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.cloud.duration");
+            case "cloud.extinguish_by_smoke" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.cloud.extinguish_by_smoke");
+            case "cloud.ignite" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.cloud.ignite");
+            case "cloud.ignite_time" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.cloud.ignite_time");
+            case "cloud.particles" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.cloud.particles");
+            case "cloud.radius" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.cloud.radius");
+            case "cloud.radius_per_tick" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.cloud.radius_per_tick");
+            case "cloud.wait_time" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.cloud.wait_time");
             default -> null;
         };
     }
@@ -1073,21 +1067,21 @@ public final class TaczDataDetailScreen extends KineticScreen {
 
     private Component lrMeleeAttackLabel(String suffix) {
         return switch (suffix) {
-            case "factor" -> Component.translatable("gui.taczworkshop.data.field.lr.melee.attack.factor");
-            case "knockback" -> Component.translatable("gui.taczworkshop.data.field.lr.melee.attack.knockback");
-            case "cooldown" -> Component.translatable("gui.taczworkshop.data.field.lr.melee.attack.cooldown");
-            case "delay" -> Component.translatable("gui.taczworkshop.data.field.lr.melee.attack.delay");
-            case "durability_damage" -> Component.translatable("gui.taczworkshop.data.field.lr.melee.attack.durability_damage");
-            case "hitbox.type" -> Component.translatable("gui.taczworkshop.data.field.lr.melee.hitbox.type");
-            case "hitbox.max_range" -> Component.translatable("gui.taczworkshop.data.field.lr.melee.hitbox.max_range");
-            case "hitbox.max_angle" -> Component.translatable("gui.taczworkshop.data.field.lr.melee.hitbox.max_angle");
-            case "hitbox.exclude_self" -> Component.translatable("gui.taczworkshop.data.field.lr.melee.hitbox.exclude_self");
-            case "hitbox.penetration" -> Component.translatable("gui.taczworkshop.data.field.lr.melee.hitbox.penetration");
-            case "hitbox.half_width" -> Component.translatable("gui.taczworkshop.data.field.lr.melee.hitbox.half_width");
-            case "hitbox.half_height" -> Component.translatable("gui.taczworkshop.data.field.lr.melee.hitbox.half_height");
-            case "hitbox.roll" -> Component.translatable("gui.taczworkshop.data.field.lr.melee.hitbox.roll");
-            case "movement.delay" -> Component.translatable("gui.taczworkshop.data.field.lr.melee.movement.delay");
-            case "movement.speed" -> Component.translatable("gui.taczworkshop.data.field.lr.melee.movement.speed");
+            case "factor" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.melee.attack.factor");
+            case "knockback" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.melee.attack.knockback");
+            case "cooldown" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.melee.attack.cooldown");
+            case "delay" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.melee.attack.delay");
+            case "durability_damage" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.melee.attack.durability_damage");
+            case "hitbox.type" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.melee.hitbox.type");
+            case "hitbox.max_range" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.melee.hitbox.max_range");
+            case "hitbox.max_angle" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.melee.hitbox.max_angle");
+            case "hitbox.exclude_self" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.melee.hitbox.exclude_self");
+            case "hitbox.penetration" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.melee.hitbox.penetration");
+            case "hitbox.half_width" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.melee.hitbox.half_width");
+            case "hitbox.half_height" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.melee.hitbox.half_height");
+            case "hitbox.roll" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.melee.hitbox.roll");
+            case "movement.delay" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.melee.movement.delay");
+            case "movement.speed" -> KineticI18n.translatable("gui.taczworkshop.data.field.lr.melee.movement.speed");
             default -> null;
         };
     }
@@ -1123,7 +1117,7 @@ public final class TaczDataDetailScreen extends KineticScreen {
                 return null;
             }
         }
-        return Component.translatable(key, index);
+        return KineticI18n.translatable(key, index);
     }
 
     private Component damageAdjustLabel(String path) {
@@ -1139,8 +1133,8 @@ public final class TaczDataDetailScreen extends KineticScreen {
             return null;
         }
         String suffix = remainder.substring(close + 1);
-        if (".distance".equals(suffix)) return Component.translatable("gui.taczworkshop.data.field.damage_curve.distance", index);
-        if (".damage".equals(suffix)) return Component.translatable("gui.taczworkshop.data.field.damage_curve.damage", index);
+        if (".distance".equals(suffix)) return KineticI18n.translatable("gui.taczworkshop.data.field.damage_curve.distance", index);
+        if (".damage".equals(suffix)) return KineticI18n.translatable("gui.taczworkshop.data.field.damage_curve.damage", index);
         return null;
     }
 

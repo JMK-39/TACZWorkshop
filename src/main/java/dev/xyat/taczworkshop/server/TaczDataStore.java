@@ -7,7 +7,7 @@ import dev.xyat.taczworkshop.TaczWorkshop;
 import dev.xyat.taczworkshop.data.TaczDataCodec;
 import dev.xyat.taczworkshop.data.TaczDataKind;
 import dev.xyat.taczworkshop.data.TaczDataOverride;
-import dev.xyat.kineticcore.api.runtime.KineticPaths;
+import dev.xyat.kineticcore.api.runtime.KineticPlatform;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -17,7 +17,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.Map;
 
 public final class TaczDataStore {
-    private static final Path DIRECTORY = KineticPaths.configDirectory().resolve("kineticcore");
+    private static final Path DIRECTORY = KineticPlatform.configDirectory().resolve("kineticcore");
     private static final Path FILE = DIRECTORY.resolve("taczdata.json");
     private static final Path BACKUP = DIRECTORY.resolve("taczdata.json.bak");
     private static Map<TaczDataKind, Map<String, TaczDataOverride>> cache = TaczDataCodec.emptyMap();

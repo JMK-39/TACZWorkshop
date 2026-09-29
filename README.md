@@ -1,4 +1,4 @@
-﻿# TACZ Workshop
+# TACZ Workshop
 
 [![🇺🇸 English](https://img.shields.io/badge/%F0%9F%87%BA%F0%9F%87%B8_English-2F81F7?style=for-the-badge)](#english) [![🇨🇳 简体中文](https://img.shields.io/badge/%F0%9F%87%A8%F0%9F%87%B3_%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-DC2828?style=for-the-badge)](#chinese) [![CurseForge](https://img.shields.io/badge/CurseForge-Open-F16436?style=for-the-badge&logo=curseforge&logoColor=white)](https://www.curseforge.com/minecraft/mc-mods/taczworkshop)
 
@@ -14,7 +14,7 @@ TACZ Workshop provides in-game tools for adjusting installed TACZ content and ma
 | --- | --- |
 | Minecraft | 1.20.1 |
 | Forge | 47.4.2 or newer |
-| KineticCore | 26.9.20 or newer; required |
+26.9.28 or newer; required |
 | Timeless and Classics Zero (TACZ) | Required |
 | Sophisticated Backpacks / Sophisticated Core | Optional backpack compatibility |
 | LR Tactical content | Needed for the corresponding melee, throwable, and consumable data categories |
@@ -104,7 +104,7 @@ TACZ Workshop 提供游戏内 TACZ 内容调整与枪匠工作台配方管理工
 | --- | --- |
 | Minecraft | 1.20.1 |
 | Forge | 47.4.2 或更新版本 |
-| KineticCore | 必需，26.9.20 或更新版本 |
+| KineticCore | 必需，26.9.27 或更新版本 |
 | Timeless and Classics Zero（TACZ） | 必需 |
 | Sophisticated Backpacks / Sophisticated Core | 可选，用于精妙背包兼容 |
 | LR Tactical 内容 | 近战、投掷物和补给品等对应数据分类需要这些内容 |
