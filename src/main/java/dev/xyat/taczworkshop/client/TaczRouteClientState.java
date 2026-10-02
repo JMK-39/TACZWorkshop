@@ -2,7 +2,6 @@ package dev.xyat.taczworkshop.client;
 
 import dev.xyat.kineticcore.api.resource.KineticResourceIds;
 import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.minecraft.resources.ResourceLocation;
 

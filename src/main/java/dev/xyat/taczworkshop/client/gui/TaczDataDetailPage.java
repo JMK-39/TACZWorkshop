@@ -24,7 +24,6 @@ import dev.xyat.taczworkshop.client.TaczDataStackUtil;
 import dev.xyat.taczworkshop.client.TaczPreviewIndexContext;
 import dev.xyat.taczworkshop.data.TaczDataKind;
 import dev.xyat.kineticcore.api.client.gui.render.KineticGraphics;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.ItemStack;

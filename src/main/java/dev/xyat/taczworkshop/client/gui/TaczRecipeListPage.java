@@ -15,7 +15,6 @@ import dev.xyat.kineticcore.api.client.gui.widget.list.*;
 import dev.xyat.kineticcore.api.text.KineticI18n;
 
 import dev.xyat.kineticcore.api.client.input.KineticMouseButtons;
-import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import dev.xyat.taczworkshop.client.TaczClientState;
 import dev.xyat.taczworkshop.client.TaczDataClientState;
 import dev.xyat.taczworkshop.client.TaczDataListEntry;
@@ -25,7 +24,6 @@ import dev.xyat.taczworkshop.data.TaczRecipeCodec;
 import dev.xyat.taczworkshop.data.TaczRecipeRecord;
 import dev.xyat.taczworkshop.network.TaczRecipeNetwork;
 import dev.xyat.kineticcore.api.client.gui.render.KineticGraphics;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.ItemStack;
