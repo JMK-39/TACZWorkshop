@@ -301,3 +301,6 @@ tasks.withType(JavaCompile).configureEach {
 tasks.named('compileJava', JavaCompile).configure {
     outputs.upToDateWhen { false }
 }
+
+// English and Chinese must expose exactly the same authored translation keys.
+apply from: rootProject.file('gradle/kinetic-language-validation.gradle')
