@@ -211,10 +211,10 @@ public final class TaczDataManagerPage extends KineticPage {
 
     @Override
     protected void renderForeground(KineticGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        graphics.text(KineticI18n.translatable("gui.taczworkshop.data.count", filtered.size()), 386, 16, 0xFFFFFFFF, true);
+        graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.data.count", filtered.size()), 386, 16, 626 - 386, 0xFFFFFFFF, true);
         renderInfoPanel(graphics);
         if (filtered.isEmpty()) {
-            graphics.centeredText(KineticI18n.translatable("gui.taczworkshop.data.empty"), GRID_X + GRID_WIDTH / 2, GRID_Y + GRID_HEIGHT / 2 - KineticText.lineHeight() / 2, 0xFFAAAAAA, true);
+            graphics.scrollingTextCentered(KineticI18n.translatable("gui.taczworkshop.data.empty"), GRID_X + GRID_WIDTH / 2, GRID_Y + GRID_HEIGHT / 2 - KineticText.lineHeight() / 2, GRID_WIDTH - 8, 0xFFAAAAAA, true);
         }
     }
 
@@ -230,13 +230,13 @@ public final class TaczDataManagerPage extends KineticPage {
 
         int x = INFO_X + 8;
         int y = INFO_Y + 8;
-        graphics.text(KineticI18n.translatable("gui.taczworkshop.data.overview"), x, y, 0xFFFFFFFF, true);
+        graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.data.overview"), x, y, INFO_WIDTH - 16, 0xFFFFFFFF, true);
         y += 18;
-        graphics.text(KineticI18n.translatable("gui.taczworkshop.data.overview.active", activeCount), x, y, 0xFFCCCCCC, false);
+        graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.data.overview.active", activeCount), x, y, INFO_WIDTH - 16, 0xFFCCCCCC, false);
         y += 13;
-        graphics.text(KineticI18n.translatable("gui.taczworkshop.data.overview.modified", modifiedCount), x, y, 0xFFCCCCCC, false);
+        graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.data.overview.modified", modifiedCount), x, y, INFO_WIDTH - 16, 0xFFCCCCCC, false);
         y += 13;
-        graphics.text(KineticI18n.translatable("gui.taczworkshop.data.overview.removed", removedCount), x, y, 0xFFCCCCCC, false);
+        graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.data.overview.removed", removedCount), x, y, INFO_WIDTH - 16, 0xFFCCCCCC, false);
         y += 22;
 
         if (hoveredEntry != null) {
@@ -250,7 +250,7 @@ public final class TaczDataManagerPage extends KineticPage {
                 graphics.scrollingText(Component.literal(hoveredEntry.dataId()), x, y, INFO_WIDTH - 16, 0xFFAAAAAA, false);
                 y += 13;
             }
-            graphics.text(statusLine(hoveredEntry), x, y, 0xFFFFFFFF, false);
+            graphics.scrollingText(statusLine(hoveredEntry), x, y, INFO_WIDTH - 16, 0xFFFFFFFF, false);
         } else {
             for (FormattedCharSequence line : KineticText.wrap(KineticI18n.translatable("gui.taczworkshop.data.overview.guide"), INFO_WIDTH - 16)) {
                 graphics.text(line, x, y, 0xFFCCCCCC, false);

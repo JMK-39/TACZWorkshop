@@ -556,10 +556,10 @@ public final class TaczDataDetailPage extends KineticPage {
         if (serverModified || dirty) KineticTheme.indicatorOutline(graphics, 20, 14, 18, 18, KineticTheme.Indicator.SUCCESS);
         if (removed) KineticTheme.indicatorOutline(graphics, 20, 14, 18, 18, KineticTheme.Indicator.DANGER);
 
-        graphics.scrollingText(displayName(stack), 44, 14, 280, 0xFFFFFFFF, true);
-        graphics.scrollingText(Component.literal(id), 44, 27, 280, 0xFFCCCCCC, false);
+        graphics.scrollingText(displayName(stack), 44, 14, 278 - 44 - 4, 0xFFFFFFFF, true);
+        graphics.scrollingText(Component.literal(id), 44, 27, 278 - 44 - 4, 0xFFCCCCCC, false);
         graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.data.detail.data_id", dataId), 44, 40, 290, 0xFFAAAAAA, false);
-        graphics.text(KineticI18n.translatable(removed ? "gui.taczworkshop.data.status.removed" : serverModified || dirty ? "gui.taczworkshop.data.status.modified" : "gui.taczworkshop.data.status.active"), 280, 56, 0xFFFFFFFF, true);
+        graphics.scrollingText(KineticI18n.translatable(removed ? "gui.taczworkshop.data.status.removed" : serverModified || dirty ? "gui.taczworkshop.data.status.modified" : "gui.taczworkshop.data.status.active"), 280, 56, 626 - 280, 0xFFFFFFFF, true);
 
         hoveredAttachmentSummary = false;
         if (kind == TaczDataKind.GUN) renderAttachmentSummary(graphics, mouseX, mouseY);
@@ -583,7 +583,7 @@ public final class TaczDataDetailPage extends KineticPage {
         }
         graphics.endScissor();
 
-        graphics.text(KineticI18n.translatable("gui.taczworkshop.data.fields", leaves.size()), 20, 338, 0xFFCCCCCC, false);
+        graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.data.fields", leaves.size()), 20, 338, 626 - 20, 0xFFCCCCCC, false);
     }
 
     @Override
@@ -679,7 +679,7 @@ public final class TaczDataDetailPage extends KineticPage {
                 ATTACHMENT_SUMMARY_HEIGHT
         );
         if (hoveredAttachmentSummary) KineticTheme.stateOutline(graphics, ATTACHMENT_SUMMARY_X, ATTACHMENT_SUMMARY_Y, ATTACHMENT_SUMMARY_WIDTH, ATTACHMENT_SUMMARY_HEIGHT, false, true, false);
-        graphics.text(KineticI18n.translatable("gui.taczworkshop.data.slot.summary", enabled.size(), ATTACHMENT_TYPES.size()), ATTACHMENT_SUMMARY_X + 8, ATTACHMENT_SUMMARY_Y + 7, 0xFFFFFFFF, false);
+        graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.data.slot.summary", enabled.size(), ATTACHMENT_TYPES.size()), ATTACHMENT_SUMMARY_X + 8, ATTACHMENT_SUMMARY_Y + 7, ATTACHMENT_SUMMARY_WIDTH - 16, 0xFFFFFFFF, false);
     }
 
     private List<FormattedCharSequence> attachmentSummaryTooltip() {
