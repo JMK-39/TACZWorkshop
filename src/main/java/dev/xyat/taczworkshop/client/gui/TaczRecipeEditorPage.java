@@ -523,37 +523,37 @@ public final class TaczRecipeEditorPage extends KineticPage {
         if (hoveredMaterialIndex >= 0 && hoveredMaterialIndex < record.materials().size()) {
             TaczMaterial material = record.materials().get(hoveredMaterialIndex);
             ItemStack preview = TaczRecipeCodec.materialPreview(material);
-            List<FormattedCharSequence> lines = new ArrayList<>();
-            lines.addAll(KineticText.wrap(materialDisplayName(material, preview), 320));
-            lines.addAll(KineticText.wrap(Component.literal(materialLabel(material)), 320));
-            lines.addAll(KineticText.wrap(KineticI18n.translatable("gui.taczworkshop.material.count", material.count()), 320));
-            lines.addAll(KineticText.wrap(KineticI18n.translatable("gui.taczworkshop.item_nbt.value", materialNbtText(material, preview)), 320));
-            lines.addAll(KineticText.wrap(KineticI18n.translatable("gui.taczworkshop.material.click_hint"), 320));
-            showFormattedTooltip(lines);
+            List<Component> lines = new ArrayList<>();
+            lines.add(materialDisplayName(material, preview));
+            lines.add(Component.literal(materialLabel(material)));
+            lines.add(KineticI18n.translatable("gui.taczworkshop.material.count", material.count()));
+            lines.add(KineticI18n.translatable("gui.taczworkshop.item_nbt.value", materialNbtText(material, preview)));
+            lines.add(KineticI18n.translatable("gui.taczworkshop.material.click_hint"));
+            showTooltip(lines, 320);
             return;
         }
         if (hoveredWorkbench) {
             ItemStack stack = workbenchPreviewStack();
-            List<FormattedCharSequence> lines = new ArrayList<>(KineticText.wrap(KineticI18n.translatable("gui.taczworkshop.workbench.button"), 280));
-            if (!stack.isEmpty()) lines.addAll(KineticText.wrap(stack.getHoverName(), 280));
+            List<Component> lines = new ArrayList<>(List.of(KineticI18n.translatable("gui.taczworkshop.workbench.button")));
+            if (!stack.isEmpty()) lines.add(stack.getHoverName());
             if (!record.workbenches().isEmpty()) {
-                lines.addAll(KineticText.wrap(Component.literal(record.workbenches().get(0)), 280));
-                if (record.workbenches().size() > 1) lines.addAll(KineticText.wrap(KineticI18n.translatable("gui.taczworkshop.workbench.summary", record.workbenches().size()), 280));
+                lines.add(Component.literal(record.workbenches().get(0)));
+                if (record.workbenches().size() > 1) lines.add(KineticI18n.translatable("gui.taczworkshop.workbench.summary", record.workbenches().size()));
             } else {
-                lines.addAll(KineticText.wrap(KineticI18n.translatable("gui.taczworkshop.workbench.native"), 280));
+                lines.add(KineticI18n.translatable("gui.taczworkshop.workbench.native"));
             }
-            showFormattedTooltip(lines);
+            showTooltip(lines, 280);
             return;
         }
 
         if (hoveredResult) {
             ItemStack resultStack = resultPreviewStack();
-            List<FormattedCharSequence> lines = new ArrayList<>();
-            lines.addAll(KineticText.wrap(resultDisplayName(resultStack), 320));
-            lines.addAll(KineticText.wrap(Component.literal(record.resultId()), 320));
-            lines.addAll(KineticText.wrap(KineticI18n.translatable("gui.taczworkshop.item_nbt.value", resultNbtText(resultStack)), 320));
-            lines.addAll(KineticText.wrap(KineticI18n.translatable("gui.taczworkshop.result.click_hint"), 320));
-            showFormattedTooltip(lines);
+            List<Component> lines = new ArrayList<>();
+            lines.add(resultDisplayName(resultStack));
+            lines.add(Component.literal(record.resultId()));
+            lines.add(KineticI18n.translatable("gui.taczworkshop.item_nbt.value", resultNbtText(resultStack)));
+            lines.add(KineticI18n.translatable("gui.taczworkshop.result.click_hint"));
+            showTooltip(lines, 320);
         }
     }
 

@@ -3,7 +3,6 @@ package dev.xyat.taczworkshop.client.gui;
 import dev.xyat.kineticcore.api.client.gui.input.ScrollInput;
 import dev.xyat.kineticcore.api.client.gui.input.MouseDragInput;
 import dev.xyat.kineticcore.api.client.gui.input.MouseInput;
-import dev.xyat.kineticcore.api.client.gui.text.KineticText;
 import dev.xyat.kineticcore.api.client.gui.overlay.KineticOverlays;
 import dev.xyat.kineticcore.api.client.gui.page.KineticPage;
 import dev.xyat.kineticcore.api.client.gui.render.KineticGraphics;
@@ -25,7 +24,6 @@ import dev.xyat.taczworkshop.client.TaczPreviewIndexContext;
 import dev.xyat.taczworkshop.data.TaczDataKind;
 import dev.xyat.kineticcore.api.client.gui.render.KineticGraphics;
 import net.minecraft.network.chat.Component;
-import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
@@ -633,26 +631,26 @@ public final class TaczDataDetailPage extends KineticPage {
         if (overlayBlocksInput()) return;
         if (hoveredLeaf != null) {
             Component label = fieldLabel(hoveredLeaf.displayPath());
-            List<FormattedCharSequence> lines = new ArrayList<>(KineticText.wrap(label, 320));
+            List<Component> lines = new ArrayList<>(List.of(label));
             if (!label.getString().equals(hoveredLeaf.displayPath())) {
-                lines.addAll(KineticText.wrap(KineticI18n.translatable("gui.taczworkshop.data.tooltip.field_path", hoveredLeaf.displayPath()), 320));
+                lines.add(KineticI18n.translatable("gui.taczworkshop.data.tooltip.field_path", hoveredLeaf.displayPath()));
             }
-            showFormattedTooltip(lines);
+            showTooltip(lines, 320);
             return;
         }
         if (hoveredAttachmentSummary && kind == TaczDataKind.GUN) {
-            showFormattedTooltip(attachmentSummaryTooltip());
+            showTooltip(attachmentSummaryTooltip(), 320);
             return;
         }
         if (hoveredHeaderItem) {
             ItemStack stack = TaczDataStackUtil.build(kind, id);
-            List<FormattedCharSequence> lines = new ArrayList<>();
+            List<Component> lines = new ArrayList<>();
             if (resourceAvailable && !stack.isEmpty()) {
-                lines.addAll(KineticText.wrap(displayName(stack), 320));
-            } else lines.addAll(KineticText.wrap(KineticI18n.translatable("gui.taczworkshop.data.resource_missing"), 320));
-            lines.addAll(KineticText.wrap(KineticI18n.translatable("gui.taczworkshop.data.tooltip.item_id", id), 320));
-            if (!dataId.isBlank()) lines.addAll(KineticText.wrap(KineticI18n.translatable("gui.taczworkshop.data.tooltip.data_id", dataId), 320));
-            showFormattedTooltip(lines);
+                lines.add(displayName(stack));
+            } else lines.add(KineticI18n.translatable("gui.taczworkshop.data.resource_missing"));
+            lines.add(KineticI18n.translatable("gui.taczworkshop.data.tooltip.item_id", id));
+            if (!dataId.isBlank()) lines.add(KineticI18n.translatable("gui.taczworkshop.data.tooltip.data_id", dataId));
+            showTooltip(lines, 320);
         }
     }
 
@@ -682,17 +680,17 @@ public final class TaczDataDetailPage extends KineticPage {
         graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.data.slot.summary", enabled.size(), ATTACHMENT_TYPES.size()), ATTACHMENT_SUMMARY_X + 8, ATTACHMENT_SUMMARY_Y + 7, ATTACHMENT_SUMMARY_WIDTH - 16, 0xFFFFFFFF, false);
     }
 
-    private List<FormattedCharSequence> attachmentSummaryTooltip() {
-        List<FormattedCharSequence> lines = new ArrayList<>(KineticText.wrap(KineticI18n.translatable("gui.taczworkshop.data.slot.summary.title"), 320));
+    private List<Component> attachmentSummaryTooltip() {
+        List<Component> lines = new ArrayList<>(List.of(KineticI18n.translatable("gui.taczworkshop.data.slot.summary.title")));
         Set<String> enabled = attachmentTypes();
         for (String type : ATTACHMENT_TYPES) {
-            lines.addAll(KineticText.wrap(KineticI18n.translatable(
+            lines.add(KineticI18n.translatable(
                     "gui.taczworkshop.data.slot.summary.line",
                     KineticI18n.translatable("gui.taczworkshop.attachment." + type),
                     KineticI18n.translatable(enabled.contains(type) ? "gui.taczworkshop.data.boolean.true" : "gui.taczworkshop.data.boolean.false")
-            ), 320));
+            ));
         }
-        lines.addAll(KineticText.wrap(KineticI18n.translatable("tip.taczworkshop.data.slot.context"), 320));
+        lines.add(KineticI18n.translatable("tip.taczworkshop.data.slot.context"));
         return lines;
     }
 

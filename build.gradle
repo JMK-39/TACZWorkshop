@@ -137,7 +137,7 @@ dependencies {
             configuration.resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
         }
     }
-    def kineticCoreMinimumVersion = project.findProperty('kineticcore_min_version')?.toString() ?: '26.10.3'
+    def kineticCoreMinimumVersion = project.findProperty('kineticcore_min_version')?.toString() ?: '26.10.4'
     // Compare local KineticCore JARs with GitHub's latest stable release; prefer local unless the official version is newer.
     def kineticCoreVersion = project.findProperty('kineticcore_resolved_version')?.toString() ?: project.findProperty('kineticcore_version')?.toString()
     def parseKineticCoreVersion = { String value ->

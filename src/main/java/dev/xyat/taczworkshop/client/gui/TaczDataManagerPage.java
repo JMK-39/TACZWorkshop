@@ -409,14 +409,14 @@ public final class TaczDataManagerPage extends KineticPage {
         if (overlayBlocksInput()) return;
         if (hoveredEntry == null) return;
         ItemStack stack = stackFor(hoveredEntry);
-        List<FormattedCharSequence> lines = new ArrayList<>();
-        lines.addAll(KineticText.wrap(hoverName(hoveredEntry, stack), 320));
-        lines.addAll(KineticText.wrap(KineticI18n.translatable("gui.taczworkshop.data.tooltip.item_id", hoveredEntry.id()), 320));
-        if (!hoveredEntry.dataId().isBlank()) lines.addAll(KineticText.wrap(KineticI18n.translatable("gui.taczworkshop.data.tooltip.data_id", hoveredEntry.dataId()), 320));
-        lines.addAll(KineticText.wrap(statusLine(hoveredEntry), 320));
-        lines.addAll(KineticText.wrap(KineticI18n.translatable("tip.taczworkshop.data.open_entry"), 320));
-        lines.addAll(KineticText.wrap(KineticI18n.translatable("tip.taczworkshop.data.context_entry"), 320));
-        showFormattedTooltip(lines);
+        List<Component> lines = new ArrayList<>();
+        lines.add(hoverName(hoveredEntry, stack));
+        lines.add(KineticI18n.translatable("gui.taczworkshop.data.tooltip.item_id", hoveredEntry.id()));
+        if (!hoveredEntry.dataId().isBlank()) lines.add(KineticI18n.translatable("gui.taczworkshop.data.tooltip.data_id", hoveredEntry.dataId()));
+        lines.add(statusLine(hoveredEntry));
+        lines.add(KineticI18n.translatable("tip.taczworkshop.data.open_entry"));
+        lines.add(KineticI18n.translatable("tip.taczworkshop.data.context_entry"));
+        showTooltip(lines, 320);
     }
 
     private void stageRemovedEntry(TaczDataListEntry entry, boolean removed) {

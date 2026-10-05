@@ -1,3 +1,11 @@
+2026年10月05日 — Screen-fitted tooltips / 提示框屏幕宽度适配
+
+- Pass original styled tooltip Components to KineticCore screen fitting for recipe materials/results/workbenches, recipe rows, data rows, fields, attachment summaries and header items. Keep all logical lines, their order, the 280/320 preferred widths, layout and interactions; require KineticCore 26.10.4 or newer.
+
+- 配方材料/结果/工作台、配方列表、资料列表、字段、配件摘要与顶栏物品提示框将原始带样式文本交给核心按屏幕宽度换行；保留全部逻辑行、顺序、280/320 首选宽度、布局和交互，最低依赖 KineticCore 26.10.4。
+
+---
+
 2026年10月05日 — Vanilla recipe slot textures / 原版配方槽位贴图
 
 - Use vanilla slot textures for recipe materials, results and workbenches. Preserve existing slot positions, size, hover/selection outlines, layout and interactions.
