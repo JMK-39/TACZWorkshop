@@ -1,3 +1,11 @@
+2026年10月05日 — Vanilla recipe slot textures / 原版配方槽位贴图
+
+- Use vanilla slot textures for recipe materials, results and workbenches. Preserve existing slot positions, size, hover/selection outlines, layout and interactions.
+
+- 配方材料、结果与工作台使用原版槽位贴图，保留既有槽位位置、尺寸、悬停/选中描边、布局与交互。
+
+---
+
 2026年10月04日 21时09分 — Bounded GUI text / 界面长文本适配
 
 - Keep recipe labels, counts, summaries and data status text inside their own areas with KineticCore scrolling text; stop data names and IDs before header buttons. Preserve styled error messages.
