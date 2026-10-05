@@ -561,7 +561,7 @@ public final class TaczRecipeEditorPage extends KineticPage {
         List<KineticOverlays.MenuItem> entries = new ArrayList<>();
         String current = record.resultType();
         for (String type : RESULT_TYPES) {
-            entries.add(KineticOverlays.MenuItem.toggle(
+            entries.add(KineticOverlays.MenuItem.choice(
                     KineticI18n.translatable("gui.taczworkshop.type.short." + type),
                     Component.empty(),
                     type.equals(current),

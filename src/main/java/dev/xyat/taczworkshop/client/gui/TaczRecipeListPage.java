@@ -292,7 +292,7 @@ public final class TaczRecipeListPage extends KineticPage {
     private void openCategoryMenu() {
         List<KineticOverlays.MenuItem> entries = new ArrayList<>();
         for (CategoryFilter option : CategoryFilter.values()) {
-            entries.add(KineticOverlays.MenuItem.toggle(
+            entries.add(KineticOverlays.MenuItem.choice(
                     KineticI18n.translatable("gui.taczworkshop.recipe.category." + option.key),
                     Component.empty(),
                     option == categoryFilter,

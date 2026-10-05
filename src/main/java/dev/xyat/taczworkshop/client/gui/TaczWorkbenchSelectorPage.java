@@ -165,7 +165,8 @@ public final class TaczWorkbenchSelectorPage extends KineticPage {
             boolean hover = KineticTheme.hovering(mouseX, mouseY, x, y, SLOT_SIZE, SLOT_SIZE);
             KineticTheme.itemSlot(graphics, x, y, hover);
             if (!entry.stack().isEmpty()) KineticTheme.item(graphics, entry.stack(), x, y, SLOT_SIZE, 1.0F, false);
-            if (selected.contains(entry.id().toString())) KineticTheme.stateOutline(graphics, x, y, SLOT_SIZE, SLOT_SIZE, true, false, false);
+            // Several workbenches can be chosen, so chosen ones are green; yellow is reserved for a single current choice.
+            if (selected.contains(entry.id().toString())) KineticTheme.indicatorOutline(graphics, x, y, SLOT_SIZE, SLOT_SIZE, KineticTheme.Indicator.SUCCESS);
             if (hover) hovered = entry;
         }
         graphics.endScissor();

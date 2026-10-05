@@ -123,7 +123,7 @@ public final class TaczDataManagerPage extends KineticPage {
     private void openKindMenu() {
         List<KineticOverlays.MenuItem> items = new ArrayList<>();
         for (TaczDataKind option : TaczDataKind.values()) {
-            items.add(KineticOverlays.MenuItem.toggle(
+            items.add(KineticOverlays.MenuItem.choice(
                     KineticI18n.translatable(tabKey(option)),
                     KineticI18n.translatable("tip.taczworkshop.data.category.entry", KineticI18n.translatable(tabKey(option))),
                     option == kind,

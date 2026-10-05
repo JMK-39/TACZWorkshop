@@ -1,3 +1,13 @@
+2026年10月05日 23时08分 — Selection colors / 选择颜色
+
+- In the workbench selector, chosen workbenches are outlined green, because several can be chosen; yellow is reserved for a single current choice.
+- The data category, result type and recipe category menus mark their current option yellow as single choices; the attachment-slot menu, where several types can be on, marks enabled types green.
+
+- 工作台选择界面中已选的工作台改为绿色边框，因为可以多选；黄色只用于单一的当前选择。
+- 数据分类、产物类型与配方分类菜单作为单选，用黄色标出当前选项；配件槽位菜单可同时开启多种类型，开启的类型显示为绿色。
+
+---
+
 2026年10月05日 — Screen-fitted tooltips / 提示框屏幕宽度适配
 
 - Pass original styled tooltip Components to KineticCore screen fitting for recipe materials/results/workbenches, recipe rows, data rows, fields, attachment summaries and header items. Keep all logical lines, their order, the 280/320 preferred widths, layout and interactions; require KineticCore 26.10.4 or newer.
