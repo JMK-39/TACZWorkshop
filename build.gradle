@@ -9,7 +9,7 @@ buildscript {
         maven { url = 'https://repo.spongepowered.org/repository/maven-public/' }
     }
  dependencies {
-        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '6.0.24'
+        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '6.0.54'
         classpath 'org.spongepowered:mixingradle:0.7.38'
     }
 }
@@ -49,7 +49,7 @@ base {
     archivesName.set(pModId)
 }
 
-java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
 minecraft {
     mappings channel: project.findProperty('mapping_channel')?.toString() ?: 'official', version: project.findProperty('mapping_version')?.toString()
@@ -109,6 +109,15 @@ repositories {
     }
     File localCoreBuildLibs = rootProject.file('../KineticCore/build/libs')
     if (localCoreBuildLibs.isDirectory()) kineticCoreLocalArtifactDirs.add(localCoreBuildLibs)
+    kineticCoreLocalArtifactDirs.eachWithIndex { File directory, int index ->
+        ivy {
+            name = "KineticCoreLocalForgePool${index}"
+            url = directory.toURI()
+            patternLayout { artifact 'kineticcore-forge-1.20.1-[revision].[ext]' }
+            metadataSources { artifact() }
+            content { includeModule 'dev.xyat.kineticcore', 'kineticcore' }
+        }
+    }
     if (!kineticCoreLocalArtifactDirs.isEmpty()) {
         flatDir {
             name = 'KineticCoreLocalPool'
@@ -119,7 +128,10 @@ repositories {
     ivy {
         name = 'KineticCoreGitHubReleases'
         url = 'https://github.com/JMK-39/KineticCore/releases/download'
-        patternLayout { artifact 'v[revision]/[artifact]-[revision].[ext]' }
+        patternLayout {
+            artifact 'v[revision]/kineticcore-forge-1.20.1-[revision].[ext]'
+            artifact 'v[revision]/[artifact]-[revision].[ext]'
+        }
         metadataSources { artifact() }
         content { includeModule 'dev.xyat.kineticcore', 'kineticcore' }
     }
@@ -169,7 +181,7 @@ dependencies {
     def localKineticCoreVersions = []
     localKineticCoreDirs.each { File directory ->
         directory.eachFile { File jar ->
-            def match = jar.name =~ /^kineticcore-(\d+(?:\.\d+){2,})\.jar$/
+            def match = jar.name =~ /^kineticcore-(?:forge-1\.20\.1-)?(\d+(?:\.\d+){2,})\.jar$/
             if (jar.isFile() && match.matches()) localKineticCoreVersions.add(match.group(1))
         }
     }
@@ -208,7 +220,7 @@ dependencies {
         if (latestOfficialVersion && (!localKineticCoreVersion ||
                 compareKineticCoreVersions(latestOfficialVersion, localKineticCoreVersion) > 0) &&
                 !(latestRelease?.assets ?: []).any { asset ->
-                    asset.name == "kineticcore-${latestOfficialVersion}.jar"
+                    asset.name in ["kineticcore-forge-1.20.1-${latestOfficialVersion}.jar", "kineticcore-${latestOfficialVersion}.jar"]
                 }) {
             throw new org.gradle.api.GradleException(
                     "Newer KineticCore release ${latestOfficialVersion} has no matching JAR asset.")
