@@ -149,7 +149,7 @@ dependencies {
             configuration.resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
         }
     }
-    def kineticCoreMinimumVersion = project.findProperty('kineticcore_min_version')?.toString() ?: '26.9.28'
+    def kineticCoreMinimumVersion = project.findProperty('kineticcore_min_version')?.toString() ?: '26.10.4'
     // Compare local KineticCore JARs with GitHub's latest stable release; prefer local unless the official version is newer.
     def kineticCoreVersion = project.findProperty('kineticcore_resolved_version')?.toString() ?: project.findProperty('kineticcore_version')?.toString()
     def parseKineticCoreVersion = { String value ->
@@ -316,3 +316,6 @@ tasks.named('compileJava', JavaCompile).configure {
 
 // English and Chinese must expose exactly the same authored translation keys.
 apply from: rootProject.file('gradle/kinetic-language-validation.gradle')
+
+// Separate opt-in GUI fixture; excluded from release artifacts.
+apply from: 'gradle/gui-long-text-validation.gradle'

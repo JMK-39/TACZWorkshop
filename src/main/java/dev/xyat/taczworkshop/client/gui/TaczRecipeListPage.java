@@ -445,9 +445,9 @@ public final class TaczRecipeListPage extends KineticPage {
 
     @Override
     protected void renderForeground(KineticGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        graphics.text(KineticI18n.translatable("gui.taczworkshop.list.count", filtered.size()), 390, 41, 0xFFFFFFFF, true);
+        graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.list.count", filtered.size()), 390, 41, 626 - 390, 0xFFFFFFFF, true);
         renderInfoPanel(graphics);
-        if (filtered.isEmpty()) graphics.centeredText(KineticI18n.translatable("gui.taczworkshop.data.empty"), GRID_X + GRID_WIDTH / 2, GRID_Y + GRID_HEIGHT / 2, 0xFFAAAAAA, true);
+        if (filtered.isEmpty()) graphics.scrollingTextCentered(KineticI18n.translatable("gui.taczworkshop.data.empty"), GRID_X + GRID_WIDTH / 2, GRID_Y + GRID_HEIGHT / 2, GRID_WIDTH - 8, 0xFFAAAAAA, true);
     }
 
     private void renderRecipes(KineticGraphics graphics, int mouseX, int mouseY) {
@@ -484,7 +484,7 @@ public final class TaczRecipeListPage extends KineticPage {
         int x = INFO_X + 8;
         int y = INFO_Y + 8;
         if (hoveredRecord == null) {
-            graphics.text(KineticI18n.translatable("gui.taczworkshop.list.title"), x, y, 0xFFFFFFFF, true);
+            graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.list.title"), x, y, INFO_WIDTH - 16, 0xFFFFFFFF, true);
             y += 18;
             for (FormattedCharSequence line : KineticText.wrap(KineticI18n.translatable("gui.taczworkshop.recipe.grid.guide"), INFO_WIDTH - 16)) {
                 graphics.text(line, x, y, 0xFFCCCCCC, false);
@@ -493,7 +493,7 @@ public final class TaczRecipeListPage extends KineticPage {
             return;
         }
         if (hoveredRecord.hasIssue()) {
-            graphics.text(KineticI18n.translatable("gui.taczworkshop.recipe.error.badge"), x, y, 0xFFFF5656, true);
+            graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.recipe.error.badge"), x, y, INFO_WIDTH - 16, 0xFFFF5656, true);
             y += 14;
             graphics.scrollingText(Component.literal(hoveredRecord.id()), x, y, INFO_WIDTH - 16, 0xFFFFFFFF, false);
             y += 13;
@@ -517,13 +517,13 @@ public final class TaczRecipeListPage extends KineticPage {
         y += 14;
         graphics.scrollingText(Component.literal(hoveredRecord.resultId()), x, y, INFO_WIDTH - 16, 0xFFCCCCCC, false);
         y += 13;
-        graphics.text(KineticI18n.translatable(originKey(hoveredRecord)), x, y, 0xFFFFFFFF, false);
+        graphics.scrollingText(KineticI18n.translatable(originKey(hoveredRecord)), x, y, INFO_WIDTH - 16, 0xFFFFFFFF, false);
         y += 13;
-        graphics.text(KineticI18n.translatable(hoveredRecord.enabled() ? "gui.taczworkshop.enabled" : "gui.taczworkshop.disabled"), x, y, 0xFFFFFFFF, false);
+        graphics.scrollingText(KineticI18n.translatable(hoveredRecord.enabled() ? "gui.taczworkshop.enabled" : "gui.taczworkshop.disabled"), x, y, INFO_WIDTH - 16, 0xFFFFFFFF, false);
         y += 13;
-        graphics.text(KineticI18n.translatable("gui.taczworkshop.materials", hoveredRecord.materials().size()), x, y, 0xFFCCCCCC, false);
+        graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.materials", hoveredRecord.materials().size()), x, y, INFO_WIDTH - 16, 0xFFCCCCCC, false);
         y += 13;
-        graphics.text(KineticI18n.translatable("gui.taczworkshop.workbench.summary", hoveredRecord.workbenches().size()), x, y, 0xFFCCCCCC, false);
+        graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.workbench.summary", hoveredRecord.workbenches().size()), x, y, INFO_WIDTH - 16, 0xFFCCCCCC, false);
     }
 
     private String originKey(TaczRecipeRecord record) {
@@ -651,24 +651,24 @@ public final class TaczRecipeListPage extends KineticPage {
     protected void renderTooltips(int scaledMouseX, int scaledMouseY) {
         if (overlayBlocksInput()) return;
         if (hoveredRecord == null) return;
-        List<FormattedCharSequence> lines = new ArrayList<>();
+        List<Component> lines = new ArrayList<>();
         if (hoveredRecord.hasIssue()) {
-            lines.addAll(KineticText.wrap(KineticI18n.translatable("gui.taczworkshop.recipe.error.badge"), 320));
-            lines.addAll(KineticText.wrap(Component.literal(hoveredRecord.id()), 320));
-            lines.addAll(KineticText.wrap(issueComponent(hoveredRecord), 320));
-            if (!hoveredRecord.issueDetail().isBlank()) lines.addAll(KineticText.wrap(Component.literal(hoveredRecord.issueDetail()), 320));
+            lines.add(KineticI18n.translatable("gui.taczworkshop.recipe.error.badge"));
+            lines.add(Component.literal(hoveredRecord.id()));
+            lines.add(issueComponent(hoveredRecord));
+            if (!hoveredRecord.issueDetail().isBlank()) lines.add(Component.literal(hoveredRecord.issueDetail()));
         } else {
             TaczDataListEntry entry = dataEntry(hoveredRecord);
             ItemStack stack = previewCache.computeIfAbsent(hoveredRecord.uuid(), ignored -> recipePreview(hoveredRecord, entry));
-            lines.addAll(KineticText.wrap(localizedResultName(hoveredRecord, entry, stack), 320));
-            lines.addAll(KineticText.wrap(Component.literal(hoveredRecord.resultId()), 320));
-            lines.addAll(KineticText.wrap(Component.literal(hoveredRecord.id()), 320));
-            lines.addAll(KineticText.wrap(KineticI18n.translatable(originKey(hoveredRecord)), 320));
-            lines.addAll(KineticText.wrap(KineticI18n.translatable(hoveredRecord.enabled() ? "gui.taczworkshop.enabled" : "gui.taczworkshop.disabled"), 320));
-            if (!hoveredRecord.workbenches().isEmpty()) lines.addAll(KineticText.wrap(KineticI18n.translatable("gui.taczworkshop.workbench.tooltip", hoveredRecord.workbenches().size()), 320));
+            lines.add(localizedResultName(hoveredRecord, entry, stack));
+            lines.add(Component.literal(hoveredRecord.resultId()));
+            lines.add(Component.literal(hoveredRecord.id()));
+            lines.add(KineticI18n.translatable(originKey(hoveredRecord)));
+            lines.add(KineticI18n.translatable(hoveredRecord.enabled() ? "gui.taczworkshop.enabled" : "gui.taczworkshop.disabled"));
+            if (!hoveredRecord.workbenches().isEmpty()) lines.add(KineticI18n.translatable("gui.taczworkshop.workbench.tooltip", hoveredRecord.workbenches().size()));
         }
-        lines.addAll(KineticText.wrap(KineticI18n.translatable("gui.taczworkshop.recipe.grid.tooltip"), 320));
-        showFormattedTooltip(lines);
+        lines.add(KineticI18n.translatable("gui.taczworkshop.recipe.grid.tooltip"));
+        showTooltip(lines, 320);
     }
 
 

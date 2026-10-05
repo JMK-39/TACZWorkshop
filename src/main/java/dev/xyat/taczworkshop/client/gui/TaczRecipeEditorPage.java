@@ -9,6 +9,7 @@ import dev.xyat.kineticcore.api.client.gui.text.KineticText;
 import dev.xyat.kineticcore.api.client.gui.overlay.KineticOverlays;
 import dev.xyat.kineticcore.api.client.gui.page.KineticPage;
 import dev.xyat.kineticcore.api.client.gui.render.KineticGraphics;
+import dev.xyat.kineticcore.api.client.gui.render.KineticTexture;
 import dev.xyat.kineticcore.api.client.gui.scroll.KineticScrollController;
 import dev.xyat.kineticcore.api.client.gui.selector.KineticSelectors;
 import dev.xyat.kineticcore.api.client.gui.theme.KineticTheme;
@@ -46,6 +47,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class TaczRecipeEditorPage extends KineticPage {
+    private static final KineticTexture SLOT_BG = KineticTexture.of("minecraft", "textures/gui/container/crafting_table.png");
     private static final List<String> RESULT_TYPES = List.of("gun", "attachment", "ammo", "melee", "throwable", "consumable", "custom");
     private static final List<String> ATTACHMENT_TYPES = List.of("scope", "muzzle", "stock", "grip", "laser", "extended_mag");
 
@@ -60,6 +62,9 @@ public final class TaczRecipeEditorPage extends KineticPage {
     private static final int MATERIAL_SCROLL_X = MATERIAL_GRID_X + MATERIAL_GRID_W + 5;
     private static final int MATERIAL_SCROLL_W = 4;
 
+    // Text stops at the inner panel edge or four pixels before its field.
+    private static final int MATERIAL_TEXT_WIDTH = 160;
+    private static final int RESULT_TEXT_WIDTH = 198;
     private static final int RESULT_SLOT_X = 418;
     private static final int RESULT_SLOT_Y = 101;
     private static final int WORKBENCH_BUTTON_X = 180;
@@ -198,40 +203,40 @@ public final class TaczRecipeEditorPage extends KineticPage {
 
     @Override
     protected void renderForeground(KineticGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        graphics.text(KineticI18n.translatable("gui.taczworkshop.recipe_id"), 14, 20, 0xFFFFFFFF, true);
+        graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.recipe_id"), 14, 20, 72 - 14 - 4, 0xFFFFFFFF, true);
         if (record.hasIssue()) {
             String code = record.issueCode().isBlank() ? "tacz_deserialize_failed" : record.issueCode();
-            String warning = KineticI18n.translatable("gui.taczworkshop.recipe.error.editor", KineticI18n.translatable("gui.taczworkshop.recipe.error." + code)).getString();
-            graphics.scrollingText(Component.literal(warning), 286, 48, 230, 0xFFFF5656, true);
+            Component warning = KineticI18n.translatable("gui.taczworkshop.recipe.error.editor", KineticI18n.translatable("gui.taczworkshop.recipe.error." + code));
+            graphics.scrollingText(warning, 286, 48, 230, 0xFFFF5656, true);
         }
 
-        graphics.text(KineticI18n.translatable("gui.taczworkshop.materials", record.materials().size()), 20, 82, 0xFFFFFFFF, true);
-        graphics.text(KineticI18n.translatable("gui.taczworkshop.result"), 418, 82, 0xFFFFFFFF, true);
+        graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.materials", record.materials().size()), 20, 82, 402 - 20 - 8, 0xFFFFFFFF, true);
+        graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.result"), 418, 82, RESULT_TEXT_WIDTH, 0xFFFFFFFF, true);
 
         if (selectedMaterial >= 0 && selectedMaterial < record.materials().size()) {
             TaczMaterial material = record.materials().get(selectedMaterial);
             ItemStack preview = TaczRecipeCodec.materialPreview(material);
-            graphics.text(KineticI18n.translatable("gui.taczworkshop.material.selected"), 238, 103, 0xFFFFFFFF, true);
+            graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.material.selected"), 238, 103, MATERIAL_TEXT_WIDTH, 0xFFFFFFFF, true);
             graphics.scrollingText(materialDisplayName(material, preview), 238, 116, 160, 0xFFFFFFFF, false);
             graphics.scrollingText(Component.literal(materialLabel(material)), 238, 129, 160, 0xFFAAAAAA, false);
-            graphics.text(KineticI18n.translatable("gui.taczworkshop.material.count_label"), 238, 145, 0xFFCCCCCC, false);
-            graphics.text(KineticI18n.translatable("gui.taczworkshop.item_nbt"), 238, 173, 0xFFCCCCCC, false);
+            graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.material.count_label"), 238, 145, 325 - 238 - 4, 0xFFCCCCCC, false);
+            graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.item_nbt"), 238, 173, MATERIAL_TEXT_WIDTH, 0xFFCCCCCC, false);
             renderNbtBlock(graphics, 238, 186, 160, 5, materialNbtText(material, preview));
         } else {
-            graphics.text(KineticI18n.translatable("gui.taczworkshop.material.select_hint"), 238, 107, 0xFFAAAAAA, false);
+            graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.material.select_hint"), 238, 107, MATERIAL_TEXT_WIDTH, 0xFFAAAAAA, false);
         }
 
         ItemStack resultStack = resultPreviewStack();
         graphics.scrollingText(resultDisplayName(resultStack), 442, 101, 96, 0xFFFFFFFF, true);
         graphics.scrollingText(Component.literal(record.resultId()), 442, 114, 96, 0xFFAAAAAA, false);
-        graphics.text(KineticI18n.translatable("gui.taczworkshop.type." + record.resultType()), 418, 126, 0xFFCCCCCC, false);
-        graphics.text(KineticI18n.translatable("gui.taczworkshop.result.count_label"), 418, 143, 0xFFCCCCCC, false);
-        graphics.text(KineticI18n.translatable("gui.taczworkshop.group"), 418, 168, 0xFFCCCCCC, false);
+        graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.type." + record.resultType()), 418, 126, RESULT_TEXT_WIDTH, 0xFFCCCCCC, false);
+        graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.result.count_label"), 418, 143, 516 - 418 - 4, 0xFFCCCCCC, false);
+        graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.group"), 418, 168, 500 - 418 - 4, 0xFFCCCCCC, false);
         if ("gun".equals(record.resultType())) {
-            graphics.text(KineticI18n.translatable("gui.taczworkshop.ammo_count"), 418, 193, 0xFFCCCCCC, false);
+            graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.ammo_count"), 418, 193, 530 - 418 - 4, 0xFFCCCCCC, false);
         }
         int nbtLabelY = "gun".equals(record.resultType()) ? 216 : 193;
-        graphics.text(KineticI18n.translatable("gui.taczworkshop.item_nbt"), 418, nbtLabelY, 0xFFCCCCCC, false);
+        graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.item_nbt"), 418, nbtLabelY, RESULT_TEXT_WIDTH, 0xFFCCCCCC, false);
         renderNbtBlock(graphics, 418, nbtLabelY + 13, 198, "gun".equals(record.resultType()) ? 8 : 11, resultNbtText(resultStack));
     }
 
@@ -252,7 +257,8 @@ public final class TaczRecipeEditorPage extends KineticPage {
             int y = MATERIAL_GRID_Y + row * CELL_SIZE - shift;
             boolean addSlot = index == record.materials().size();
             boolean hovered = KineticTheme.hovering(mouseX, mouseY, x, y, SLOT_SIZE, SLOT_SIZE) && !overlayBlocksInput();
-            KineticTheme.itemSlot(graphics, x, y, hovered);
+            graphics.texture(SLOT_BG, x, y, 29, 16, SLOT_SIZE, SLOT_SIZE);
+            KineticTheme.stateOutline(graphics, x, y, SLOT_SIZE, SLOT_SIZE, false, hovered, false);
             if (addSlot) {
                 graphics.centeredText("+", x + 9, y + 5, 0xFFFFFFFF, true);
             } else {
@@ -268,7 +274,8 @@ public final class TaczRecipeEditorPage extends KineticPage {
 
     private void renderResultSlot(KineticGraphics graphics, int mouseX, int mouseY) {
         hoveredResult = KineticTheme.hovering(mouseX, mouseY, RESULT_SLOT_X, RESULT_SLOT_Y, SLOT_SIZE, SLOT_SIZE);
-        KineticTheme.itemSlot(graphics, RESULT_SLOT_X, RESULT_SLOT_Y, hoveredResult);
+        graphics.texture(SLOT_BG, RESULT_SLOT_X, RESULT_SLOT_Y, 29, 16, SLOT_SIZE, SLOT_SIZE);
+        KineticTheme.stateOutline(graphics, RESULT_SLOT_X, RESULT_SLOT_Y, SLOT_SIZE, SLOT_SIZE, false, hoveredResult, false);
         ItemStack result = resultPreviewStack();
         if (!result.isEmpty()) renderItemWithPreviewContext(graphics, result, RESULT_SLOT_X, RESULT_SLOT_Y);
     }
@@ -383,7 +390,7 @@ public final class TaczRecipeEditorPage extends KineticPage {
         int count = 0;
         JsonObject object = attachments();
         for (String type : ATTACHMENT_TYPES) if (!getString(object, type).isBlank()) count++;
-        graphics.text(KineticI18n.translatable("gui.taczworkshop.recipe.attachments.summary", count, ATTACHMENT_TYPES.size()), ATTACHMENT_SUMMARY_X + 7, ATTACHMENT_SUMMARY_Y + 7, 0xFFFFFFFF, false);
+        graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.recipe.attachments.summary", count, ATTACHMENT_TYPES.size()), ATTACHMENT_SUMMARY_X + 7, ATTACHMENT_SUMMARY_Y + 7, ATTACHMENT_SUMMARY_W - 14, 0xFFFFFFFF, false);
         if (hoveredAttachmentSummary) KineticTheme.stateOutline(graphics, ATTACHMENT_SUMMARY_X, ATTACHMENT_SUMMARY_Y, ATTACHMENT_SUMMARY_W, ATTACHMENT_SUMMARY_H, false, true, false);
     }
 
@@ -516,37 +523,37 @@ public final class TaczRecipeEditorPage extends KineticPage {
         if (hoveredMaterialIndex >= 0 && hoveredMaterialIndex < record.materials().size()) {
             TaczMaterial material = record.materials().get(hoveredMaterialIndex);
             ItemStack preview = TaczRecipeCodec.materialPreview(material);
-            List<FormattedCharSequence> lines = new ArrayList<>();
-            lines.addAll(KineticText.wrap(materialDisplayName(material, preview), 320));
-            lines.addAll(KineticText.wrap(Component.literal(materialLabel(material)), 320));
-            lines.addAll(KineticText.wrap(KineticI18n.translatable("gui.taczworkshop.material.count", material.count()), 320));
-            lines.addAll(KineticText.wrap(KineticI18n.translatable("gui.taczworkshop.item_nbt.value", materialNbtText(material, preview)), 320));
-            lines.addAll(KineticText.wrap(KineticI18n.translatable("gui.taczworkshop.material.click_hint"), 320));
-            showFormattedTooltip(lines);
+            List<Component> lines = new ArrayList<>();
+            lines.add(materialDisplayName(material, preview));
+            lines.add(Component.literal(materialLabel(material)));
+            lines.add(KineticI18n.translatable("gui.taczworkshop.material.count", material.count()));
+            lines.add(KineticI18n.translatable("gui.taczworkshop.item_nbt.value", materialNbtText(material, preview)));
+            lines.add(KineticI18n.translatable("gui.taczworkshop.material.click_hint"));
+            showTooltip(lines, 320);
             return;
         }
         if (hoveredWorkbench) {
             ItemStack stack = workbenchPreviewStack();
-            List<FormattedCharSequence> lines = new ArrayList<>(KineticText.wrap(KineticI18n.translatable("gui.taczworkshop.workbench.button"), 280));
-            if (!stack.isEmpty()) lines.addAll(KineticText.wrap(stack.getHoverName(), 280));
+            List<Component> lines = new ArrayList<>(List.of(KineticI18n.translatable("gui.taczworkshop.workbench.button")));
+            if (!stack.isEmpty()) lines.add(stack.getHoverName());
             if (!record.workbenches().isEmpty()) {
-                lines.addAll(KineticText.wrap(Component.literal(record.workbenches().get(0)), 280));
-                if (record.workbenches().size() > 1) lines.addAll(KineticText.wrap(KineticI18n.translatable("gui.taczworkshop.workbench.summary", record.workbenches().size()), 280));
+                lines.add(Component.literal(record.workbenches().get(0)));
+                if (record.workbenches().size() > 1) lines.add(KineticI18n.translatable("gui.taczworkshop.workbench.summary", record.workbenches().size()));
             } else {
-                lines.addAll(KineticText.wrap(KineticI18n.translatable("gui.taczworkshop.workbench.native"), 280));
+                lines.add(KineticI18n.translatable("gui.taczworkshop.workbench.native"));
             }
-            showFormattedTooltip(lines);
+            showTooltip(lines, 280);
             return;
         }
 
         if (hoveredResult) {
             ItemStack resultStack = resultPreviewStack();
-            List<FormattedCharSequence> lines = new ArrayList<>();
-            lines.addAll(KineticText.wrap(resultDisplayName(resultStack), 320));
-            lines.addAll(KineticText.wrap(Component.literal(record.resultId()), 320));
-            lines.addAll(KineticText.wrap(KineticI18n.translatable("gui.taczworkshop.item_nbt.value", resultNbtText(resultStack)), 320));
-            lines.addAll(KineticText.wrap(KineticI18n.translatable("gui.taczworkshop.result.click_hint"), 320));
-            showFormattedTooltip(lines);
+            List<Component> lines = new ArrayList<>();
+            lines.add(resultDisplayName(resultStack));
+            lines.add(Component.literal(record.resultId()));
+            lines.add(KineticI18n.translatable("gui.taczworkshop.item_nbt.value", resultNbtText(resultStack)));
+            lines.add(KineticI18n.translatable("gui.taczworkshop.result.click_hint"));
+            showTooltip(lines, 320);
         }
     }
 
@@ -775,7 +782,8 @@ public final class TaczRecipeEditorPage extends KineticPage {
 
     private void renderWorkbenchSlot(KineticGraphics graphics, int mouseX, int mouseY) {
         hoveredWorkbench = KineticTheme.hovering(mouseX, mouseY, WORKBENCH_SLOT_X, WORKBENCH_SLOT_Y, SLOT_SIZE, SLOT_SIZE);
-        KineticTheme.itemSlot(graphics, WORKBENCH_SLOT_X, WORKBENCH_SLOT_Y, hoveredWorkbench);
+        graphics.texture(SLOT_BG, WORKBENCH_SLOT_X, WORKBENCH_SLOT_Y, 29, 16, SLOT_SIZE, SLOT_SIZE);
+        KineticTheme.stateOutline(graphics, WORKBENCH_SLOT_X, WORKBENCH_SLOT_Y, SLOT_SIZE, SLOT_SIZE, false, hoveredWorkbench, false);
         ItemStack stack = workbenchPreviewStack();
         if (!stack.isEmpty()) KineticTheme.item(graphics, stack, WORKBENCH_SLOT_X, WORKBENCH_SLOT_Y, SLOT_SIZE, 1.0F, false);
         if (record.workbenches().size() > 1) {

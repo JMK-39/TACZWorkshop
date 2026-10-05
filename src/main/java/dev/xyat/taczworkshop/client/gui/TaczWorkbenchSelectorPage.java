@@ -128,11 +128,11 @@ public final class TaczWorkbenchSelectorPage extends KineticPage {
 
     @Override
     protected void renderForeground(KineticGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        graphics.text(KineticI18n.translatable("gui.taczworkshop.workbench.selected_count", selected.size()), 374, 18, 0xFFFFFFFF, true);
+        graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.workbench.selected_count", selected.size()), 374, 18, 626 - 374, 0xFFFFFFFF, true);
         int x = INFO_X + 8;
         int y = GRID_Y + 8;
         if (hovered == null) {
-            graphics.text(KineticI18n.translatable("gui.taczworkshop.workbench.title"), x, y, 0xFFFFFFFF, true);
+            graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.workbench.title"), x, y, INFO_W - 16, 0xFFFFFFFF, true);
             y += 18;
             for (var line : KineticText.wrap(KineticI18n.translatable("gui.taczworkshop.workbench.guide"), INFO_W - 16)) {
                 graphics.text(line, x, y, 0xFFCCCCCC, false);
@@ -146,7 +146,7 @@ public final class TaczWorkbenchSelectorPage extends KineticPage {
                 y += KineticText.lineHeight() + 1;
             }
             y += 6;
-            graphics.text(KineticI18n.translatable(selected.contains(hovered.id().toString()) ? "gui.taczworkshop.workbench.selected" : "gui.taczworkshop.workbench.not_selected"), x, y, 0xFFFFFFFF, false);
+            graphics.scrollingText(KineticI18n.translatable(selected.contains(hovered.id().toString()) ? "gui.taczworkshop.workbench.selected" : "gui.taczworkshop.workbench.not_selected"), x, y, INFO_W - 16, 0xFFFFFFFF, false);
         }
     }
 

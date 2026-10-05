@@ -1,0 +1,42 @@
+// Explicit local GUI fixture. No validation classes or metadata enter the release JAR.
+def guiValidationMetadata = layout.buildDirectory.dir('gui-long-text-validation-metadata')
+def writeGuiValidationMetadata = tasks.register('writeGuiValidationMetadata') {
+    outputs.dir(guiValidationMetadata)
+    doLast {
+        File metadata = new File(guiValidationMetadata.get().asFile, 'META-INF/mods.toml')
+        metadata.parentFile.mkdirs()
+        metadata.setText('''modLoader="javafml"
+loaderVersion="[47,)"
+license="LGPLv3"
+[[mods]]
+modId="taczworkshop_validation"
+version="1.0.0"
+displayName="TACZWorkshop local GUI validation"
+[[dependencies.taczworkshop_validation]]
+modId="taczworkshop"
+mandatory=true
+versionRange="[0,)"
+ordering="AFTER"
+side="CLIENT"
+''', 'UTF-8')
+        new File(guiValidationMetadata.get().asFile, 'pack.mcmeta').setText(
+                '{"pack":{"pack_format":15,"description":"TACZWorkshop local GUI validation"}}', 'UTF-8')
+    }
+}
+
+tasks.register('runtimeValidationJar', Jar) {
+    group = 'verification'
+    description = 'Build the separate, opt-in local GUI validation Forge mod.'
+    dependsOn(tasks.named('testClasses'), writeGuiValidationMetadata)
+    archiveFileName.set('taczworkshop-validation.jar')
+    destinationDirectory.set(layout.buildDirectory.dir('libs'))
+    from(sourceSets.test.output) { include('dev/xyat/taczworkshopvalidation/**') }
+    from(guiValidationMetadata)
+    // MixinGradle adds the main mod's configs to every Jar; this fixture has no mixins.
+    doFirst { manifest.attributes.remove('MixinConfigs') }
+    finalizedBy('reobfRuntimeValidationJar')
+}
+
+reobf {
+    runtimeValidationJar {}
+}
