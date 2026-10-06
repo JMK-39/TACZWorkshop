@@ -1,3 +1,13 @@
+2026年10月06日 18时01分 — Labels centred on their fields / 标签与输入框垂直居中
+
+- In the data detail page and the recipe editor, field labels (Gun Damage and the other data fields, Material Count, Output Count, Group, Loaded Ammo Count) sat 2 px below the middle of their input boxes; they are now centred on them.
+- Checked with screenshots of all 19 screens at 1920×1080 and 854×480, in English and Chinese and with extra-long text, inside the 1.20.1 modpack.
+
+- 数据详情页与配方编辑器中，各输入框的标签（枪械伤害等数据字段、材料数量、产出数量、分组、装填弹药数）比输入框中线低 2 像素；现在与输入框垂直居中。
+- 已在 1.20.1 整合包中以 1920×1080 与 854×480、英文和中文以及超长文本对全部 19 个界面截图检查。
+
+---
+
 2026年10月05日 23时08分 — Selection colors / 选择颜色
 
 - In the workbench selector, chosen workbenches are outlined green, because several can be chosen; yellow is reserved for a single current choice.

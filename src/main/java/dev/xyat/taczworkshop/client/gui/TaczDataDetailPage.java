@@ -576,7 +576,8 @@ public final class TaczDataDetailPage extends KineticPage {
             int y = fieldBaseY() + row * ROW_HEIGHT - shift;
             TaczJsonLeafModel.Leaf leaf = leaves.get(i);
             Component label = fieldLabel(leaf.displayPath());
-            graphics.scrollingText(label, x, y + 8, LABEL_WIDTH, 0xFFFFFFFF, false);
+            // Controls sit at y + 2 and are 16 px tall; the 8 px label is centred on them.
+            graphics.scrollingText(label, x, y + 6, LABEL_WIDTH, 0xFFFFFFFF, false);
             if (KineticTheme.hovering(mouseX, mouseY, x, y + 2, INPUT_OFFSET + INPUT_WIDTH, 20)) hoveredLeaf = leaf;
         }
         graphics.endScissor();

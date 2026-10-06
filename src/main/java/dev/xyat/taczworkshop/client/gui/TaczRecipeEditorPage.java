@@ -219,7 +219,7 @@ public final class TaczRecipeEditorPage extends KineticPage {
             graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.material.selected"), 238, 103, MATERIAL_TEXT_WIDTH, 0xFFFFFFFF, true);
             graphics.scrollingText(materialDisplayName(material, preview), 238, 116, 160, 0xFFFFFFFF, false);
             graphics.scrollingText(Component.literal(materialLabel(material)), 238, 129, 160, 0xFFAAAAAA, false);
-            graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.material.count_label"), 238, 145, 325 - 238 - 4, 0xFFCCCCCC, false);
+            graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.material.count_label"), 238, 143, 325 - 238 - 4, 0xFFCCCCCC, false);
             graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.item_nbt"), 238, 173, MATERIAL_TEXT_WIDTH, 0xFFCCCCCC, false);
             renderNbtBlock(graphics, 238, 186, 160, 5, materialNbtText(material, preview));
         } else {
@@ -230,10 +230,10 @@ public final class TaczRecipeEditorPage extends KineticPage {
         graphics.scrollingText(resultDisplayName(resultStack), 442, 101, 96, 0xFFFFFFFF, true);
         graphics.scrollingText(Component.literal(record.resultId()), 442, 114, 96, 0xFFAAAAAA, false);
         graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.type." + record.resultType()), 418, 126, RESULT_TEXT_WIDTH, 0xFFCCCCCC, false);
-        graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.result.count_label"), 418, 143, 516 - 418 - 4, 0xFFCCCCCC, false);
-        graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.group"), 418, 168, 500 - 418 - 4, 0xFFCCCCCC, false);
+        graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.result.count_label"), 418, 141, 516 - 418 - 4, 0xFFCCCCCC, false);
+        graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.group"), 418, 166, 500 - 418 - 4, 0xFFCCCCCC, false);
         if ("gun".equals(record.resultType())) {
-            graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.ammo_count"), 418, 193, 530 - 418 - 4, 0xFFCCCCCC, false);
+            graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.ammo_count"), 418, 191, 530 - 418 - 4, 0xFFCCCCCC, false);
         }
         int nbtLabelY = "gun".equals(record.resultType()) ? 216 : 193;
         graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.item_nbt"), 418, nbtLabelY, RESULT_TEXT_WIDTH, 0xFFCCCCCC, false);

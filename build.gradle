@@ -71,6 +71,10 @@ minecraft {
         }
 
         client {
+            // -Pkinetic_quick_play=<save folder> joins that world straight away; -Pkinetic_client_jvm_args="-Dkey=value ..." passes
+            // system properties, e.g. to switch on the GUI validation fixture.
+            if (project.findProperty('kinetic_quick_play')) args '--quickPlaySingleplayer', project.property('kinetic_quick_play').toString()
+            if (project.findProperty('kinetic_client_jvm_args')) jvmArgs project.property('kinetic_client_jvm_args').toString().trim().split(/s+/).toList()
             mixinConfigList.each { configName -> args "-mixin.config=${configName}" }
         }
 

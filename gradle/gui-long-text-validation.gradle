@@ -40,3 +40,15 @@ tasks.register('runtimeValidationJar', Jar) {
 reobf {
     runtimeValidationJar {}
 }
+
+// The same fixture in development names, for the dev client: copy it into run/mods.
+tasks.register('runtimeValidationDevJar', Jar) {
+    group = 'verification'
+    description = 'Build the opt-in GUI validation mod for the development client.'
+    dependsOn(tasks.named('testClasses'), writeGuiValidationMetadata)
+    archiveFileName.set('taczworkshop-validation-dev.jar')
+    destinationDirectory.set(layout.buildDirectory.dir('validation-dev'))
+    from(sourceSets.test.output) { include('dev/xyat/taczworkshopvalidation/**') }
+    from(guiValidationMetadata)
+    doFirst { manifest.attributes.remove('MixinConfigs') }
+}
