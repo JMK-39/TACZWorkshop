@@ -3,7 +3,7 @@
 - In the data detail page and the recipe editor, field labels (Gun Damage and the other data fields, Material Count, Output Count, Group, Loaded Ammo Count) sat 2 px below the middle of their input boxes; they are now centred on them.
 - Checked with screenshots of all 19 screens at 1920×1080 and 854×480, in English and Chinese and with extra-long text, inside the 1.20.1 modpack.
 
-- 数据详情页与配方编辑器中，各输入框的标签（枪械伤害等数据字段、材料数量、产出数量、分组、装填弹药数）比输入框中线低 2 像素；现在与输入框垂直居中。
+- 数据详情页与配方编辑器中，各输入框的标签（枪械威力等数据字段、材料数量、输出数量、分类、预装弹药数量）比输入框中线低 2 像素；现在与输入框垂直居中。
 - 已在 1.20.1 整合包中以 1920×1080 与 854×480、英文和中文以及超长文本对全部 19 个界面截图检查。
 
 ---
