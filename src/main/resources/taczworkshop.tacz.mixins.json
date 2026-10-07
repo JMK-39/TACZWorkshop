@@ -21,6 +21,7 @@
     "compat.TaczBackpackMixins$GunAnimationStateContextMixin",
     "compat.TaczBackpackMixins$GunHudOverlayMixin",
     "compat.TaczUiMixins$GunSmithTableScreenMixin",
+    "compat.TaczUiMixins$GunSmithItemButtonMixin",
     "compat.TaczUiMixins$ClientAttachmentItemTooltipMixin"
   ],
   "injectors": {

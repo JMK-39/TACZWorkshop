@@ -547,7 +547,7 @@ public final class TaczDataDetailPage extends KineticPage {
         hoveredHeaderItem = KineticTheme.hovering(mouseX, mouseY, 20, 14, 18, 18);
         KineticTheme.itemSlot(graphics, 20, 14, hoveredHeaderItem);
         if (resourceAvailable && !stack.isEmpty()) {
-            TaczPreviewIndexContext.with(kind, id, previewIndex, () -> KineticTheme.item(graphics, stack, 20, 14, 18, 1.0F, false));
+            TaczPreviewIndexContext.with(kind, id, previewIndex, () -> KineticTheme.item(graphics, stack, 20, 14, 18, 0.75F, false));
         } else {
             graphics.centeredText(KineticI18n.translatable("gui.taczworkshop.data.missing_mark"), 29, 19, 0xFFFFCC55, true);
         }

@@ -2,6 +2,9 @@ package dev.xyat.taczworkshop.mixin.compat;
 
 import dev.xyat.kineticcore.api.text.KineticI18n;
 import dev.xyat.kineticcore.api.client.gui.overlay.KineticOverlays;
+import dev.xyat.kineticcore.api.client.gui.render.KineticGraphics;
+import dev.xyat.kineticcore.api.client.gui.render.KineticGraphicsInterop;
+import dev.xyat.kineticcore.api.client.gui.theme.KineticTheme;
 import com.tacz.guns.api.TimelessAPI;
 import com.tacz.guns.api.DefaultAssets;
 import com.tacz.guns.config.sync.SyncConfig;
@@ -13,6 +16,8 @@ import com.tacz.guns.api.modifier.IAttachmentModifier;
 import com.tacz.guns.api.modifier.JsonProperty;
 import com.tacz.guns.client.gui.GunSmithTableScreen;
 import com.tacz.guns.client.gui.components.GunPackList;
+import com.tacz.guns.client.gui.components.smith.ResultButton;
+import com.tacz.guns.client.gui.components.smith.TypeButton;
 import com.tacz.guns.crafting.GunSmithTableRecipe;
 import com.tacz.guns.client.tooltip.ClientAttachmentItemTooltip;
 import com.tacz.guns.resource.modifier.AttachmentCacheProperty;
@@ -129,10 +134,21 @@ public final class TaczUiMixins {
             taczworkshop_tacz$mousePos[1] = mouseY;
         }
 
+        @Inject(method = "render", at = @At(value = "INVOKE", target = "Lcom/tacz/guns/client/gui/GunSmithTableScreen;renderLeftModel(Lcom/tacz/guns/crafting/GunSmithTableRecipe;)V", remap = false), remap = true)
+        private void taczworkshop_tacz$renderOutputPreviewGrid(GuiGraphics graphics, int mouseX, int mouseY, float partialTick, CallbackInfo ci) {
+            GunSmithTableScreen screen = (GunSmithTableScreen) (Object) this;
+            KineticTheme.itemGrid(KineticGraphicsInterop.wrap(graphics), screen.getGuiLeft() + 3, screen.getGuiTop() + 16,
+                    128, 99);
+        }
+
         @Redirect(method = "renderIngredient", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphics;renderFakeItem(Lnet/minecraft/world/item/ItemStack;II)V"), remap = true)
         private void taczworkshop_tacz$renderIngredient(GuiGraphics graphics, ItemStack stack, int x, int y) {
-            graphics.renderItem(stack, x, y);
-            if (taczworkshop_tacz$mousePos[0] >= x && taczworkshop_tacz$mousePos[0] <= x + 16 && taczworkshop_tacz$mousePos[1] >= y && taczworkshop_tacz$mousePos[1] <= y + 16) {
+            KineticGraphics renderer = KineticGraphicsInterop.wrap(graphics);
+            boolean hovered = taczworkshop_tacz$mousePos[0] >= x && taczworkshop_tacz$mousePos[0] <= x + 16
+                    && taczworkshop_tacz$mousePos[1] >= y && taczworkshop_tacz$mousePos[1] <= y + 16;
+            KineticTheme.itemSlot(renderer, x - 1, y - 1, 18, hovered);
+            KineticTheme.item(renderer, stack, x - 1, y - 1, 18, 0.75F, false);
+            if (hovered) {
                 KineticOverlays.requestItemTooltip(stack, taczworkshop_tacz$mousePos[0], taczworkshop_tacz$mousePos[1]);
             }
         }
@@ -142,6 +158,16 @@ public final class TaczUiMixins {
             String typeName = KineticI18n.translatable(String.format("tacz.type.%s.name", selectedType.getPath())).getString();
             int maxPage = Math.max(1, (int) Math.ceil(selectedRecipeList.size() / 6.0));
             return KineticI18n.translatable("gui.taczworkshop.tacz_page", typeName, indexPage + 1, maxPage);
+        }
+    }
+
+    @Mixin(value = {ResultButton.class, TypeButton.class}, remap = false)
+    public abstract static class GunSmithItemButtonMixin {
+        @Redirect(method = "renderWidget", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphics;renderItem(Lnet/minecraft/world/item/ItemStack;II)V"), remap = true)
+        private void taczworkshop_tacz$renderItemButtonSlot(GuiGraphics graphics, ItemStack stack, int x, int y) {
+            KineticGraphics renderer = KineticGraphicsInterop.wrap(graphics);
+            KineticTheme.itemSlot(renderer, x - 1, y - 1, 18, false);
+            KineticTheme.item(renderer, stack, x - 1, y - 1, 18, 0.75F, false);
         }
     }
 

@@ -279,7 +279,7 @@ public final class TaczDataManagerPage extends KineticPage {
             KineticTheme.itemSlot(graphics, x, y, hovered);
             ItemStack stack = stackFor(entry);
             if (!stack.isEmpty()) {
-                TaczPreviewIndexContext.with(entry, () -> KineticTheme.item(graphics, stack, x, y, SLOT_SIZE, 1.0F, false));
+                TaczPreviewIndexContext.with(entry, () -> KineticTheme.item(graphics, stack, x, y, SLOT_SIZE, 0.75F, false));
             } else {
                 graphics.centeredText(KineticI18n.translatable("gui.taczworkshop.data.missing_mark"), x + 9, y + 5, 0xFFFFCC55, true);
             }

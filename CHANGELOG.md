@@ -1,3 +1,11 @@
+2026年10月08日 02时45分 — Themed item preview slots / 统一物品预览格子
+
+- Recipe materials, results and workbenches use the same themed slot background as the data and recipe lists. Compact item previews have space inside their borders, and TaCZ workbench ingredients, recipe/category icons and 3D result previews follow the same style.
+
+- 配方材料、结果与工作台使用和数据、配方列表相同的格子背景；紧凑物品预览在边框内留出间距，TaCZ 工作台的材料、配方与分类图标及三维结果预览也采用相同样式。
+
+---
+
 2026年10月06日 18时01分 — Labels centred on their fields / 标签与输入框垂直居中
 
 - In the data detail page and the recipe editor, field labels (Gun Damage and the other data fields, Material Count, Output Count, Group, Loaded Ammo Count) sat 2 px below the middle of their input boxes; they are now centred on them.

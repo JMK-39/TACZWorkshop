@@ -9,7 +9,6 @@ import dev.xyat.kineticcore.api.client.gui.text.KineticText;
 import dev.xyat.kineticcore.api.client.gui.overlay.KineticOverlays;
 import dev.xyat.kineticcore.api.client.gui.page.KineticPage;
 import dev.xyat.kineticcore.api.client.gui.render.KineticGraphics;
-import dev.xyat.kineticcore.api.client.gui.render.KineticTexture;
 import dev.xyat.kineticcore.api.client.gui.scroll.KineticScrollController;
 import dev.xyat.kineticcore.api.client.gui.selector.KineticSelectors;
 import dev.xyat.kineticcore.api.client.gui.theme.KineticTheme;
@@ -47,7 +46,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class TaczRecipeEditorPage extends KineticPage {
-    private static final KineticTexture SLOT_BG = KineticTexture.of("minecraft", "textures/gui/container/crafting_table.png");
     private static final List<String> RESULT_TYPES = List.of("gun", "attachment", "ammo", "melee", "throwable", "consumable", "custom");
     private static final List<String> ATTACHMENT_TYPES = List.of("scope", "muzzle", "stock", "grip", "laser", "extended_mag");
 
@@ -257,8 +255,7 @@ public final class TaczRecipeEditorPage extends KineticPage {
             int y = MATERIAL_GRID_Y + row * CELL_SIZE - shift;
             boolean addSlot = index == record.materials().size();
             boolean hovered = KineticTheme.hovering(mouseX, mouseY, x, y, SLOT_SIZE, SLOT_SIZE) && !overlayBlocksInput();
-            graphics.texture(SLOT_BG, x, y, 29, 16, SLOT_SIZE, SLOT_SIZE);
-            KineticTheme.stateOutline(graphics, x, y, SLOT_SIZE, SLOT_SIZE, false, hovered, false);
+            KineticTheme.itemSlot(graphics, x, y, SLOT_SIZE, hovered);
             if (addSlot) {
                 graphics.centeredText("+", x + 9, y + 5, 0xFFFFFFFF, true);
             } else {
@@ -274,8 +271,7 @@ public final class TaczRecipeEditorPage extends KineticPage {
 
     private void renderResultSlot(KineticGraphics graphics, int mouseX, int mouseY) {
         hoveredResult = KineticTheme.hovering(mouseX, mouseY, RESULT_SLOT_X, RESULT_SLOT_Y, SLOT_SIZE, SLOT_SIZE);
-        graphics.texture(SLOT_BG, RESULT_SLOT_X, RESULT_SLOT_Y, 29, 16, SLOT_SIZE, SLOT_SIZE);
-        KineticTheme.stateOutline(graphics, RESULT_SLOT_X, RESULT_SLOT_Y, SLOT_SIZE, SLOT_SIZE, false, hoveredResult, false);
+        KineticTheme.itemSlot(graphics, RESULT_SLOT_X, RESULT_SLOT_Y, SLOT_SIZE, hoveredResult);
         ItemStack result = resultPreviewStack();
         if (!result.isEmpty()) renderItemWithPreviewContext(graphics, result, RESULT_SLOT_X, RESULT_SLOT_Y);
     }
@@ -283,9 +279,13 @@ public final class TaczRecipeEditorPage extends KineticPage {
     private void renderItemWithPreviewContext(KineticGraphics graphics, ItemStack stack, int x, int y) {
         TaczDataListEntry entry = dataEntryForStack(stack);
         if (entry == null) {
-            KineticTheme.item(graphics, stack, x, y, SLOT_SIZE, 1.0F, true);
+            KineticTheme.item(graphics, stack, x, y, SLOT_SIZE, 0.75F, false);
+            graphics.itemDecorations(stack, x + 1, y + 1);
         } else {
-            TaczPreviewIndexContext.with(entry, () -> KineticTheme.item(graphics, stack, x, y, SLOT_SIZE, 1.0F, true));
+            TaczPreviewIndexContext.with(entry, () -> {
+                KineticTheme.item(graphics, stack, x, y, SLOT_SIZE, 0.75F, false);
+                graphics.itemDecorations(stack, x + 1, y + 1);
+            });
         }
     }
 
@@ -782,10 +782,9 @@ public final class TaczRecipeEditorPage extends KineticPage {
 
     private void renderWorkbenchSlot(KineticGraphics graphics, int mouseX, int mouseY) {
         hoveredWorkbench = KineticTheme.hovering(mouseX, mouseY, WORKBENCH_SLOT_X, WORKBENCH_SLOT_Y, SLOT_SIZE, SLOT_SIZE);
-        graphics.texture(SLOT_BG, WORKBENCH_SLOT_X, WORKBENCH_SLOT_Y, 29, 16, SLOT_SIZE, SLOT_SIZE);
-        KineticTheme.stateOutline(graphics, WORKBENCH_SLOT_X, WORKBENCH_SLOT_Y, SLOT_SIZE, SLOT_SIZE, false, hoveredWorkbench, false);
+        KineticTheme.itemSlot(graphics, WORKBENCH_SLOT_X, WORKBENCH_SLOT_Y, SLOT_SIZE, hoveredWorkbench);
         ItemStack stack = workbenchPreviewStack();
-        if (!stack.isEmpty()) KineticTheme.item(graphics, stack, WORKBENCH_SLOT_X, WORKBENCH_SLOT_Y, SLOT_SIZE, 1.0F, false);
+        if (!stack.isEmpty()) KineticTheme.item(graphics, stack, WORKBENCH_SLOT_X, WORKBENCH_SLOT_Y, SLOT_SIZE, 0.75F, false);
         if (record.workbenches().size() > 1) {
             graphics.text(Integer.toString(record.workbenches().size()), WORKBENCH_SLOT_X + 13, WORKBENCH_SLOT_Y + 10, 0xFFFFFFFF, true);
         }

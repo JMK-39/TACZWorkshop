@@ -469,8 +469,8 @@ public final class TaczRecipeListPage extends KineticPage {
             TaczDataListEntry previewEntry = dataEntry(record);
             ItemStack stack = previewCache.computeIfAbsent(record.uuid(), ignored -> recipePreview(record, previewEntry));
             if (!stack.isEmpty()) {
-                if (previewEntry == null) KineticTheme.item(graphics, stack, x, y, SLOT_SIZE, 1.0F, false);
-                else TaczPreviewIndexContext.with(previewEntry, () -> KineticTheme.item(graphics, stack, x, y, SLOT_SIZE, 1.0F, false));
+                if (previewEntry == null) KineticTheme.item(graphics, stack, x, y, SLOT_SIZE, 0.75F, false);
+                else TaczPreviewIndexContext.with(previewEntry, () -> KineticTheme.item(graphics, stack, x, y, SLOT_SIZE, 0.75F, false));
             }
             if (record.hasIssue()) KineticTheme.indicatorOutline(graphics, x, y, SLOT_SIZE, SLOT_SIZE, KineticTheme.Indicator.DANGER);
             else if (!record.enabled()) KineticTheme.indicatorOutline(graphics, x, y, SLOT_SIZE, SLOT_SIZE, KineticTheme.Indicator.DANGER);
