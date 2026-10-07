@@ -14,7 +14,8 @@ TACZ Workshop provides in-game tools for adjusting installed TACZ content and ma
 | --- | --- |
 | Minecraft | 1.20.1 |
 | Forge | 47.4.2 or newer |
-| KineticCore | 26.10.4 or newer; required |
+| Java | 17 |
+| KineticCore | 26.10.7 or newer; required |
 | Timeless and Classics Zero (TACZ) | Required |
 | Sophisticated Backpacks / Sophisticated Core | Optional backpack compatibility |
 | LR Tactical content | Needed for the corresponding melee, throwable, and consumable data categories |
@@ -104,7 +105,8 @@ TACZ Workshop 提供游戏内 TACZ 内容调整与枪匠工作台配方管理工
 | --- | --- |
 | Minecraft | 1.20.1 |
 | Forge | 47.4.2 或更新版本 |
-| KineticCore | 必需，26.10.4 或更新版本 |
+| Java | 17 |
+| KineticCore | 必需，26.10.7 或更新版本 |
 | Timeless and Classics Zero（TACZ） | 必需 |
 | Sophisticated Backpacks / Sophisticated Core | 可选，用于精妙背包兼容 |
 | LR Tactical 内容 | 近战、投掷物和补给品等对应数据分类需要这些内容 |

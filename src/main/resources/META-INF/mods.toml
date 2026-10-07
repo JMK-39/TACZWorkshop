@@ -28,7 +28,7 @@ side="BOTH"
 [[dependencies.taczworkshop]]
 modId="kineticcore"
 mandatory=true
-versionRange="[26.10.4,)"
+versionRange="[26.10.7,)"
 ordering="AFTER"
 side="BOTH"
 

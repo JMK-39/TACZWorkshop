@@ -21,7 +21,7 @@ tasks.register('checkKineticReobfRefs', Exec) {
     group = 'verification'
     description = 'Checks method references into KineticCore in the final (reobf) addon JAR.'
     dependsOn 'reobfJar'
-    def launcher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(21) }
+    def launcher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(17) }
     def checker = file('gradle/KineticReobfCheck.java')
     def finalJar = tasks.named('jar').flatMap { it.archiveFile }
     def coreJars = configurations.kineticCoreReobf
