@@ -32,3 +32,5 @@ Thumbs.db
 
 # Local working notes
 /docs/
+*.zip
+*.7z
