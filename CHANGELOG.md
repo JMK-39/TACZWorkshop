@@ -1,8 +1,8 @@
-2026年10月08日 02时45分 — Themed item preview slots / 统一物品预览格子
+2026年10月08日 — Native recipe backgrounds / 原版配方背景
 
-- Recipe materials, results and workbenches use the same themed slot background as the data and recipe lists. Compact item previews have space inside their borders, and TaCZ workbench ingredients, recipe/category icons and 3D result previews follow the same style.
+- Recipe materials, results, recipe lists and workbench selection use native slot textures. TaCZ workbench backgrounds, ingredients and 3D result previews retain their original appearance. Compact icons in custom data lists keep clear themed backgrounds and space inside their borders.
 
-- 配方材料、结果与工作台使用和数据、配方列表相同的格子背景；紧凑物品预览在边框内留出间距，TaCZ 工作台的材料、配方与分类图标及三维结果预览也采用相同样式。
+- 配方材料、结果、配方列表和工作台选择使用原版槽位贴图；TaCZ 工作台背景、材料及三维结果预览保留原有外观。自绘资料列表的小图标保留清晰的格子背景，并在边框内留出间距。
 
 ---
 

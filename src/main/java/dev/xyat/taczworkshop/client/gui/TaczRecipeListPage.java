@@ -7,6 +7,7 @@ import dev.xyat.kineticcore.api.client.gui.text.KineticText;
 import dev.xyat.kineticcore.api.client.gui.overlay.KineticOverlays;
 import dev.xyat.kineticcore.api.client.gui.page.KineticPage;
 import dev.xyat.kineticcore.api.client.gui.render.KineticGraphics;
+import dev.xyat.kineticcore.api.client.gui.render.KineticTexture;
 import dev.xyat.kineticcore.api.client.gui.scroll.KineticScrollController;
 import dev.xyat.kineticcore.api.client.gui.theme.KineticTheme;
 import dev.xyat.kineticcore.api.client.gui.ui.KineticUi;
@@ -39,6 +40,7 @@ import java.util.Map;
 import java.util.Set;
 
 public final class TaczRecipeListPage extends KineticPage {
+    private static final KineticTexture SLOT_BG = KineticTexture.of("minecraft", "textures/gui/container/crafting_table.png");
     private static final List<String> CREATE_TYPES = List.of("gun", "attachment", "ammo", "melee", "throwable", "consumable", "custom");
     private static final int SEARCH_X = 14;
     private static final int SEARCH_Y = 10;
@@ -465,7 +467,8 @@ public final class TaczRecipeListPage extends KineticPage {
             TaczRecipeRecord record = filtered.get(index);
             boolean hovered = index == hoveredIndex && !overlayBlocksInput();
 
-            KineticTheme.itemSlot(graphics, x, y, hovered);
+            graphics.texture(SLOT_BG, x, y, 29, 16, SLOT_SIZE, SLOT_SIZE);
+            KineticTheme.stateOutline(graphics, x, y, SLOT_SIZE, SLOT_SIZE, false, hovered, false);
             TaczDataListEntry previewEntry = dataEntry(record);
             ItemStack stack = previewCache.computeIfAbsent(record.uuid(), ignored -> recipePreview(record, previewEntry));
             if (!stack.isEmpty()) {
