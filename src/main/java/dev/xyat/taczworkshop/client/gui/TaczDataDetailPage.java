@@ -109,7 +109,7 @@ public final class TaczDataDetailPage extends KineticPage {
         if (hasRemovableCollections()) {
             ui().button(490, 18, 68).text(KineticI18n.translatable("gui.taczworkshop.data.collection.remove")).tooltip(KineticI18n.translatable("tip.taczworkshop.data.collection.remove")).layer(1).onClick(this::openRemoveCollectionMenu).build();
         }
-        ui().button(562, 18, 64).text(KineticI18n.translatable("gui.taczworkshop.back")).tooltip(KineticI18n.translatable("tip.taczworkshop.back.data_list")).onClick(this::close).build();
+        ui().button(20, 332, 64).text(KineticI18n.translatable("gui.taczworkshop.back")).tooltip(KineticI18n.translatable("tip.taczworkshop.back.data_list")).onClick(this::close).build();
 
         rebuildFieldWidgets();
     }
@@ -547,7 +547,7 @@ public final class TaczDataDetailPage extends KineticPage {
         hoveredHeaderItem = KineticTheme.hovering(mouseX, mouseY, 20, 14, 18, 18);
         KineticTheme.itemSlot(graphics, 20, 14, hoveredHeaderItem);
         if (resourceAvailable && !stack.isEmpty()) {
-            TaczPreviewIndexContext.with(kind, id, previewIndex, () -> KineticTheme.item(graphics, stack, 20, 14, 18, 0.75F, false));
+            TaczPreviewIndexContext.with(kind, id, previewIndex, () -> KineticTheme.item(graphics, stack, 20, 14, 18, 1.0F, false));
         } else {
             graphics.centeredText(KineticI18n.translatable("gui.taczworkshop.data.missing_mark"), 29, 19, 0xFFFFCC55, true);
         }
@@ -582,7 +582,7 @@ public final class TaczDataDetailPage extends KineticPage {
         }
         graphics.endScissor();
 
-        graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.data.fields", leaves.size()), 20, 338, 626 - 20, 0xFFCCCCCC, false);
+        graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.data.fields", leaves.size()), 88, 338, 626 - 88, 0xFFCCCCCC, false);
     }
 
     @Override

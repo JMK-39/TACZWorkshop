@@ -140,7 +140,7 @@ public final class TaczRecipeEditorPage extends KineticPage {
         resultTypeButton = ui().button(90, 42, 86).text(resultTypeComponent()).layer(1).onClick(this::openResultTypeMenu).build();
         ui().button(WORKBENCH_BUTTON_X, WORKBENCH_BUTTON_Y, WORKBENCH_BUTTON_W).text(KineticI18n.translatable("gui.taczworkshop.workbench.button")).tooltip(KineticI18n.translatable("tip.taczworkshop.workbench.select")).onClick(this::openWorkbenchSelector).build();
         ui().button(524, 42, 48).text(KineticI18n.translatable("gui.taczworkshop.save")).tooltip(KineticI18n.translatable("tip.taczworkshop.save")).onClick(this::save).build();
-        ui().button(578, 42, 48).text(KineticI18n.translatable("gui.taczworkshop.back")).tooltip(KineticI18n.translatable("tip.taczworkshop.back.recipe_list")).onClick(this::close).build();
+        ui().button(20, 324, 48).text(KineticI18n.translatable("gui.taczworkshop.back")).tooltip(KineticI18n.translatable("tip.taczworkshop.back.recipe_list")).onClick(this::close).build();
 
         createSelectedMaterialWidgets();
         createResultWidgets();

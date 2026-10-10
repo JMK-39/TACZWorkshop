@@ -34,9 +34,9 @@ import java.util.Locale;
 import java.util.Map;
 
 public final class TaczDataManagerPage extends KineticPage {
-    private static final int SEARCH_X = 14;
+    private static final int SEARCH_X = 114;
     private static final int SEARCH_Y = 10;
-    private static final int SEARCH_W = 224;
+    private static final int SEARCH_W = 180;
     private static final int GRID_X = 14;
     private static final int GRID_Y = 60;
     private static final int SLOT_SIZE = 18;
@@ -86,8 +86,9 @@ public final class TaczDataManagerPage extends KineticPage {
     @Override
     protected void build(KineticUi ui) {
         closeContextMenu();
+        ui().button(14, 10, 96).text(KineticI18n.translatable("gui.taczworkshop.back")).tooltip(KineticI18n.translatable("tip.taczworkshop.back.management")).onClick(this::close).build();
         String oldSearch = search == null ? "" : search.textValue();
-        search = ui().textField(SEARCH_X, SEARCH_Y, 180).label(KineticI18n.translatable("gui.taczworkshop.search")).placeholder(KineticI18n.translatable("gui.taczworkshop.data.search.hint")).firstShownTextAsDefault().build();
+        search = ui().textField(SEARCH_X, SEARCH_Y, SEARCH_W).label(KineticI18n.translatable("gui.taczworkshop.search")).placeholder(KineticI18n.translatable("gui.taczworkshop.data.search.hint")).firstShownTextAsDefault().build();
         search.limitTextLength(256);
         search.setTextValue(oldSearch);
         search.onTextChange(value -> {
@@ -95,7 +96,7 @@ public final class TaczDataManagerPage extends KineticPage {
             rebuildFiltered();
         });
 
-        categoryButton = ui().button(198, 10, 180).text(KineticI18n.translatable("gui.taczworkshop.data.category", KineticI18n.translatable(tabKey(kind)))).tooltip(KineticI18n.translatable("tip.taczworkshop.data.category")).layer(1).onClick(this::openKindMenu).build();
+        categoryButton = ui().button(298, 10, 180).text(KineticI18n.translatable("gui.taczworkshop.data.category", KineticI18n.translatable(tabKey(kind)))).tooltip(KineticI18n.translatable("tip.taczworkshop.data.category")).layer(1).onClick(this::openKindMenu).build();
 
         activeFilterButton = ui().button(14, 34, 80).text(KineticI18n.translatable(StatusFilter.ACTIVE.key)).tooltip(KineticI18n.translatable("tip.taczworkshop.data.filter.active")).onClick(() -> setStatusFilter(StatusFilter.ACTIVE)).build();
         activeFilterButton.setEnabled(statusFilter != StatusFilter.ACTIVE);
@@ -106,7 +107,6 @@ public final class TaczDataManagerPage extends KineticPage {
         saveAllButton = ui().button(340, 34, 92).text(KineticI18n.translatable("gui.taczworkshop.data.save_all", TaczDataClientState.pendingCount())).tooltip(KineticI18n.translatable("tip.taczworkshop.data.save_all")).onClick(this::saveAll).build();
         saveAllButton.setEnabled(TaczDataClientState.hasPending());
         ui().button(436, 34, 90).text(KineticI18n.translatable("gui.taczworkshop.data.refresh")).tooltip(KineticI18n.translatable("tip.taczworkshop.data.refresh")).onClick(TaczRecipeNetwork::requestDataList).build();
-        ui().button(530, 34, 96).text(KineticI18n.translatable("gui.taczworkshop.back")).tooltip(KineticI18n.translatable("tip.taczworkshop.back.management")).onClick(this::close).build();
 
         refreshFromState();
     }
@@ -130,7 +130,7 @@ public final class TaczDataManagerPage extends KineticPage {
                     () -> setKind(option)
             ));
         }
-        int menuX = categoryButton == null ? 198 : categoryButton.controlX();
+        int menuX = categoryButton == null ? 298 : categoryButton.controlX();
         int menuY = categoryButton == null ? 32 : categoryButton.controlY() + categoryButton.controlHeight() + 2;
         openContextMenu(menuX, menuY, items);
     }
@@ -211,7 +211,7 @@ public final class TaczDataManagerPage extends KineticPage {
 
     @Override
     protected void renderForeground(KineticGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.data.count", filtered.size()), 386, 16, 626 - 386, 0xFFFFFFFF, true);
+        graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.data.count", filtered.size()), 482, 16, 626 - 482, 0xFFFFFFFF, true);
         renderInfoPanel(graphics);
         if (filtered.isEmpty()) {
             graphics.scrollingTextCentered(KineticI18n.translatable("gui.taczworkshop.data.empty"), GRID_X + GRID_WIDTH / 2, GRID_Y + GRID_HEIGHT / 2 - KineticText.lineHeight() / 2, GRID_WIDTH - 8, 0xFFAAAAAA, true);
@@ -279,7 +279,7 @@ public final class TaczDataManagerPage extends KineticPage {
             KineticTheme.itemSlot(graphics, x, y, hovered);
             ItemStack stack = stackFor(entry);
             if (!stack.isEmpty()) {
-                TaczPreviewIndexContext.with(entry, () -> KineticTheme.item(graphics, stack, x, y, SLOT_SIZE, 0.75F, false));
+                TaczPreviewIndexContext.with(entry, () -> KineticTheme.item(graphics, stack, x, y, SLOT_SIZE, 1.0F, false));
             } else {
                 graphics.centeredText(KineticI18n.translatable("gui.taczworkshop.data.missing_mark"), x + 9, y + 5, 0xFFFFCC55, true);
             }

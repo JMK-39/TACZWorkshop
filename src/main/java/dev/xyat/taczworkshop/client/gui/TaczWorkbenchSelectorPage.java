@@ -7,7 +7,6 @@ import dev.xyat.kineticcore.api.client.gui.input.MouseInput;
 import dev.xyat.kineticcore.api.client.gui.text.KineticText;
 import dev.xyat.kineticcore.api.client.gui.page.KineticPage;
 import dev.xyat.kineticcore.api.client.gui.render.KineticGraphics;
-import dev.xyat.kineticcore.api.client.gui.render.KineticTexture;
 import dev.xyat.kineticcore.api.client.gui.scroll.KineticScrollController;
 import dev.xyat.kineticcore.api.client.gui.theme.KineticTheme;
 import dev.xyat.kineticcore.api.client.gui.ui.KineticUi;
@@ -33,7 +32,6 @@ import java.util.Set;
 import java.util.function.Consumer;
 
 public final class TaczWorkbenchSelectorPage extends KineticPage {
-    private static final KineticTexture SLOT_BG = KineticTexture.of("minecraft", "textures/gui/container/crafting_table.png");
     private static final int GRID_X = 14;
     private static final int GRID_Y = 54;
     private static final int SLOT_SIZE = 18;
@@ -99,7 +97,7 @@ public final class TaczWorkbenchSelectorPage extends KineticPage {
 
         ui().button(244, 12, 118).text(KineticI18n.translatable("gui.taczworkshop.workbench.restore_original")).tooltip(KineticI18n.translatable("tip.taczworkshop.workbench.restore_original")).onClick(this::restoreOriginal).build();
         ui().button(492, 328, 62).text(KineticI18n.translatable("gui.taczworkshop.save")).tooltip(KineticI18n.translatable("tip.taczworkshop.save")).onClick(this::saveSelection).build();
-        ui().button(560, 328, 66).text(KineticI18n.translatable("gui.taczworkshop.back")).tooltip(KineticI18n.translatable("tip.taczworkshop.back.recipe_editor")).onClick(this::close).build();
+        ui().button(14, 328, 66).text(KineticI18n.translatable("gui.taczworkshop.back")).tooltip(KineticI18n.translatable("tip.taczworkshop.back.recipe_editor")).onClick(this::close).build();
         rebuildFiltered();
     }
 
@@ -165,9 +163,9 @@ public final class TaczWorkbenchSelectorPage extends KineticPage {
             int y = GRID_Y + (visible / COLUMNS) * CELL_SIZE - visualShift;
             Entry entry = filtered.get(index);
             boolean hover = KineticTheme.hovering(mouseX, mouseY, x, y, SLOT_SIZE, SLOT_SIZE);
-            graphics.texture(SLOT_BG, x, y, 29, 16, SLOT_SIZE, SLOT_SIZE);
+            KineticTheme.itemSlot(graphics, x, y, SLOT_SIZE, false);
             KineticTheme.stateOutline(graphics, x, y, SLOT_SIZE, SLOT_SIZE, false, hover, false);
-            if (!entry.stack().isEmpty()) KineticTheme.item(graphics, entry.stack(), x, y, SLOT_SIZE, 0.75F, false);
+            if (!entry.stack().isEmpty()) KineticTheme.item(graphics, entry.stack(), x, y, SLOT_SIZE, 1.0F, false);
             // Several workbenches can be chosen, so chosen ones are green; yellow is reserved for a single current choice.
             if (selected.contains(entry.id().toString())) KineticTheme.indicatorOutline(graphics, x, y, SLOT_SIZE, SLOT_SIZE, KineticTheme.Indicator.SUCCESS);
             if (hover) hovered = entry;

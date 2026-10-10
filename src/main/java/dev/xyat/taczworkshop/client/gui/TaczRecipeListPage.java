@@ -7,7 +7,6 @@ import dev.xyat.kineticcore.api.client.gui.text.KineticText;
 import dev.xyat.kineticcore.api.client.gui.overlay.KineticOverlays;
 import dev.xyat.kineticcore.api.client.gui.page.KineticPage;
 import dev.xyat.kineticcore.api.client.gui.render.KineticGraphics;
-import dev.xyat.kineticcore.api.client.gui.render.KineticTexture;
 import dev.xyat.kineticcore.api.client.gui.scroll.KineticScrollController;
 import dev.xyat.kineticcore.api.client.gui.theme.KineticTheme;
 import dev.xyat.kineticcore.api.client.gui.ui.KineticUi;
@@ -40,9 +39,8 @@ import java.util.Map;
 import java.util.Set;
 
 public final class TaczRecipeListPage extends KineticPage {
-    private static final KineticTexture SLOT_BG = KineticTexture.of("minecraft", "textures/gui/container/crafting_table.png");
     private static final List<String> CREATE_TYPES = List.of("gun", "attachment", "ammo", "melee", "throwable", "consumable", "custom");
-    private static final int SEARCH_X = 14;
+    private static final int SEARCH_X = 80;
     private static final int SEARCH_Y = 10;
     private static final int SEARCH_W = 210;
     private static final int GRID_X = 14;
@@ -168,6 +166,7 @@ public final class TaczRecipeListPage extends KineticPage {
     @Override
     protected void build(KineticUi ui) {
         closeContextMenu();
+        ui().button(14, 10, 62).text(KineticI18n.translatable("gui.taczworkshop.back")).tooltip(KineticI18n.translatable("tip.taczworkshop.back.management")).onClick(this::close).build();
         String oldSearch = search == null ? initialSearch : search.textValue();
         search = ui().textField(SEARCH_X, SEARCH_Y, SEARCH_W).label(KineticI18n.translatable("gui.taczworkshop.search")).placeholder(KineticI18n.translatable("gui.taczworkshop.search.hint")).firstShownTextAsDefault().build();
         search.limitTextLength(256);
@@ -177,13 +176,12 @@ public final class TaczRecipeListPage extends KineticPage {
             rebuildFiltered();
         });
 
-        categoryButton = ui().button(230, 10, 110).text(categoryComponent()).layer(1).onClick(this::openCategoryMenu).build();
+        categoryButton = ui().button(294, 10, 110).text(categoryComponent()).layer(1).onClick(this::openCategoryMenu).build();
 
-        createButton = ui().button(344, 10, 92).text(KineticI18n.translatable("gui.taczworkshop.recipe.create")).layer(1).onClick(this::openCreateMenu).build();
+        createButton = ui().button(408, 10, 92).text(KineticI18n.translatable("gui.taczworkshop.recipe.create")).layer(1).onClick(this::openCreateMenu).build();
 
-        ui().button(440, 10, 58).text(KineticI18n.translatable("gui.taczworkshop.refresh")).tooltip(KineticI18n.translatable("tip.taczworkshop.refresh")).onClick(TaczRecipeNetwork::requestSnapshot).build();
-        ui().button(502, 10, 58).text(KineticI18n.translatable("gui.taczworkshop.save")).tooltip(KineticI18n.translatable("tip.taczworkshop.save")).onClick(this::savePendingRecipeListChanges).build();
-        ui().button(564, 10, 62).text(KineticI18n.translatable("gui.taczworkshop.back")).tooltip(KineticI18n.translatable("tip.taczworkshop.back.management")).onClick(this::close).build();
+        ui().button(504, 10, 58).text(KineticI18n.translatable("gui.taczworkshop.refresh")).tooltip(KineticI18n.translatable("tip.taczworkshop.refresh")).onClick(TaczRecipeNetwork::requestSnapshot).build();
+        ui().button(566, 10, 58).text(KineticI18n.translatable("gui.taczworkshop.save")).tooltip(KineticI18n.translatable("tip.taczworkshop.save")).onClick(this::savePendingRecipeListChanges).build();
 
         KineticButton allFilter = ui().button(14, 34, 76).text(KineticI18n.translatable(StatusFilter.ALL.key)).tooltip(KineticI18n.translatable("tip.taczworkshop.recipe.filter.all")).onClick(() -> setStatusFilter(StatusFilter.ALL)).build();
         allFilter.setEnabled(statusFilter != StatusFilter.ALL);
@@ -301,7 +299,7 @@ public final class TaczRecipeListPage extends KineticPage {
                     () -> setCategoryFilter(option)
             ));
         }
-        int x = categoryButton == null ? 230 : categoryButton.controlX();
+        int x = categoryButton == null ? 294 : categoryButton.controlX();
         int y = categoryButton == null ? 32 : categoryButton.controlY() + categoryButton.controlHeight() + 2;
         openContextMenu(x, y, entries);
     }
@@ -328,7 +326,7 @@ public final class TaczRecipeListPage extends KineticPage {
                     () -> create(type)
             ));
         }
-        int x = createButton == null ? 344 : createButton.controlX();
+        int x = createButton == null ? 408 : createButton.controlX();
         int y = createButton == null ? 32 : createButton.controlY() + createButton.controlHeight() + 2;
         openContextMenu(x, y, entries);
     }
@@ -467,13 +465,13 @@ public final class TaczRecipeListPage extends KineticPage {
             TaczRecipeRecord record = filtered.get(index);
             boolean hovered = index == hoveredIndex && !overlayBlocksInput();
 
-            graphics.texture(SLOT_BG, x, y, 29, 16, SLOT_SIZE, SLOT_SIZE);
+            KineticTheme.itemSlot(graphics, x, y, SLOT_SIZE, false);
             KineticTheme.stateOutline(graphics, x, y, SLOT_SIZE, SLOT_SIZE, false, hovered, false);
             TaczDataListEntry previewEntry = dataEntry(record);
             ItemStack stack = previewCache.computeIfAbsent(record.uuid(), ignored -> recipePreview(record, previewEntry));
             if (!stack.isEmpty()) {
-                if (previewEntry == null) KineticTheme.item(graphics, stack, x, y, SLOT_SIZE, 0.75F, false);
-                else TaczPreviewIndexContext.with(previewEntry, () -> KineticTheme.item(graphics, stack, x, y, SLOT_SIZE, 0.75F, false));
+                if (previewEntry == null) KineticTheme.item(graphics, stack, x, y, SLOT_SIZE, 1.0F, false);
+                else TaczPreviewIndexContext.with(previewEntry, () -> KineticTheme.item(graphics, stack, x, y, SLOT_SIZE, 1.0F, false));
             }
             if (record.hasIssue()) KineticTheme.indicatorOutline(graphics, x, y, SLOT_SIZE, SLOT_SIZE, KineticTheme.Indicator.DANGER);
             else if (!record.enabled()) KineticTheme.indicatorOutline(graphics, x, y, SLOT_SIZE, SLOT_SIZE, KineticTheme.Indicator.DANGER);

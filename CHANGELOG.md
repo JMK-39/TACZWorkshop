@@ -1,3 +1,13 @@
+2026年10月10日 — Consistent Back navigation / 统一返回导航
+
+- Recipe and data managers place Back at the upper left beside the search controls. Recipe editing, data details and workbench selection use the lower-left corner because their headers are occupied. Existing control widths, grids, fields and saving actions are preserved; counts scroll within the space beside neighboring controls.
+- Recipe and workbench lists use API checkerboard slots. List and detail item icons use their original 1.0 scale.
+
+- 配方与资料管理页将返回按钮放到左上角、搜索控件之前；配方编辑、资料详情和工作台选择页因顶栏已有内容，改用左下角。保留原有控件宽度、网格、字段与保存操作，计数文字在相邻控件之间的区域内滚动。
+- 配方与工作台列表使用 API 棋盘格；列表及资料详情中的物品图标统一使用 1.0 原始大小。
+
+---
+
 2026年10月08日 — Native recipe backgrounds / 原版配方背景
 
 - Recipe materials, results, recipe lists and workbench selection use native slot textures. TaCZ workbench backgrounds, ingredients and 3D result previews retain their original appearance. Compact icons in custom data lists keep clear themed backgrounds and space inside their borders.
