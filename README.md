@@ -56,7 +56,7 @@ The batch flow keeps pending edits distinct from saved server data. It also chec
 
 From **26.10.11**, the separate Workshop recipe editor and workbench-routing controls are removed. Use **ContentStudio → Recipe Manager → TACZ** to edit recipes or create a recipe using an existing registered type. Third-party visual editing requires **JEI**; saved datapack recipes continue loading without JEI. ContentStudio and JEI are optional for Workshop's data editing and repair.
 
-On the first launch with ContentStudio installed, Workshop automatically imports enabled legacy recipes from `config/kineticcore/taczrecipes.json` and their original-recipe removals. Existing ContentStudio recipes with the same ID take priority. The original file and backup copies are retained. Successful migration is recorded once, so later edits and deletions in ContentStudio are preserved. File errors are logged, leave the original files intact, and are retried after repair and restart.
+On the first launch with ContentStudio installed, Workshop automatically imports enabled legacy recipes from `config/kineticcore/taczrecipes.json` and their original-recipe removals. Existing ContentStudio recipes with the same ID take priority. After successful migration, the legacy source and obsolete migration backups are removed; no new backup files are generated. Update ContentStudio together with Workshop. Successful migration is recorded once, so later edits and deletions in ContentStudio are preserved. Invalid files stop migration before source removal; cleanup errors are logged and retried after repair and restart.
 
 Legacy custom per-workbench restrictions cannot be represented by a native recipe alone. Migration refuses such configurations and logs the affected recipe instead of silently making restricted recipes available on every workbench. New recipes follow TACZ's native workbench rules.
 ### Validation and compatibility
@@ -70,9 +70,9 @@ With Sophisticated Backpacks installed, the compatibility layer includes ammunit
 | File | Purpose |
 | --- | --- |
 | `config/kineticcore/taczdata.json` | Content-data overrides and disabled states |
-| `config/kineticcore/taczrecipes.json` | Legacy migration source; retained after migration |
+| `config/kineticcore/taczrecipes.json` | Legacy migration source; deleted after successful migration |
 | `config/kineticcore/taczrecipes-migrated.json` | One-time migration status and unusable records |
-| `config/kineticcore/datapack/data/contentstudio/recipe_overrides.json` | Migrated native recipes, managed by ContentStudio |
+| `config/kineticcore/datapack/data/contentstudio/recipe/recipe_overrides.json` | Migrated native recipes, managed by ContentStudio |
 | Corresponding `.json.bak` files | Backup copies maintained by the stores when applicable |
 
 These are instance-level configuration files. Keep the original TACZ/LR Tactical packs installed: the overrides refer to their content IDs. Distribute the matching content packs and Workshop configuration together when reproducing a setup.
@@ -134,7 +134,7 @@ TACZ Workshop 提供游戏内 TACZ 内容的数据修改与修复功能。配方
 
 从 **26.10.11** 起，移除工坊内独立的配方编辑器和工作台分配功能。请使用 **ContentStudio → 配方管理器 → TACZ** 修改配方，或选择已有配方类型新增自己的配方。第三方可视化编辑需要安装 **JEI**；已保存的数据包配方在没有 JEI 时仍会加载。工坊的数据修改与修复不依赖 ContentStudio 或 JEI。
 
-同时安装 ContentStudio 后，首次启动会自动导入 `config/kineticcore/taczrecipes.json` 中已启用的旧配方及原始配方移除规则。同 ID 的 ContentStudio 已有配方优先保留。旧文件及备份不会删除；成功后记录迁移状态，只导入一次，之后在新编辑器中修改或删除配方不会被旧文件覆盖。文件出错会在日志中说明，保留原文件，修复后重启重试。
+同时安装 ContentStudio 后，首次启动会自动导入 `config/kineticcore/taczrecipes.json` 中已启用的旧配方及原始配方移除规则。同 ID 的 ContentStudio 已有配方优先保留。成功后删除旧文件与旧迁移备份，不生成新的备份文件；ContentStudio 与工坊需一起更新。成功后记录迁移状态，只导入一次，之后在新编辑器中修改或删除配方不会被旧文件覆盖。文件格式错误会在删除来源前停止迁移；清理失败会记录日志，修复后重启重试。
 
 旧版自定义的工作台限定范围无法直接写进原生配方；遇到这种配置会停止迁移并记录具体配方，不会擅自扩大可制作范围。新配方遵循 TACZ 自身的工作台规则。
 ### 校验与兼容
@@ -148,9 +148,9 @@ TACZ Workshop 提供游戏内 TACZ 内容的数据修改与修复功能。配方
 | 文件 | 用途 |
 | --- | --- |
 | `config/kineticcore/taczdata.json` | 内容数据覆盖与禁用状态 |
-| `config/kineticcore/taczrecipes.json` | 旧配方迁移来源，迁移后保留 |
+| `config/kineticcore/taczrecipes.json` | 旧配方迁移来源，成功迁移后删除 |
 | `config/kineticcore/taczrecipes-migrated.json` | 一次性迁移状态与无法导入的记录 |
-| `config/kineticcore/datapack/data/contentstudio/recipe_overrides.json` | 迁移后的原生配方，由 ContentStudio 管理 |
+| `config/kineticcore/datapack/data/contentstudio/recipe/recipe_overrides.json` | 迁移后的原生配方，由 ContentStudio 管理 |
 | 对应的 `.json.bak` 文件 | 存储逻辑在适用情况下维护的备份 |
 
 这些文件属于游戏或服务器实例配置。原有 TACZ/LR Tactical 内容包仍需保留，因为覆盖记录引用其中的内容 ID。分发整合包时，应同时携带对应内容包和 Workshop 配置。

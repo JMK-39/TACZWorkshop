@@ -1,11 +1,11 @@
 2026年10月11日 — Recipe editing moved to ContentStudio / 配方编辑统一迁至 ContentStudio
 
 - Removed Workshop's duplicate recipe editor, recipe manager, custom workbench routing and their network handlers. Data editing, batch saving, disabled-state controls, and data repair remain available.
-- Added one-time automatic migration of enabled legacy recipes and original-recipe removals to ContentStudio datapack files. Existing ContentStudio edits take priority; original files and backups are kept. Completed migration never overwrites subsequent edits or recreates deleted recipes. File errors are logged and can be retried after repair; unsupported legacy custom workbench restrictions are reported without changing their scope.
+- Added one-time automatic migration of enabled legacy recipes and original-recipe removals to ContentStudio datapack files. Existing ContentStudio edits take priority; successful migration deletes the legacy source and old migration backups without creating new backups. Recipe files are grouped under `data/contentstudio/recipe/`. Completed migration never overwrites subsequent edits or recreates deleted recipes. File errors are logged and can be retried after repair; unsupported legacy custom workbench restrictions are reported without changing their scope.
 - Use ContentStudio's TACZ recipe category to create or edit recipes. JEI is required for third-party visual editing; saved datapack recipes still load without it. Multiplayer clients and servers must both update Workshop to this version.
 
 - 移除工坊内重复的配方编辑器、配方管理器、自定义工作台分配及对应网络处理；保留数据修改、批量保存、禁用状态管理与数据修复。
-- 新增旧配方的一次性自动迁移：将已启用的配方与原始配方移除规则导入 ContentStudio 数据包文件。同 ID 的已有新编辑器修改优先保留，旧文件和备份继续保留；成功后不再覆盖后续修改，也不会重新生成已删除的配方。文件错误会记录日志，修复后可重启重试；不支持的旧自定义工作台限定会明确报告，不擅自扩大制作范围。
+- 新增旧配方的一次性自动迁移：将已启用的配方与原始配方移除规则导入 ContentStudio 数据包文件。同 ID 的已有新编辑器修改优先保留，迁移成功后删除旧文件和旧迁移备份，不生成新备份，配方文件统一存放在 `data/contentstudio/recipe/`；成功后不再覆盖后续修改，也不会重新生成已删除的配方。文件错误会记录日志，修复后可重启重试；不支持的旧自定义工作台限定会明确报告，不擅自扩大制作范围。
 - 新增或编辑配方请使用 ContentStudio 的 TACZ 分类；第三方可视化编辑需要 JEI，已保存的数据包配方不依赖 JEI 加载。多人游戏的客户端与服务端需同时更新至本版本。
 
 ---

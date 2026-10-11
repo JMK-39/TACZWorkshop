@@ -130,8 +130,17 @@ public final class TaczAddonValidation {
 
     private static void verifyMigratedRecipes(MinecraftServer server) throws Exception {
         var directory = KineticPlatform.configDirectory().resolve("kineticcore");
-        JsonObject original = JsonParser.parseString(Files.readString(directory.resolve("taczrecipes.json"))).getAsJsonObject();
-        JsonObject migrated = JsonParser.parseString(Files.readString(directory.resolve("datapack/data/contentstudio/recipe_overrides.json"))).getAsJsonObject();
+        var expectedSource = java.nio.file.Path.of(System.getProperty("taczworkshop.dataValidation.source",
+                directory.resolve(".validation/taczrecipes.json").toString()));
+        JsonObject original = JsonParser.parseString(Files.readString(expectedSource)).getAsJsonObject();
+        JsonObject migrated = JsonParser.parseString(Files.readString(directory.resolve("datapack/data/contentstudio/recipe/recipe_overrides.json"))).getAsJsonObject();
+        require(!Files.exists(directory.resolve("taczrecipes.json")), "Legacy migration source was not removed");
+        require(!Files.exists(directory.resolve("datapack/data/contentstudio/recipe_overrides.json")), "Overrides remain outside recipe directory");
+        for (String obsolete : new String[]{"taczrecipes.json.pre-contentstudio.bak",
+                "datapack/data/contentstudio/recipe_overrides.json.pre-taczworkshop.bak",
+                "datapack/data/contentstudio/recipe/recipe_bundle.json.pre-taczworkshop.bak"}) {
+            require(!Files.exists(directory.resolve(obsolete)), "Unnecessary migration backup remains: " + obsolete);
+        }
         JsonObject marker = JsonParser.parseString(Files.readString(directory.resolve("taczrecipes-migrated.json"))).getAsJsonObject();
         require(marker.getAsJsonArray("unusable_records").isEmpty(), "Migration contains unusable records");
         int count = 0, emptyLegacyResults = 0;

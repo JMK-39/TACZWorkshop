@@ -32,16 +32,26 @@ public final class LegacyTaczRecipeMigration {
     public static void migrateInstalled() {
         if (!KineticPlatform.isModLoaded("contentstudio")) return;
         try {
-            var document = Class.forName("dev.xyat.contentstudio.recipe.nativeedit.NativeRecipeDocument").getConstructor(JsonObject.class);
-            migrate(KineticPlatform.configDirectory().resolve("kineticcore"), recipe -> {
-                try { document.newInstance(recipe); }
-                catch (ReflectiveOperationException exception) {
-                    Throwable cause = exception.getCause() == null ? exception : exception.getCause();
-                    throw new IllegalArgumentException(cause.getMessage(), cause);
+            Path directory = KineticPlatform.configDirectory().resolve("kineticcore");
+            Class<?> store = Class.forName("dev.xyat.contentstudio.recipe.nativeedit.NativeRecipeStore");
+            // Mod constructors run in parallel. Share the native store's static
+            // synchronization monitor so relocation cannot overwrite a migration.
+            synchronized (store) {
+                Path installedFile = (Path) store.getMethod("file").invoke(null);
+                if (!installedFile.equals(directory.resolve("datapack/data/contentstudio/recipe/recipe_overrides.json"))) {
+                    throw new IOException("Update ContentStudio to the version using data/contentstudio/recipe before migrating TACZ recipes");
                 }
-            });
+                var document = Class.forName("dev.xyat.contentstudio.recipe.nativeedit.NativeRecipeDocument").getConstructor(JsonObject.class);
+                migrate(directory, recipe -> {
+                    try { document.newInstance(recipe); }
+                    catch (ReflectiveOperationException exception) {
+                        Throwable cause = exception.getCause() == null ? exception : exception.getCause();
+                        throw new IllegalArgumentException(cause.getMessage(), cause);
+                    }
+                });
+            }
         } catch (Exception exception) {
-            TaczWorkshop.LOGGER.error("Legacy TACZ recipes were not migrated; original files are preserved. Repair the reported file and restart to retry", exception);
+            TaczWorkshop.LOGGER.error("Legacy TACZ recipe migration or cleanup failed. Repair the reported file and restart to retry; completed migration data remains in ContentStudio", exception);
         }
     }
 
@@ -55,14 +65,27 @@ public final class LegacyTaczRecipeMigration {
     private static void migrate(Path directory, Consumer<JsonObject> validateTarget) throws IOException {
         Path source = directory.resolve("taczrecipes.json");
         Path marker = directory.resolve("taczrecipes-migrated.json");
-        if (!Files.isRegularFile(source) || Files.exists(marker)) return;
-        Path overridesFile = directory.resolve("datapack/data/contentstudio/recipe_overrides.json");
+        if (!Files.isRegularFile(source) && !Files.exists(marker)) return;
+        Path oldOverridesFile = directory.resolve("datapack/data/contentstudio/recipe_overrides.json");
+        Path overridesFile = directory.resolve("datapack/data/contentstudio/recipe/recipe_overrides.json");
         Path bundleFile = directory.resolve("datapack/data/contentstudio/recipe/recipe_bundle.json");
+        JsonObject overrides = readObject(oldOverridesFile);
+        readObject(overridesFile).entrySet().forEach(entry -> overrides.add(entry.getKey(), entry.getValue().deepCopy()));
+        if (Files.exists(marker)) {
+            JsonObject completion = readObject(marker);
+            if (!completion.has("version") || completion.get("version").getAsInt() != 1) {
+                throw new IOException(marker + ": unknown migration status");
+            }
+            array(completion, "unusable_records", true);
+            readObject(bundleFile);
+            if (Files.exists(oldOverridesFile)) writeAtomic(overridesFile, encode(overrides, overridesFile));
+            cleanupMigratedSource(source, oldOverridesFile, overridesFile, bundleFile);
+            return;
+        }
         JsonObject legacy = readObject(source);
         JsonArray records;
         try { records = array(legacy, "recipes", true); }
         catch (IOException exception) { throw new IOException(source + ": " + exception.getMessage(), exception); }
-        JsonObject overrides = readObject(overridesFile);
         JsonObject bundle = readObject(bundleFile);
         JsonArray removals = array(bundle, "removals", false);
         array(bundle, "recipes", false);
@@ -144,12 +167,10 @@ public final class LegacyTaczRecipeMigration {
         byte[] encodedRecipes = encode(overrides, overridesFile);
         byte[] encodedBundle = encode(bundle, bundleFile);
         byte[] encodedMarker = encode(completion, marker);
-        backup(source, ".pre-contentstudio.bak");
-        backup(overridesFile, ".pre-taczworkshop.bak");
-        backup(bundleFile, ".pre-taczworkshop.bak");
         writeAtomic(overridesFile, encodedRecipes);
         writeAtomic(bundleFile, encodedBundle);
         writeAtomic(marker, encodedMarker);
+        cleanupMigratedSource(source, oldOverridesFile, overridesFile, bundleFile);
         TaczWorkshop.LOGGER.info("Migrated {} legacy TACZ recipes and {} removals to ContentStudio; {} unusable records retained in {}",
                 imported, importedRemovals, unusable.size(), marker);
     }
@@ -231,9 +252,13 @@ public final class LegacyTaczRecipeMigration {
         return bytes;
     }
 
-    private static void backup(Path file, String suffix) throws IOException {
-        Path backup = file.resolveSibling(file.getFileName() + suffix);
-        if (Files.exists(file) && !Files.exists(backup)) Files.copy(file, backup);
+    private static void cleanupMigratedSource(Path source, Path oldOverrides, Path overrides, Path bundle) throws IOException {
+        Files.deleteIfExists(source);
+        Files.deleteIfExists(oldOverrides);
+        Files.deleteIfExists(source.resolveSibling(source.getFileName() + ".pre-contentstudio.bak"));
+        for (Path file : new Path[]{oldOverrides, overrides, bundle}) {
+            Files.deleteIfExists(file.resolveSibling(file.getFileName() + ".pre-taczworkshop.bak"));
+        }
     }
 
     private static void writeAtomic(Path file, byte[] bytes) throws IOException {
