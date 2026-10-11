@@ -22,7 +22,7 @@ public final class GuiLongTextValidation {
  private static final Logger LOG=LoggerFactory.getLogger(GuiLongTextValidation.class);
  private static final String ROOT=System.getProperty("taczworkshop.guiValidation.output","D:/IDEAWork/TACZWorkshop/.worktrees/gui-long-text-20261004/.gradle/gui-long-text-20261004/screenshots");
  private static final String LONG_NAME="A deliberately long representative name for bounded text ".repeat(4);
- private static final String[] NAMES={"recipes-empty","recipes","recipe-invalid","editor-custom-empty","editor-custom","editor-gun","editor-attachment","editor-ammo","editor-melee","editor-throwable","editor-consumable","workbench-empty","workbenches","data-empty","data","detail-active","detail-modified","detail-removed","editor-invalid"};
+ private static final String[] NAMES={"data-empty","data","detail-active","detail-modified","detail-removed"};
  private static boolean installed,started,screenshot,finished,originalFullscreen,prepared;
  private static String originalLanguage;
  private static int originalScale,originalWidth,originalHeight,phase=-1,page=-1,captures,failures;
@@ -141,25 +141,14 @@ public final class GuiLongTextValidation {
                 KineticGui.currentPage().getClass().getName());
     }
 
- private static TaczRecipeRecord sample(String type, boolean populated) {
-  TaczRecipeRecord r=TaczRecipeRecord.blank(type);r.setId("validation:a_deliberately_long_recipe_identifier_for_clipping");r.setComment(LONG_NAME);
-  if(populated){JsonObject ingredient=new JsonObject();ingredient.addProperty("item","minecraft:diamond_sword");ingredient.addProperty("nbt","{display:{Name:'{\"text\":\"A very long colored material name\",\"color\":\"aqua\"}'}}");r.materials().add(new TaczMaterial(ingredient,32));}
-  if(type.equals("custom")){JsonObject item=r.result().getAsJsonObject("item");item.addProperty("item","minecraft:diamond_sword");item.addProperty("nbt","{display:{Name:'{\"text\":\"A very long colored result name\",\"color\":\"aqua\"}'}}");}
-  else r.result().addProperty("id","tacz:ak47");r.result().addProperty("group",LONG_NAME);return r;
- }
  private static void openPage(int i) throws Exception {
   KineticPage p;
-  if(i<3){p=new TaczRecipeListPage();List<TaczRecipeRecord> source=(List<TaczRecipeRecord>)field(p,"source");source.clear();if(i>0)source.add(sample("custom",true));if(i==2)source.get(0).setIssue("tacz_deserialize_failed",LONG_NAME,new JsonObject());}
-  else if(i==18){TaczRecipeRecord record=sample("custom",true);record.setIssue("tacz_deserialize_failed",LONG_NAME,new JsonObject());p=new TaczRecipeEditorPage(null,record);setField(p,"selectedMaterial",0);}
-  else if(i<=10){String type=List.of("custom","custom","gun","attachment","ammo","melee","throwable","consumable").get(i-3);p=new TaczRecipeEditorPage(null,sample(type,i!=3));if(i!=3)setField(p,"selectedMaterial",0);}
-  else if(i<=12){p=new TaczWorkbenchSelectorPage(List.of(),value->{});if(i==11)((List<?>)field(p,"source")).clear();}
-  else if(i<=14){p=new TaczDataManagerPage();}
-  else {JsonObject d=new JsonObject();d.addProperty("kind","gun");d.addProperty("id","tacz:ak47");d.addProperty("data_id","validation:a_deliberately_long_data_identifier_for_clipping");d.addProperty("modified",i==16);d.addProperty("removed",i==17);JsonObject index=new JsonObject();index.addProperty("name","item.minecraft.diamond_sword");d.add("index",index);JsonObject data=new JsonObject();data.addProperty("damage",12);data.addProperty("a_very_long_field_identifier_for_layout",LONG_NAME);data.addProperty("a_very_long_boolean_field_identifier_for_layout",true);d.add("data",data);p=new TaczDataDetailPage(d);}
+  if(i<=1){p=new TaczDataManagerPage();}
+  else {JsonObject d=new JsonObject();d.addProperty("kind","gun");d.addProperty("id","tacz:ak47");d.addProperty("data_id","tacz:ak47");d.addProperty("modified",i==3);d.addProperty("removed",i==4);JsonObject index=new JsonObject();index.addProperty("name","item.minecraft.diamond_sword");d.add("index",index);JsonObject data=new JsonObject();data.addProperty("damage",12);data.addProperty("a_very_long_field_identifier_for_layout",LONG_NAME);data.addProperty("a_very_long_boolean_field_identifier_for_layout",true);d.add("data",data);p=new TaczDataDetailPage(d);}
   KineticGui.open(p);fixturePage=p;
  }
  private static void preparePage(int i)throws Exception{
-  if(i<3){List<TaczRecipeRecord> source=(List<TaczRecipeRecord>)field(fixturePage,"source");source.clear();if(i>0)source.add(sample("custom",true));if(i==2)source.get(0).setIssue("tacz_deserialize_failed",LONG_NAME,new JsonObject());invoke(fixturePage,"rebuildFiltered");}
-  if(i==13||i==14){List<TaczDataListEntry> source=(List<TaczDataListEntry>)field(fixturePage,"source");source.clear();if(i==14)source.add(new TaczDataListEntry(TaczDataKind.GUN,"tacz:ak47","validation:long_data_identifier", "item.minecraft.diamond_sword","gun",true,false,new JsonObject()));invoke(fixturePage,"rebuildFiltered");}
+  if(i<=1){List<TaczDataListEntry> source=(List<TaczDataListEntry>)field(fixturePage,"source");source.clear();if(i==1)source.add(new TaczDataListEntry(TaczDataKind.GUN,"tacz:ak47","tacz:ak47", "item.minecraft.diamond_sword","gun",true,false,new JsonObject()));invoke(fixturePage,"rebuildFiltered");}
  }
     private static void setField(Object target, String name, Object value) throws Exception {
         for (Class<?> type = target.getClass(); type != null; type = type.getSuperclass()) try {

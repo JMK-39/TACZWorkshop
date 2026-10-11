@@ -7,7 +7,6 @@
   "mixins": [
     "RecipeManagerPreflightMixin",
     "TaczDataManagerMixin",
-    "TaczRecipeRouteMixin",
     "compat.InventoryAccessor",
     "compat.TaczBackpackMixins$AbstractGunItemMixin",
     "compat.TaczBackpackMixins$ModernGunScriptApiMixin",
@@ -20,7 +19,6 @@
     "TimelessApiPreviewMixin",
     "compat.TaczBackpackMixins$GunAnimationStateContextMixin",
     "compat.TaczBackpackMixins$GunHudOverlayMixin",
-    "compat.TaczUiMixins$GunSmithTableScreenMixin",
     "compat.TaczUiMixins$ClientAttachmentItemTooltipMixin"
   ],
   "injectors": {

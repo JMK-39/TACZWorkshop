@@ -15,6 +15,10 @@ public final class RuntimeValidationMod {
     }
 
     private void serverStarted(ServerStartedEvent event) {
+        if (Boolean.getBoolean("taczworkshop.dataValidation")) {
+            TaczAddonValidation.install();
+            return;
+        }
         KineticClientRuntime.execute(GuiLongTextValidation::install);
     }
 }

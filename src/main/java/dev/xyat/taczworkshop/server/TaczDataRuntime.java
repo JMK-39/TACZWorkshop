@@ -4,7 +4,7 @@ import dev.xyat.kineticcore.api.event.KineticEventPriority;
 import dev.xyat.kineticcore.api.runtime.KineticServerRuntime;
 import dev.xyat.kineticcore.api.server.event.KineticServerEvents;
 import dev.xyat.taczworkshop.TaczWorkshop;
-import dev.xyat.taczworkshop.network.TaczRecipeNetwork;
+import dev.xyat.taczworkshop.network.TaczDataNetwork;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 
@@ -39,7 +39,7 @@ public final class TaczDataRuntime {
 
     private static void onDatapackSync(MinecraftServer server, ServerPlayer player) {
         if (player != null) {
-            if (player.hasPermissions(2)) TaczRecipeNetwork.sendDataList(player);
+            if (player.hasPermissions(2)) TaczDataNetwork.sendDataList(player);
             return;
         }
 
@@ -47,14 +47,14 @@ public final class TaczDataRuntime {
         if (completed != null) {
             ServerPlayer target = server.getPlayerList().getPlayer(completed.playerId());
             if (target != null) {
-                TaczRecipeNetwork.completeDataBatchReload(target, completed.batchId(), completed.editCount());
+                TaczDataNetwork.completeDataBatchReload(target, completed.batchId(), completed.editCount());
             }
             TaczWorkshop.LOGGER.info("TACZ data batch reload completed: batchId={}, edits={}", completed.batchId(), completed.editCount());
         }
 
         server.getPlayerList().getPlayers().stream()
                 .filter(target -> target.hasPermissions(2))
-                .forEach(TaczRecipeNetwork::sendDataList);
+                .forEach(TaczDataNetwork::sendDataList);
     }
 
     private static void onServerTick(MinecraftServer server) {
@@ -62,7 +62,7 @@ public final class TaczDataRuntime {
         if (timedOut == null) return;
 
         ServerPlayer player = server.getPlayerList().getPlayer(timedOut.playerId());
-        if (player != null) TaczRecipeNetwork.failDataBatchReload(player);
+        if (player != null) TaczDataNetwork.failDataBatchReload(player);
         TaczWorkshop.LOGGER.warn("Timed out waiting for server /reload after TACZ data save: batchId={}, edits={}", timedOut.batchId(), timedOut.editCount());
     }
 

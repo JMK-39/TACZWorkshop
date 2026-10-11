@@ -256,7 +256,11 @@ dependencies {
     implementation fg.deobf("maven.modrinth:timeless-and-classics-zero:C2pCZ5ht")
     implementation fg.deobf("maven.modrinth:sophisticated-backpacks:i8yHivUh")
     implementation fg.deobf("maven.modrinth:sophisticated-core:t68nu57v")
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
 }
+
+tasks.named('test', Test) { useJUnitPlatform() }
+
 
 tasks.named('jar', Jar).configure {
     def customOutputDir = project.findProperty('output_mods_dir')

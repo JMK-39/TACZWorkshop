@@ -6,7 +6,7 @@
 
 ## English
 
-TACZ Workshop provides in-game tools for adjusting installed TACZ content and managing gunsmith-workbench recipes. Pack authors can tune weapon data, control available entries, build recipes with NBT-bearing results, and choose which workbenches offer them.
+TACZ Workshop provides in-game data editing and repair for installed TACZ content. Recipe creation, editing and removal now belong to ContentStudio.
 
 ### Installation and access
 
@@ -20,7 +20,7 @@ TACZ Workshop provides in-game tools for adjusting installed TACZ content and ma
 | Sophisticated Backpacks / Sophisticated Core | Optional backpack compatibility |
 | LR Tactical content | Needed for the corresponding melee, throwable, and consumable data categories |
 
-Install the mod and required dependencies on both client and server for multiplayer use. Press **F6** to open KineticCore's configuration center, then open TACZ Workshop's data manager or recipe manager. F6 is the default shared configuration key.
+Install the mod and required dependencies on both client and server for multiplayer use. Press **F6** to open KineticCore's configuration center, then open TACZ Workshop's data manager. F6 is the default shared configuration key.
 
 The editors read and modify server data. Opening server snapshots and submitting modifications require permission level **2**. A local preview is not proof that a server change has been accepted.
 
@@ -52,31 +52,16 @@ For guns, attachment-type controls can allow or block supported attachment categ
 
 The batch flow keeps pending edits distinct from saved server data. It also checks whether another reload is already pending. Reset and disabled-state changes participate in the same staged workflow.
 
-### Create gunsmith-workbench recipes
+### Recipe tools have moved to ContentStudio
 
-The recipe editor supports gun, attachment, ammo, normal-item, and available LR Tactical melee/throwable/consumable outputs. Choose a real output item, its count, a recipe ID, and optional group and note.
+From **26.10.11**, the separate Workshop recipe editor and workbench-routing controls are removed. Use **ContentStudio → Recipe Manager → TACZ** to edit recipes or create a recipe using an existing registered type. Third-party visual editing requires **JEI**; saved datapack recipes continue loading without JEI. ContentStudio and JEI are optional for Workshop's data editing and repair.
 
-- Add item or item-tag inputs with separate required counts.
-- Give a concrete item input a partial-NBT condition; tag inputs do not directly carry NBT conditions.
-- Set extra output NBT for customized results.
-- For gun outputs, configure loaded ammunition and preinstalled attachments.
-- Validate attachment types and result types against the selected content.
-- Copy a recipe to start a new recipe ID, edit an existing record, or remove it.
-- Disable a custom recipe while retaining its saved definition for later reuse.
+On the first launch with ContentStudio installed, Workshop automatically imports enabled legacy recipes from `config/kineticcore/taczrecipes.json` and their original-recipe removals. Existing ContentStudio recipes with the same ID take priority. The original file and backup copies are retained. Successful migration is recorded once, so later edits and deletions in ContentStudio are preserved. File errors are logged, leave the original files intact, and are retried after repair and restart.
 
-Recipe searches include recipe ID, result ID, type, and note. The manager distinguishes original recipes, Workshop-created recipes, and removed recipes.
-
-### Workbench routing and original recipes
-
-The workbench selector lists available gunsmith workbenches by name and ID. Toggle the workbenches where a recipe may appear and be crafted. Recipes using native routing follow their original workbench rules.
-
-Editing an original recipe saves a Workshop replacement and places the original in the removed set. This preserves a way to restore the original recipe instead of requiring changes to the original gun-pack archive. Use the recipe manager's restore action when you want the original back.
-
-**Recipe saves apply immediately:** after server validation, the recipe store is updated and the runtime recipe/routing state is synchronized. This is separate from the data manager's staged **Save All** workflow.
-
+Legacy custom per-workbench restrictions cannot be represented by a native recipe alone. Migration refuses such configurations and logs the affected recipe instead of silently making restricted recipes available on every workbench. New recipes follow TACZ's native workbench rules.
 ### Validation and compatibility
 
-Recipe validation checks IDs, material/result structure, counts, result types, and NBT. A preflight pass also isolates malformed TACZ recipe candidates before recipe deserialization and records the affected recipe IDs and reasons for diagnosis. This does not guarantee that every third-party gun pack is compatible.
+Data validation and malformed TACZ recipe isolation remain available. Invalid recipe candidates are isolated before deserialization, with IDs and reasons recorded in the log.
 
 With Sophisticated Backpacks installed, the compatibility layer includes ammunition held in supported inventory backpacks in TACZ reload checks, consumption, and ammo display. The optional integration is more than an editor item picker; it affects ammunition availability during play.
 
@@ -85,19 +70,21 @@ With Sophisticated Backpacks installed, the compatibility layer includes ammunit
 | File | Purpose |
 | --- | --- |
 | `config/kineticcore/taczdata.json` | Content-data overrides and disabled states |
-| `config/kineticcore/taczrecipes.json` | Workshop recipes and original-recipe removal state |
+| `config/kineticcore/taczrecipes.json` | Legacy migration source; retained after migration |
+| `config/kineticcore/taczrecipes-migrated.json` | One-time migration status and unusable records |
+| `config/kineticcore/datapack/data/contentstudio/recipe_overrides.json` | Migrated native recipes, managed by ContentStudio |
 | Corresponding `.json.bak` files | Backup copies maintained by the stores when applicable |
 
 These are instance-level configuration files. Keep the original TACZ/LR Tactical packs installed: the overrides refer to their content IDs. Distribute the matching content packs and Workshop configuration together when reproducing a setup.
 
-If a save fails, inspect the server message/log and check IDs, material counts, NBT, and whether the referenced content is loaded. If a recipe is missing from a bench, also check its enabled state, original/replacement status, and workbench selection.
+If a data save fails, inspect the server message/log and confirm the referenced content packs are installed. Manage recipes in ContentStudio.
 
 
 <a id="chinese"></a>
 
 ## 简体中文
 
-TACZ Workshop 提供游戏内 TACZ 内容调整与枪匠工作台配方管理工具。整合包作者可以调整已安装内容的数据、控制条目是否可用、制作带 NBT 的产物，并指定配方出现在哪些工作台中。
+TACZ Workshop 提供游戏内 TACZ 内容的数据修改与修复功能。配方新增、修改与移除已统一交给 ContentStudio。
 
 ### 安装与入口
 
@@ -111,7 +98,7 @@ TACZ Workshop 提供游戏内 TACZ 内容调整与枪匠工作台配方管理工
 | Sophisticated Backpacks / Sophisticated Core | 可选，用于精妙背包兼容 |
 | LR Tactical 内容 | 近战、投掷物和补给品等对应数据分类需要这些内容 |
 
-多人游戏中，在客户端和服务端安装模组及必需前置。按 **F6** 打开 KineticCore 配置中心，进入 TACZ Workshop 的数据管理器或配方管理器。F6 是共享配置中心的默认按键。
+多人游戏中，在客户端和服务端安装模组及必需前置。按 **F6** 打开 KineticCore 配置中心，进入 TACZ Workshop 的数据管理器。F6 是共享配置中心的默认按键。
 
 编辑器读取和修改服务端数据。请求服务端列表和提交修改需要 **2 级管理权限**；本地预览变化不等于服务端已经接受修改。
 
@@ -143,31 +130,16 @@ TACZ Workshop 提供游戏内 TACZ 内容调整与枪匠工作台配方管理工
 
 批量流程会区分待保存修改与服务端已保存状态，也会检查是否已有重载任务等待执行。重置和禁用状态修改同样进入暂存流程。
 
-### 制作枪匠工作台配方
+### 配方功能已迁至 ContentStudio
 
-配方编辑器支持枪械、配件、弹药、普通物品，以及可用的 LR Tactical 近战、投掷物和补给品产物。选择真实产物、数量、配方 ID，并按需填写分组和备注。
+从 **26.10.11** 起，移除工坊内独立的配方编辑器和工作台分配功能。请使用 **ContentStudio → 配方管理器 → TACZ** 修改配方，或选择已有配方类型新增自己的配方。第三方可视化编辑需要安装 **JEI**；已保存的数据包配方在没有 JEI 时仍会加载。工坊的数据修改与修复不依赖 ContentStudio 或 JEI。
 
-- 添加具体物品或物品标签作为输入，分别设置所需数量。
-- 为具体物品输入设置部分 NBT 匹配条件；标签材料不能直接携带 NBT 条件。
-- 为产物附加 NBT，制作定制物品。
-- 枪械产物可设置已装填弹药数量和预装配件。
-- 根据所选内容校验配件类型与产物类型。
-- 复制已有配方并生成新 ID，也可编辑或删除记录。
-- 暂时禁用自建配方，同时保留文件中的定义，便于以后重新启用。
+同时安装 ContentStudio 后，首次启动会自动导入 `config/kineticcore/taczrecipes.json` 中已启用的旧配方及原始配方移除规则。同 ID 的 ContentStudio 已有配方优先保留。旧文件及备份不会删除；成功后记录迁移状态，只导入一次，之后在新编辑器中修改或删除配方不会被旧文件覆盖。文件出错会在日志中说明，保留原文件，修复后重启重试。
 
-配方搜索覆盖配方 ID、产物 ID、类型和备注。管理界面区分原始配方、Workshop 新建配方与已移除配方。
-
-### 工作台分配与原始配方
-
-工作台选择器按名称和 ID 展示可用枪匠工作台。勾选哪些工作台允许显示并制作当前配方；采用原生分配规则的配方则遵循原始工作台规则。
-
-修改原始配方时，会保存一份 Workshop 替代配方，并把原配方放入已移除集合。这样无需修改原枪包压缩文件，也保留了恢复原配方的途径。需要恢复时，使用配方管理器的恢复操作。
-
-**配方保存立即应用：**服务端校验通过后更新配方文件，并同步运行时配方与工作台分配状态。这与数据管理器的暂存、全部保存流程不同。
-
+旧版自定义的工作台限定范围无法直接写进原生配方；遇到这种配置会停止迁移并记录具体配方，不会擅自扩大可制作范围。新配方遵循 TACZ 自身的工作台规则。
 ### 校验与兼容
 
-配方校验涉及 ID、材料/产物结构、数量、类型和 NBT。反序列化前的预检查还会隔离格式异常的 TACZ 配方候选项，记录相关配方 ID 与原因，便于定位问题。这不代表所有第三方枪包都已验证兼容。
+保留数据校验与异常 TACZ 配方隔离修复功能。格式异常的配方候选项会在反序列化前隔离，日志记录相关配方 ID 与原因。
 
 安装精妙背包后，兼容层会将支持的背包中的弹药纳入 TACZ 换弹检查、弹药消耗和数量显示。它不仅用于编辑器选物品，也影响实际游戏中的弹药可用性。
 
@@ -176,9 +148,11 @@ TACZ Workshop 提供游戏内 TACZ 内容调整与枪匠工作台配方管理工
 | 文件 | 用途 |
 | --- | --- |
 | `config/kineticcore/taczdata.json` | 内容数据覆盖与禁用状态 |
-| `config/kineticcore/taczrecipes.json` | Workshop 配方及原始配方移除状态 |
+| `config/kineticcore/taczrecipes.json` | 旧配方迁移来源，迁移后保留 |
+| `config/kineticcore/taczrecipes-migrated.json` | 一次性迁移状态与无法导入的记录 |
+| `config/kineticcore/datapack/data/contentstudio/recipe_overrides.json` | 迁移后的原生配方，由 ContentStudio 管理 |
 | 对应的 `.json.bak` 文件 | 存储逻辑在适用情况下维护的备份 |
 
 这些文件属于游戏或服务器实例配置。原有 TACZ/LR Tactical 内容包仍需保留，因为覆盖记录引用其中的内容 ID。分发整合包时，应同时携带对应内容包和 Workshop 配置。
 
-保存失败时，检查服务端提示/日志、ID、材料数量、NBT，以及引用内容是否已加载。若工作台中找不到配方，还应检查启用状态、原始/替代关系和工作台勾选范围。
+数据保存失败时，检查服务端提示或日志，并确认引用的内容包已经安装。配方相关操作请使用 ContentStudio。

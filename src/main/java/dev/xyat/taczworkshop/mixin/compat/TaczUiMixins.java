@@ -1,148 +1,40 @@
 package dev.xyat.taczworkshop.mixin.compat;
 
 import dev.xyat.kineticcore.api.text.KineticI18n;
-import dev.xyat.kineticcore.api.client.gui.overlay.KineticOverlays;
 import com.tacz.guns.api.TimelessAPI;
-import com.tacz.guns.api.DefaultAssets;
-import com.tacz.guns.config.sync.SyncConfig;
 import com.tacz.guns.api.item.IAttachment;
 import com.tacz.guns.api.item.IGun;
 import com.tacz.guns.api.item.attachment.AttachmentType;
 import com.tacz.guns.api.item.builder.AttachmentItemBuilder;
 import com.tacz.guns.api.modifier.IAttachmentModifier;
 import com.tacz.guns.api.modifier.JsonProperty;
-import com.tacz.guns.client.gui.GunSmithTableScreen;
-import com.tacz.guns.client.gui.components.GunPackList;
-import com.tacz.guns.crafting.GunSmithTableRecipe;
 import com.tacz.guns.client.tooltip.ClientAttachmentItemTooltip;
 import com.tacz.guns.resource.modifier.AttachmentCacheProperty;
 import com.tacz.guns.resource.modifier.AttachmentPropertyManager;
-import com.tacz.guns.resource.pojo.data.block.TabConfig;
 import com.tacz.guns.resource.pojo.data.gun.GunData;
 import com.tacz.guns.util.AllowAttachmentTagMatcher;
-import dev.xyat.taczworkshop.client.TaczRouteClientState;
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentContents;
 import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.Recipe;
-import net.minecraft.world.item.crafting.RecipeManager;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.ModifyArg;
 import org.spongepowered.asm.mixin.injection.Redirect;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.gen.Invoker;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public final class TaczUiMixins {
     private TaczUiMixins() {
-    }
-
-    @Mixin(value = GunSmithTableScreen.class, remap = false)
-    public abstract static class GunSmithTableScreenMixin {
-        @Shadow
-        private ResourceLocation selectedType;
-        @Shadow
-        private int indexPage;
-        @Shadow
-        private List<ResourceLocation> selectedRecipeList;
-        @Shadow
-        @Final
-        private LinkedHashMap<ResourceLocation, TabConfig> recipeKeys;
-        @Shadow
-        @Final
-        private Map<ResourceLocation, List<ResourceLocation>> recipes;
-        @Shadow
-        private GunPackList filterList;
-        @Invoker(value = "isNameMatch", remap = false)
-        protected abstract boolean taczworkshop_tacz$invokeIsNameMatch(GunSmithTableRecipe recipe);
-        @Invoker(value = "isSuitableForMainHand", remap = false)
-        protected abstract boolean taczworkshop_tacz$invokeIsSuitableForMainHand(GunSmithTableRecipe recipe);
-        @Unique
-        private final int[] taczworkshop_tacz$mousePos = new int[2];
-
-        @Inject(method = "classifyRecipes", at = @At("RETURN"))
-        private void taczworkshop_tacz$addRoutedRecipes(CallbackInfo ci) {
-            var level = KineticClientRuntime.currentLevel();
-            if (level == null) return;
-            GunSmithTableScreen screen = (GunSmithTableScreen) (Object) this;
-            ResourceLocation blockId = screen.getMenu().getBlockId();
-            if (blockId == null) return;
-
-            List<TabConfig> tabs = TimelessAPI.getCommonBlockIndex(blockId)
-                    .map(index -> {
-                        if (DefaultAssets.DEFAULT_BLOCK_ID.equals(blockId) && !SyncConfig.ENABLE_TABLE_FILTER.get()) {
-                            return TabConfig.DEFAULT_TABS;
-                        }
-                        return index.getData().getTabs();
-                    })
-                    .orElse(List.of());
-            if (tabs.isEmpty()) return;
-
-            RecipeManager manager = level.getRecipeManager();
-            Set<String> namespaces = filterList == null ? null : filterList.namespaceList();
-
-            recipes.values().forEach(list -> list.removeIf(recipeId ->
-                    TaczRouteClientState.hasRoute(recipeId) && !TaczRouteClientState.allows(recipeId, blockId)));
-            recipes.entrySet().removeIf(entry -> entry.getValue().isEmpty());
-            recipeKeys.entrySet().removeIf(entry -> !recipes.containsKey(entry.getKey()));
-
-            for (ResourceLocation recipeId : TaczRouteClientState.routedRecipes(blockId)) {
-                if (namespaces != null && !namespaces.contains(recipeId.getNamespace())) continue;
-                Recipe<?> raw = manager.byKey(recipeId).orElse(null);
-                if (!(raw instanceof GunSmithTableRecipe recipe)) continue;
-                if (!taczworkshop_tacz$invokeIsSuitableForMainHand(recipe) || !taczworkshop_tacz$invokeIsNameMatch(recipe)) continue;
-
-                TabConfig target = tabs.stream().filter(tab -> tab.id().equals(recipe.getTab())).findFirst().orElse(tabs.get(0));
-                List<ResourceLocation> list = recipes.computeIfAbsent(target.id(), ignored -> new ArrayList<>());
-                if (!list.contains(recipeId)) list.add(recipeId);
-                recipeKeys.putIfAbsent(target.id(), target);
-            }
-
-            if (!recipeKeys.containsKey(selectedType)) {
-                selectedType = recipeKeys.isEmpty() ? null : recipeKeys.keySet().iterator().next();
-                indexPage = 0;
-            }
-            selectedRecipeList = selectedType == null ? null : recipes.get(selectedType);
-        }
-
-        @Inject(method = "render", at = @At("HEAD"), remap = true)
-        private void taczworkshop_tacz$storeMouse(GuiGraphics graphics, int mouseX, int mouseY, float partialTick, CallbackInfo ci) {
-            taczworkshop_tacz$mousePos[0] = mouseX;
-            taczworkshop_tacz$mousePos[1] = mouseY;
-        }
-
-        @Redirect(method = "renderIngredient", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphics;renderFakeItem(Lnet/minecraft/world/item/ItemStack;II)V"), remap = true)
-        private void taczworkshop_tacz$renderIngredient(GuiGraphics graphics, ItemStack stack, int x, int y) {
-            graphics.renderItem(stack, x, y);
-            if (taczworkshop_tacz$mousePos[0] >= x && taczworkshop_tacz$mousePos[0] <= x + 16 && taczworkshop_tacz$mousePos[1] >= y && taczworkshop_tacz$mousePos[1] <= y + 16) {
-                KineticOverlays.requestItemTooltip(stack, taczworkshop_tacz$mousePos[0], taczworkshop_tacz$mousePos[1]);
-            }
-        }
-
-        @ModifyArg(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphics;drawString(Lnet/minecraft/client/gui/Font;Lnet/minecraft/network/chat/Component;IIIZ)I", ordinal = 0), index = 1, remap = true)
-        private Component taczworkshop_tacz$renderPageInfo(Component original) {
-            String typeName = KineticI18n.translatable(String.format("tacz.type.%s.name", selectedType.getPath())).getString();
-            int maxPage = Math.max(1, (int) Math.ceil(selectedRecipeList.size() / 6.0));
-            return KineticI18n.translatable("gui.taczworkshop.tacz_page", typeName, indexPage + 1, maxPage);
-        }
     }
 
     @Mixin(value = ClientAttachmentItemTooltip.class, remap = false)

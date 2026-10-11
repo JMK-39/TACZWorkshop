@@ -20,7 +20,7 @@ import dev.xyat.taczworkshop.client.TaczDataListEntry;
 import dev.xyat.taczworkshop.client.TaczDataStackUtil;
 import dev.xyat.taczworkshop.client.TaczPreviewIndexContext;
 import dev.xyat.taczworkshop.data.TaczDataKind;
-import dev.xyat.taczworkshop.network.TaczRecipeNetwork;
+import dev.xyat.taczworkshop.network.TaczDataNetwork;
 import dev.xyat.kineticcore.api.client.gui.render.KineticGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
@@ -106,7 +106,7 @@ public final class TaczDataManagerPage extends KineticPage {
         removedFilterButton.setEnabled(statusFilter != StatusFilter.REMOVED);
         saveAllButton = ui().button(340, 34, 92).text(KineticI18n.translatable("gui.taczworkshop.data.save_all", TaczDataClientState.pendingCount())).tooltip(KineticI18n.translatable("tip.taczworkshop.data.save_all")).onClick(this::saveAll).build();
         saveAllButton.setEnabled(TaczDataClientState.hasPending());
-        ui().button(436, 34, 90).text(KineticI18n.translatable("gui.taczworkshop.data.refresh")).tooltip(KineticI18n.translatable("tip.taczworkshop.data.refresh")).onClick(TaczRecipeNetwork::requestDataList).build();
+        ui().button(436, 34, 90).text(KineticI18n.translatable("gui.taczworkshop.data.refresh")).tooltip(KineticI18n.translatable("tip.taczworkshop.data.refresh")).onClick(TaczDataNetwork::requestDataList).build();
 
         refreshFromState();
     }
@@ -337,7 +337,7 @@ public final class TaczDataManagerPage extends KineticPage {
         if (index < 0) return widget;
         TaczDataListEntry entry = filtered.get(index);
         if (KineticMouseButtons.isPrimary(button)) {
-            TaczRecipeNetwork.requestDataDetail(entry.kind(), entry.id());
+            TaczDataNetwork.requestDataDetail(entry.kind(), entry.id());
             return true;
         }
         if (KineticMouseButtons.isSecondary(button)) {
@@ -352,7 +352,7 @@ public final class TaczDataManagerPage extends KineticPage {
         items.add(KineticOverlays.MenuItem.action(
                 KineticI18n.translatable("gui.taczworkshop.context.edit"),
                 KineticI18n.translatable("tip.taczworkshop.context.edit"),
-                () -> TaczRecipeNetwork.requestDataDetail(entry.kind(), entry.id())
+                () -> TaczDataNetwork.requestDataDetail(entry.kind(), entry.id())
         ));
         items.add(KineticOverlays.MenuItem.action(
                 KineticI18n.translatable(entry.removed() ? "gui.taczworkshop.context.enable" : "gui.taczworkshop.context.disable"),
@@ -426,7 +426,7 @@ public final class TaczDataManagerPage extends KineticPage {
 
     private void saveAll() {
         if (!TaczDataClientState.hasPending()) return;
-        TaczRecipeNetwork.saveDataBatch(TaczDataClientState.pendingPayload());
+        TaczDataNetwork.saveDataBatch(TaczDataClientState.pendingPayload());
     }
 
     public void handleDataBatchCommit(long batchId) {

@@ -27,12 +27,6 @@ public final class TaczConfigGui {
                         TaczClientHandler::openDataManagerFromCore,
                         KineticI18n.translatable("cfg.taczworkshop.management.open_data.tooltip")
                 )
-                .action(
-                        "open_recipe_manager",
-                        KineticI18n.translatable("cfg.taczworkshop.management.open_recipes"),
-                        TaczClientHandler::openRecipeManagerFromCore,
-                        KineticI18n.translatable("cfg.taczworkshop.management.open_recipes.tooltip")
-                )
                 .build());
     }
 }

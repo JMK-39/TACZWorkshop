@@ -8,7 +8,7 @@ version="${file.jarVersion}"
 displayName="TACZ Workshop"
 authors="XYAT"
 description='''
-TACZ firearm, attachment, ammunition, melee, supply, and recipe editing tools.
+TACZ firearm, attachment, ammunition, melee and supply data editing and repair.
 '''
 
 [[dependencies.taczworkshop]]
