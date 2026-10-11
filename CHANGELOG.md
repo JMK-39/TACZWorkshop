@@ -1,3 +1,11 @@
+2026年10月12日 — 26.10.12 — ContentStudio owns recipes / ContentStudio 接管配方
+
+- Removed the remaining recipe preflight, recipe issue registry and automatic legacy converter. Workshop now provides data editing and data repair only; ContentStudio owns recipe creation, editing, saving and loading.
+- Preserve legacy recipe files for separate conversion. No conversion, deletion or migration backup is performed at startup.
+- 移除剩余的配方预检、配方错误登记和旧配方自动转换。工坊只保留数据修改与数据修复；新增、编辑、保存和加载配方均由 ContentStudio 接管。
+- 保留旧配方文件供单独转换，启动时不转换、不删除，也不生成迁移备份。
+
+---
 2026年10月11日 — Recipe editing moved to ContentStudio / 配方编辑统一迁至 ContentStudio
 
 - Removed Workshop's duplicate recipe editor, recipe manager, custom workbench routing and their network handlers. Data editing, batch saving, disabled-state controls, and data repair remain available.

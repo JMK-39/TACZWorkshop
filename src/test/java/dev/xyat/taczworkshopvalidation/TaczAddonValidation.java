@@ -1,13 +1,8 @@
 package dev.xyat.taczworkshopvalidation;
 
 import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import com.tacz.guns.api.TimelessAPI;
-import com.tacz.guns.crafting.GunSmithTableRecipe;
-import com.tacz.guns.resource.CommonAssetsManager;
-import com.tacz.guns.resource.pojo.data.recipe.TableRecipe;
 import com.tacz.guns.api.item.builder.GunItemBuilder;
 import com.tacz.guns.resource.pojo.data.gun.GunData;
 import com.tacz.guns.util.AttachmentDataUtils;
@@ -32,7 +27,6 @@ import net.minecraft.world.item.enchantment.Enchantment;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.nio.file.Files;
 import java.util.Map;
 
 /** Real server batch/reload checks in an explicitly enabled, isolated client fixture. */
@@ -65,7 +59,6 @@ public final class TaczAddonValidation {
                     grantedOperator = true;
                 }
                 require(player.hasPermissions(2), "Isolated test player must have admin permissions");
-                verifyMigratedRecipes(server);
                 previous = TaczDataStore.snapshot();
                 GunData gun = gunData();
                 oldAmmo = gun.getAmmoAmount(); oldRpm = gun.getRoundsPerMinute(); oldDamage = gun.getBulletData().getDamageAmount();
@@ -98,7 +91,6 @@ public final class TaczAddonValidation {
                 stack.enchant(enchantment, 3);
                 int modifiedCapacity = AttachmentDataUtils.getAmmoCountWithAttachment(stack, gun);
                 require(modifiedCapacity == 65, "SomeTaczAddon magazine enchantment expected 65, got " + modifiedCapacity);
-                verifyMigratedRecipes(server);
                 LOG.info("TACZ_DATA_CHECK saved/reloaded damage=37 rpm=720 magazine=50; SomeTaczAddon level-3 magazine=65");
                 TaczDataStore.replaceAll(previous);
                 TaczDataRuntime.requestDataBatchReload(player, 102, 0);
@@ -109,7 +101,7 @@ public final class TaczAddonValidation {
                         && Math.abs(gun.getBulletData().getDamageAmount() - oldDamage) < 0.001, "Original data was not restored");
                 finished = true;
                 if (grantedOperator) server.getPlayerList().deop(player.getGameProfile());
-                LOG.info("TACZ_DATA_PASS automatic migration, production batch/reload, SomeTaczAddon modifiers and restoration");
+                LOG.info("TACZ_DATA_PASS production batch/reload, SomeTaczAddon modifiers and restoration");
                 KineticClientRuntime.execute(GuiLongTextValidation::install);
             }
         } catch (Throwable error) {
@@ -126,50 +118,6 @@ public final class TaczAddonValidation {
 
     private static GunData gunData() {
         return TimelessAPI.getCommonGunIndex(KineticResourceIds.parse("tacz:ak47")).orElseThrow().getGunData();
-    }
-
-    private static void verifyMigratedRecipes(MinecraftServer server) throws Exception {
-        var directory = KineticPlatform.configDirectory().resolve("kineticcore");
-        var expectedSource = java.nio.file.Path.of(System.getProperty("taczworkshop.dataValidation.source",
-                directory.resolve(".validation/taczrecipes.json").toString()));
-        JsonObject original = JsonParser.parseString(Files.readString(expectedSource)).getAsJsonObject();
-        JsonObject migrated = JsonParser.parseString(Files.readString(directory.resolve("datapack/data/contentstudio/recipe/recipe_overrides.json"))).getAsJsonObject();
-        require(!Files.exists(directory.resolve("taczrecipes.json")), "Legacy migration source was not removed");
-        require(!Files.exists(directory.resolve("datapack/data/contentstudio/recipe_overrides.json")), "Overrides remain outside recipe directory");
-        for (String obsolete : new String[]{"taczrecipes.json.pre-contentstudio.bak",
-                "datapack/data/contentstudio/recipe_overrides.json.pre-taczworkshop.bak",
-                "datapack/data/contentstudio/recipe/recipe_bundle.json.pre-taczworkshop.bak"}) {
-            require(!Files.exists(directory.resolve(obsolete)), "Unnecessary migration backup remains: " + obsolete);
-        }
-        JsonObject marker = JsonParser.parseString(Files.readString(directory.resolve("taczrecipes-migrated.json"))).getAsJsonObject();
-        require(marker.getAsJsonArray("unusable_records").isEmpty(), "Migration contains unusable records");
-        int count = 0, emptyLegacyResults = 0;
-        for (JsonElement element : original.getAsJsonArray("recipes")) {
-            JsonObject record = element.getAsJsonObject();
-            if (record.has("enabled") && !record.get("enabled").getAsBoolean()) continue;
-            String id = record.get("id").getAsString();
-            JsonObject nativeRecipe = migrated.getAsJsonObject(id);
-            require(nativeRecipe != null, "Missing imported recipe " + id);
-            require(nativeRecipe.get("materials").equals(record.get("materials")), "Changed materials for " + id);
-            require(nativeRecipe.get("result").equals(record.get("result")), "Changed result for " + id);
-            var recipe = server.getRecipeManager().byKey(KineticResourceIds.parse(id)).orElseThrow(() -> new IllegalStateException("Recipe was not loaded: " + id));
-            // Reconstruct the old Workshop's native conversion to distinguish migration
-            // regressions from already-unresolvable IDs in the original gun packs.
-            var legacyRecipe = new GunSmithTableRecipe(KineticResourceIds.parse(id),
-                    CommonAssetsManager.GSON.fromJson(nativeRecipe, TableRecipe.class));
-            legacyRecipe.init();
-            ItemStack expected = legacyRecipe.getOutput();
-            ItemStack actual = recipe.getResultItem(server.registryAccess());
-            require(ItemStack.matches(expected, actual), "Runtime output differs from legacy conversion: " + id
-                    + " legacy=" + expected + " migrated=" + actual);
-            if (expected.isEmpty()) {
-                emptyLegacyResults++;
-                if (emptyLegacyResults <= 4) LOG.warn("TACZ_MIGRATION_BASELINE_EMPTY {} result={}", id, record.get("result"));
-            }
-            count++;
-        }
-        require(count == 519, "Expected 519 legacy recipes, got " + count);
-        LOG.info("TACZ_MIGRATION_CHECK {} recipes loaded with unchanged inputs/results and runtime output matching legacy conversion; {} original outputs already unresolved", count, emptyLegacyResults);
     }
 
     private static void require(boolean passed, String message) {
