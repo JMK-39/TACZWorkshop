@@ -45,6 +45,7 @@ public final class GuiLongTextValidation {
             if (fixturePage != null && KineticGui.currentPage() == fixturePage) suppressCachedMouse();
             if (!started) {
                 if (mc.player == null || mc.level == null || mc.getSingleplayerServer() == null) return;
+                if (Boolean.getBoolean("taczworkshop.taczAddonClientValidation")) TaczAddonClientValidation.check();
                 started = true;
                 originalLanguage = mc.getLanguageManager().getSelected();
                 originalScale = mc.options.guiScale().get();

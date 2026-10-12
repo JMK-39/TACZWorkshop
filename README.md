@@ -64,7 +64,7 @@ Data validation and data repair remain available. Recipe loading and editing are
 
 With Sophisticated Backpacks installed, the compatibility layer includes ammunition held in supported inventory backpacks in TACZ reload checks, consumption, and ammo display. The optional integration is more than an editor item picker; it affects ammunition availability during play.
 
-When **TaCZ addon (`taczaddon`)** is installed, it owns the overlapping backpack-ammunition and attachment-tooltip features. Workshop does not inject those hooks a second time; its data editing, repair, and reload hooks remain active. This is distinct from SomeTaczAddon (`sometaczaddon`). Dedicated-server validation covers TaCZ addon **1.1.8.3**, TaCZ **1.1.8-hotfix2**, ContentStudio **26.10.12**, and backpack-only ammunition with Sophisticated Backpacks **3.26.9.2194** / Core **1.5.6.2383** on Forge 1.20.1. Client GUI verification is still pending.
+When **TaCZ addon (`taczaddon`)** is installed, it owns the overlapping backpack-ammunition and attachment-tooltip features. Workshop does not inject those hooks a second time; its data editing, repair, and reload hooks remain active. This is distinct from SomeTaczAddon (`sometaczaddon`). Dedicated-server validation covers TaCZ addon **1.1.8.3**, TaCZ **1.1.8-hotfix2**, ContentStudio **26.10.12**, and backpack-only ammunition with Sophisticated Backpacks **3.26.9.2194** / Core **1.5.6.2383** on Forge 1.20.1. Client validation covers joining a world with these mods, the actual injected hook owners, retained Workshop data-preview hook, and five Workshop data-editor pages in English and Chinese.
 
 ### Storage and pack distribution
 
