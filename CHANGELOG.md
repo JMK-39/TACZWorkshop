@@ -1,5 +1,7 @@
 2026年10月12日 — 26.10.12 — ContentStudio owns recipes / ContentStudio 接管配方
 
+- Fix startup failure with TaCZ addon (`taczaddon`): leave its overlapping ammunition and attachment-tooltip hooks to the addon, while keeping Workshop data editing, repair and reload active. SomeTaczAddon is a different compatibility target.
+- 修复与 TaCZ addon（`taczaddon`）同装时的重复注入启动错误；重复的弹药与配件提示功能交由 addon 处理，工坊数据修改、修复和重载继续启用。SomeTaczAddon 属于不同测试目标。
 - Removed the remaining recipe preflight, recipe issue registry and automatic legacy converter. Workshop now provides data editing and data repair only; ContentStudio owns recipe creation, editing, saving and loading.
 - Preserve legacy recipe files for separate conversion. No conversion, deletion or migration backup is performed at startup.
 - 移除剩余的配方预检、配方错误登记和旧配方自动转换。工坊只保留数据修改与数据修复；新增、编辑、保存和加载配方均由 ContentStudio 接管。

@@ -64,6 +64,8 @@ Data validation and data repair remain available. Recipe loading and editing are
 
 With Sophisticated Backpacks installed, the compatibility layer includes ammunition held in supported inventory backpacks in TACZ reload checks, consumption, and ammo display. The optional integration is more than an editor item picker; it affects ammunition availability during play.
 
+When **TaCZ addon (`taczaddon`)** is installed, it owns the overlapping backpack-ammunition and attachment-tooltip features. Workshop does not inject those hooks a second time; its data editing, repair, and reload hooks remain active. This is distinct from SomeTaczAddon (`sometaczaddon`). Dedicated-server validation covers TaCZ addon **1.1.8.3**, TaCZ **1.1.8-hotfix2**, ContentStudio **26.10.12**, and backpack-only ammunition with Sophisticated Backpacks **3.26.9.2194** / Core **1.5.6.2383** on Forge 1.20.1. Client GUI verification is still pending.
+
 ### Storage and pack distribution
 
 | File | Purpose |
@@ -138,6 +140,8 @@ TACZ Workshop 提供游戏内 TACZ 内容的数据修改与修复功能。配方
 保留数据校验与数据修复，配方加载与编辑由 ContentStudio 负责。
 
 安装精妙背包后，兼容层会将支持的背包中的弹药纳入 TACZ 换弹检查、弹药消耗和数量显示。它不仅用于编辑器选物品，也影响实际游戏中的弹药可用性。
+
+安装 **TaCZ addon（模组 ID：`taczaddon`）** 时，重复的背包弹药与配件提示功能交由 addon 处理，工坊不再重复注入；数据修改、修复和重载仍正常启用。它与 SomeTaczAddon（`sometaczaddon`）是不同模组。专用服务端已验证 Forge 1.20.1 下的 TaCZ addon **1.1.8.3**、TaCZ **1.1.8-hotfix2**、ContentStudio **26.10.12** 组合，并验证精妙背包 **3.26.9.2194** / 精妙核心 **1.5.6.2383** 的背包独占弹药检查与消耗。客户端 GUI 仍待验证。
 
 ### 文件与整合包分发
 

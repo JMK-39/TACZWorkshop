@@ -21,7 +21,7 @@ public final class TaczWorkshop {
         TaczDataRuntime.register();
         KineticPlatform.runOnClient(() -> () -> {
             TaczConfigGui.load();
-            ClientAmmoTickEvent.register();
+            if (!KineticPlatform.isModLoaded("taczaddon")) ClientAmmoTickEvent.register();
         });
     }
 }

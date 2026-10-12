@@ -9,6 +9,9 @@ import net.minecraftforge.fml.common.Mod;
 @Mod("taczworkshop_validation")
 public final class RuntimeValidationMod {
     public RuntimeValidationMod() {
+        if (Boolean.getBoolean("taczworkshop.taczAddonServerValidation")) {
+            MinecraftForge.EVENT_BUS.addListener(TaczAddonServerValidation::serverStarted);
+        }
         if (Boolean.getBoolean("taczworkshop.guiValidation")) {
             MinecraftForge.EVENT_BUS.addListener(this::serverStarted);
         }
@@ -16,7 +19,7 @@ public final class RuntimeValidationMod {
 
     private void serverStarted(ServerStartedEvent event) {
         if (Boolean.getBoolean("taczworkshop.dataValidation")) {
-            TaczAddonValidation.install();
+            SomeTaczAddonValidation.install();
             return;
         }
         KineticClientRuntime.execute(GuiLongTextValidation::install);

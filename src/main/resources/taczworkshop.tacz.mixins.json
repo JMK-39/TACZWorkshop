@@ -4,6 +4,7 @@
   "compatibilityLevel": "JAVA_17",
   "refmap": "taczworkshop.mixins.refmap.json",
   "package": "dev.xyat.taczworkshop.mixin",
+  "plugin": "dev.xyat.taczworkshop.mixin.TaczMixinCompatibility",
   "mixins": [
     "TaczDataManagerMixin",
     "compat.InventoryAccessor",

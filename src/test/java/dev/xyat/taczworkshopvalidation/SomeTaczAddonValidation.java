@@ -30,8 +30,8 @@ import org.slf4j.LoggerFactory;
 import java.util.Map;
 
 /** Real server batch/reload checks in an explicitly enabled, isolated client fixture. */
-public final class TaczAddonValidation {
-    private static final Logger LOG = LoggerFactory.getLogger(TaczAddonValidation.class);
+public final class SomeTaczAddonValidation {
+    private static final Logger LOG = LoggerFactory.getLogger(SomeTaczAddonValidation.class);
     private static Map<TaczDataKind, Map<String, TaczDataOverride>> previous;
     private static int phase, ticks, waitTicks, oldAmmo, oldRpm;
     private static float oldDamage;
@@ -41,7 +41,7 @@ public final class TaczAddonValidation {
     public static void install() {
         if (installed) return;
         installed = true;
-        KineticServerEvents.onTick(KineticEventPriority.NORMAL, KineticServerEvents.TickPhase.END, TaczAddonValidation::tick);
+        KineticServerEvents.onTick(KineticEventPriority.NORMAL, KineticServerEvents.TickPhase.END, SomeTaczAddonValidation::tick);
     }
 
     private static void tick(MinecraftServer server) {

@@ -17,7 +17,7 @@ modId="taczworkshop"
 mandatory=true
 versionRange="[0,)"
 ordering="AFTER"
-side="CLIENT"
+side="BOTH"
 ''', 'UTF-8')
         new File(guiValidationMetadata.get().asFile, 'pack.mcmeta').setText(
                 '{"pack":{"pack_format":15,"description":"TACZWorkshop local GUI validation"}}', 'UTF-8')
