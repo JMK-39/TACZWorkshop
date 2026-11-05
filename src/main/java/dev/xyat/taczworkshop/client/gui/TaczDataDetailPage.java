@@ -5,7 +5,6 @@ import dev.xyat.kineticcore.api.client.gui.input.MouseDragInput;
 import dev.xyat.kineticcore.api.client.gui.input.MouseInput;
 import dev.xyat.kineticcore.api.client.gui.overlay.KineticOverlays;
 import dev.xyat.kineticcore.api.client.gui.page.KineticPage;
-import dev.xyat.kineticcore.api.client.gui.render.KineticGraphics;
 import dev.xyat.kineticcore.api.client.gui.scroll.KineticScrollController;
 import dev.xyat.kineticcore.api.client.gui.theme.KineticTheme;
 import dev.xyat.kineticcore.api.client.gui.ui.KineticUi;
@@ -33,23 +32,26 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.function.DoubleSupplier;
 
 public final class TaczDataDetailPage extends KineticPage {
     private static final List<String> ATTACHMENT_TYPES = List.of("scope", "muzzle", "stock", "grip", "laser", "extended_mag");
-    private static final int FIELDS_PER_ROW = 2;
-    private static final int ROW_HEIGHT = 28;
-    private static final int LEFT_X = 20;
-    private static final int RIGHT_X = 318;
+    private static final int FIELDS_PER_ROW = 3;
+    private static final int ROW_HEIGHT = 22;
+    private static final int LEFT_X = 12;
+    private static final int COLUMN_WIDTH = 204;
     private static final int LABEL_WIDTH = 112;
-    private static final int INPUT_OFFSET = 118;
-    private static final int INPUT_WIDTH = 158;
-    private static final int FIELD_SCROLL_X = 617;
+    private static final int INPUT_OFFSET = 116;
+    private static final int INPUT_WIDTH = 80;
+    private static final int FIELD_VIEWPORT_X = 8;
+    private static final int FIELD_VIEWPORT_RIGHT = 624;
+    private static final int FIELD_SCROLL_X = 628;
     private static final int FIELD_SCROLL_WIDTH = 4;
-    private static final int FIELD_BOTTOM = 330;
-    private static final int ATTACHMENT_SUMMARY_X = 20;
-    private static final int ATTACHMENT_SUMMARY_Y = 82;
+    private static final int FIELD_BOTTOM = 356;
+    private static final int ATTACHMENT_SUMMARY_X = 12;
+    private static final int ATTACHMENT_SUMMARY_Y = 64;
     private static final int ATTACHMENT_SUMMARY_WIDTH = 200;
-    private static final int ATTACHMENT_SUMMARY_HEIGHT = 22;
+    private static final int ATTACHMENT_SUMMARY_HEIGHT = 16;
 
     private final TaczDataKind kind;
     private final String id;
@@ -60,6 +62,8 @@ public final class TaczDataDetailPage extends KineticPage {
     private final boolean resourceAvailable;
     private final JsonObject previewIndex;
     private final KineticScrollController fieldScroll = new KineticScrollController();
+    private double fieldPixelOffset;
+    private final DoubleSupplier fieldOffsetSupplier = () -> fieldPixelOffset = fieldScroll.smoothOffset();
     private final List<KineticControl> activeFieldWidgets = new ArrayList<>();
     private boolean removed;
     private boolean dirty;
@@ -68,7 +72,6 @@ public final class TaczDataDetailPage extends KineticPage {
     private TaczJsonLeafModel.Leaf hoveredLeaf;
     private boolean hoveredHeaderItem;
     private boolean hoveredAttachmentSummary;
-    private int fieldWidgetFirstRow = -1;
 
     public TaczDataDetailPage(JsonObject detail) {
         super(KineticI18n.translatable("gui.taczworkshop.data.detail.title"));
@@ -86,6 +89,7 @@ public final class TaczDataDetailPage extends KineticPage {
         this.resourceAvailable = detail.has("index") && detail.get("index").isJsonObject() && !detail.getAsJsonObject("index").entrySet().isEmpty()
                 || !this.previewIndex.entrySet().isEmpty();
         this.removed = bool(detail, "removed");
+        bindDeleteAction(() -> !removed, this::toggleRemoved);
     }
 
     @Override
@@ -93,7 +97,7 @@ public final class TaczDataDetailPage extends KineticPage {
         closeContextMenu();
         activeFieldWidgets.clear();
         String oldSearch = search == null ? "" : search.textValue();
-        search = ui().textField(20, 50, 250).label(KineticI18n.translatable("gui.taczworkshop.search")).placeholder(KineticI18n.translatable("gui.taczworkshop.data.field.search.hint")).firstShownTextAsDefault().build();
+        search = ui().textField(12, 44, 290).label(KineticI18n.translatable("gui.taczworkshop.search")).placeholder(KineticI18n.translatable("gui.taczworkshop.data.field.search.hint")).firstShownTextAsDefault().build();
         search.limitTextLength(256);
         search.setTextValue(oldSearch);
         search.onTextChange(value -> {
@@ -101,25 +105,25 @@ public final class TaczDataDetailPage extends KineticPage {
             rebuildFieldWidgets();
         });
 
-        ui().button(278, 18, 68).text(KineticI18n.translatable(removed ? "gui.taczworkshop.data.restore" : "gui.taczworkshop.data.remove")).tooltip(KineticI18n.translatable("tip.taczworkshop.data.remove")).onClick(this::toggleRemoved).build();
-        ui().button(350, 18, 64).text(KineticI18n.translatable("gui.taczworkshop.data.reset")).tooltip(KineticI18n.translatable("tip.taczworkshop.data.reset")).onClick(this::confirmReset).build();
+        ui().button(368, 4, 64).text(KineticI18n.translatable(removed ? "gui.taczworkshop.data.restore" : "gui.taczworkshop.data.remove")).tooltip(KineticI18n.translatable("tip.taczworkshop.data.remove")).onClick(this::toggleRemoved).build();
+        ui().button(436, 4, 64).text(KineticI18n.translatable("gui.taczworkshop.data.reset")).tooltip(KineticI18n.translatable("tip.taczworkshop.data.reset")).onClick(this::confirmReset).build();
         if (hasExpandableCollections()) {
-            ui().button(418, 18, 68).text(KineticI18n.translatable("gui.taczworkshop.data.collection.add")).tooltip(KineticI18n.translatable("tip.taczworkshop.data.collection.add")).layer(1).onClick(this::openAddCollectionMenu).build();
+            ui().button(504, 4, 64).text(KineticI18n.translatable("gui.taczworkshop.data.collection.add")).tooltip(KineticI18n.translatable("tip.taczworkshop.data.collection.add")).layer(1).onClick(this::openAddCollectionMenu).build();
         }
         if (hasRemovableCollections()) {
-            ui().button(490, 18, 68).text(KineticI18n.translatable("gui.taczworkshop.data.collection.remove")).tooltip(KineticI18n.translatable("tip.taczworkshop.data.collection.remove")).layer(1).onClick(this::openRemoveCollectionMenu).build();
+            ui().button(572, 4, 64).text(KineticI18n.translatable("gui.taczworkshop.data.collection.remove")).tooltip(KineticI18n.translatable("tip.taczworkshop.data.collection.remove")).layer(1).onClick(this::openRemoveCollectionMenu).build();
         }
-        ui().button(20, 332, 64).text(KineticI18n.translatable("gui.taczworkshop.back")).tooltip(KineticI18n.translatable("tip.taczworkshop.back.data_list")).onClick(this::close).build();
+        ui().button(4, 4, 40).text(KineticI18n.translatable("gui.taczworkshop.back")).tooltip(KineticI18n.translatable("tip.taczworkshop.back.data_list")).onClick(this::close).build();
 
         rebuildFieldWidgets();
     }
 
     private int fieldBaseY() {
-        return kind == TaczDataKind.GUN ? 116 : 84;
+        return kind == TaczDataKind.GUN ? 88 : 68;
     }
 
-    private int visibleFieldRows() {
-        return Math.max(1, (FIELD_BOTTOM - fieldBaseY()) / ROW_HEIGHT);
+    private int fieldViewportHeight() {
+        return FIELD_BOTTOM - fieldBaseY();
     }
 
     private void rebuildFieldWidgets() {
@@ -134,27 +138,22 @@ public final class TaczDataDetailPage extends KineticPage {
         leaves = List.copyOf(all);
 
         int totalRows = (leaves.size() + FIELDS_PER_ROW - 1) / FIELDS_PER_ROW;
-        fieldScroll.update(totalRows, visibleFieldRows());
-
-        fieldWidgetFirstRow = fieldScroll.smoothIndexOffset();
-        int start = fieldWidgetFirstRow * FIELDS_PER_ROW;
-        int end = Math.min(leaves.size(), start + (visibleFieldRows() + 1) * FIELDS_PER_ROW);
-        for (int i = start; i < end; i++) {
-            int local = i - start;
-            int col = local % FIELDS_PER_ROW;
-            int row = local / FIELDS_PER_ROW;
-            int x = col == 0 ? LEFT_X : RIGHT_X;
-            int y = fieldBaseY() + row * ROW_HEIGHT - fieldScroll.visualShift(ROW_HEIGHT);
-            addLeafEditor(leaves.get(i), x, y);
+        int contentHeight = totalRows == 0 ? 0 : (totalRows - 1) * ROW_HEIGHT + CONTROL_HEIGHT + 4;
+        fieldScroll.updateContent(contentHeight, fieldViewportHeight(), 1);
+        KineticUi fieldUi = ui().scrollViewport(FIELD_VIEWPORT_X, fieldBaseY(), FIELD_VIEWPORT_RIGHT, FIELD_BOTTOM, fieldOffsetSupplier);
+        for (int i = 0; i < leaves.size(); i++) {
+            int x = LEFT_X + (i % FIELDS_PER_ROW) * COLUMN_WIDTH;
+            int y = fieldBaseY() + (i / FIELDS_PER_ROW) * ROW_HEIGHT;
+            addLeafEditor(fieldUi, leaves.get(i), x, y);
         }
     }
 
-    private void addLeafEditor(TaczJsonLeafModel.Leaf leaf, int x, int y) {
+    private void addLeafEditor(KineticUi fieldUi, TaczJsonLeafModel.Leaf leaf, int x, int y) {
         int inputX = x + INPUT_OFFSET;
         Component label = fieldLabel(leaf.displayPath());
         if (leaf.isBoolean()) {
             boolean current = leaf.value().getAsBoolean();
-            KineticToggle button = ui().toggle(inputX, y + 2, INPUT_WIDTH).value(current).labels(KineticI18n.translatable("gui.taczworkshop.data.boolean.true"), KineticI18n.translatable("gui.taczworkshop.data.boolean.false")).onChange(value -> {
+            KineticToggle button = fieldUi.toggle(inputX, y + 2, INPUT_WIDTH).value(current).labels(KineticI18n.translatable("gui.taczworkshop.data.boolean.true"), KineticI18n.translatable("gui.taczworkshop.data.boolean.false")).onChange(value -> {
                         TaczJsonLeafModel.set(data, leaf, Boolean.toString(value));
                         markDirty();
                     }).build();
@@ -164,47 +163,32 @@ public final class TaczDataDetailPage extends KineticPage {
 
         KineticTextField box;
         if (leaf.isNumber()) {
-            KineticNumberField numeric = ui().numberField(inputX, y + 2, INPUT_WIDTH, NumberType.DECIMAL).label(label).allowNegative(true).firstShownTextAsDefault().build();
-            numeric.setTextValue(leaf.value().getAsString());
-            numeric.onTextChange(value -> {
+            box = fieldUi.numberField(inputX, y + 2, INPUT_WIDTH, NumberType.DECIMAL).label(label).allowNegative(true).firstShownTextAsDefault().build();
+        } else {
+            box = fieldUi.textField(inputX, y + 2, INPUT_WIDTH).label(label).firstShownTextAsDefault().build();
+        }
+        box.limitTextLength(2048);
+        box.setTextValue(leaf.value().getAsString());
+        String[] observedText = {box.textValue()};
+        box.onTextChange(ignored -> {
+            // Vanilla also fires the responder when a click only moves the cursor.
+            String value = box.textValue();
+            if (value.equals(observedText[0])) return;
+            observedText[0] = value;
+            if (leaf.isNumber()) {
                 try {
                     if (value.isBlank() || "-".equals(value) || ".".equals(value) || "-.".equals(value)) return;
                     new BigDecimal(value);
-                    TaczJsonLeafModel.set(data, leaf, value);
-                    markDirty();
-                } catch (NumberFormatException ignored) {
+                } catch (NumberFormatException invalid) {
+                    return;
                 }
-            });
-            box = numeric;
-        } else {
-            box = ui().textField(inputX, y + 2, INPUT_WIDTH).label(label).firstShownTextAsDefault().build();
-            box.setTextValue(leaf.value().getAsString());
-            box.onTextChange(value -> {
-                TaczJsonLeafModel.set(data, leaf, value);
-                markDirty();
-            });
-        }
-        box.limitTextLength(2048);
+            }
+            TaczJsonLeafModel.set(data, leaf, value);
+            markDirty();
+        });
         activeFieldWidgets.add(box);
     }
 
-
-    private void updateFieldWidgetPositions() {
-        int firstRow = fieldScroll.smoothIndexOffset();
-        if (firstRow != fieldWidgetFirstRow) {
-            rebuildFieldWidgets();
-            return;
-        }
-        int shift = fieldScroll.visualShift(ROW_HEIGHT);
-        for (int i = 0; i < activeFieldWidgets.size(); i++) {
-            KineticControl widget = activeFieldWidgets.get(i);
-            int row = i / FIELDS_PER_ROW;
-            widget.moveControlY(fieldBaseY() + row * ROW_HEIGHT - shift + 2);
-            boolean intersects = widget.controlY() + widget.controlHeight() > fieldBaseY()
-                    && widget.controlY() < fieldBaseY() + visibleFieldRows() * ROW_HEIGHT;
-            widget.setControlVisible(intersects);
-        }
-    }
 
     private Set<String> attachmentTypes() {
         Set<String> result = new HashSet<>();
@@ -266,8 +250,7 @@ public final class TaczDataDetailPage extends KineticPage {
         for (int i = 0; i < leaves.size(); i++) {
             if (!leaves.get(i).displayPath().startsWith(pathPrefix)) continue;
             int row = i / FIELDS_PER_ROW;
-            fieldScroll.setOffset(Math.max(0, row - visibleFieldRows() + 1));
-            rebuildFieldWidgets();
+            fieldScroll.setOffset(Math.max(0, row * ROW_HEIGHT + CONTROL_HEIGHT + 4 - fieldViewportHeight()));
             return;
         }
     }
@@ -301,7 +284,7 @@ public final class TaczDataDetailPage extends KineticPage {
         if (kind == TaczDataKind.THROWABLE && objectAtPath() != null) {
             addCollectionEntry(items, "gui.taczworkshop.data.collection.cloud_effect", true, this::addCloudEffect);
         }
-        if (!items.isEmpty()) openContextMenu(418, 40, items);
+        if (!items.isEmpty()) openContextMenu(504, 24, items);
     }
 
     private void openRemoveCollectionMenu() {
@@ -313,7 +296,7 @@ public final class TaczDataDetailPage extends KineticPage {
         if (arraySize("effects") > 0) addCollectionEntry(items, "gui.taczworkshop.data.collection.effect", false, () -> removeLast("effects", 0));
         if (arraySize("remove_effects") > 0) addCollectionEntry(items, "gui.taczworkshop.data.collection.remove_effect", false, () -> removeLast("remove_effects", 0));
         if (arraySize("cloud.effects") > 0) addCollectionEntry(items, "gui.taczworkshop.data.collection.cloud_effect", false, () -> removeLast("cloud.effects", 0));
-        if (!items.isEmpty()) openContextMenu(490, 40, items);
+        if (!items.isEmpty()) openContextMenu(572, 24, items);
     }
 
     private void addCollectionEntry(List<KineticOverlays.MenuItem> items, String labelKey, boolean add, Runnable action) {
@@ -533,56 +516,54 @@ public final class TaczDataDetailPage extends KineticPage {
 
     @Override
     protected void renderBackground(KineticGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        KineticTheme.panel(graphics, 6, 6, 628, 348);
-        updateFieldWidgetPositions();
-        int top = kind == TaczDataKind.GUN ? 110 : 78;
-        KineticTheme.panelAlt(graphics, 14, top, 612, 218 - (top - 110));
-        int scrollHeight = visibleFieldRows() * ROW_HEIGHT - 4;
-        fieldScroll.render(graphics, mouseX, mouseY, FIELD_SCROLL_X, fieldBaseY(), FIELD_SCROLL_WIDTH, scrollHeight, 18);
+        KineticTheme.panel(graphics, 0, 0, width(), height());
+        int top = fieldBaseY() - 4;
+        KineticTheme.surface(graphics, 4, top, 632, FIELD_BOTTOM - top, KineticTheme.Surface.PANEL_ALT);
+        graphics.hLine(4, 636, top, KineticTheme.current().accentHover());
+        fieldScroll.render(graphics, mouseX, mouseY, FIELD_SCROLL_X, fieldBaseY(), FIELD_SCROLL_WIDTH, fieldViewportHeight(), 18);
     }
 
     @Override
     protected void renderForeground(KineticGraphics graphics, int mouseX, int mouseY, float partialTick) {
         ItemStack stack = TaczDataStackUtil.build(kind, id);
-        hoveredHeaderItem = KineticTheme.hovering(mouseX, mouseY, 20, 14, 18, 18);
-        KineticTheme.itemSlot(graphics, 20, 14, hoveredHeaderItem);
+        hoveredHeaderItem = KineticTheme.hovering(mouseX, mouseY, 48, 4, 18, 18);
+        KineticTheme.itemSlot(graphics, 48, 4, hoveredHeaderItem);
         if (resourceAvailable && !stack.isEmpty()) {
-            TaczPreviewIndexContext.with(kind, id, previewIndex, () -> KineticTheme.item(graphics, stack, 20, 14, 18, 1.0F, false));
+            TaczPreviewIndexContext.with(kind, id, previewIndex, () -> KineticTheme.item(graphics, stack, 48, 4, 18, 1.0F, false));
         } else {
-            graphics.centeredText(KineticI18n.translatable("gui.taczworkshop.data.missing_mark"), 29, 19, 0xFFFFCC55, true);
+            graphics.centeredText(KineticI18n.translatable("gui.taczworkshop.data.missing_mark"), 57, 9, 0xFFFFCC55, true);
         }
-        if (serverModified || dirty) KineticTheme.indicatorOutline(graphics, 20, 14, 18, 18, KineticTheme.Indicator.SUCCESS);
-        if (removed) KineticTheme.indicatorOutline(graphics, 20, 14, 18, 18, KineticTheme.Indicator.DANGER);
+        if (serverModified || dirty) KineticTheme.indicatorOutline(graphics, 48, 4, 18, 18, KineticTheme.Indicator.SUCCESS);
+        if (removed) KineticTheme.indicatorOutline(graphics, 48, 4, 18, 18, KineticTheme.Indicator.DANGER);
 
-        graphics.scrollingText(displayName(stack), 44, 14, 278 - 44 - 4, 0xFFFFFFFF, true);
-        graphics.scrollingText(Component.literal(id), 44, 27, 278 - 44 - 4, 0xFFCCCCCC, false);
-        graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.data.detail.data_id", dataId), 44, 40, 290, 0xFFAAAAAA, false);
-        graphics.scrollingText(KineticI18n.translatable(removed ? "gui.taczworkshop.data.status.removed" : serverModified || dirty ? "gui.taczworkshop.data.status.modified" : "gui.taczworkshop.data.status.active"), 280, 56, 626 - 280, 0xFFFFFFFF, true);
+        graphics.scrollingText(displayName(stack), 70, 4, 294, 0xFFFFFFFF, true);
+        graphics.scrollingText(Component.literal(id), 70, 17, 294, 0xFFCCCCCC, false);
+        graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.data.detail.data_id", dataId), 12, 31, 620, 0xFFAAAAAA, false);
+        graphics.scrollingText(KineticI18n.translatable(removed ? "gui.taczworkshop.data.status.removed" : serverModified || dirty ? "gui.taczworkshop.data.status.modified" : "gui.taczworkshop.data.status.active"), 306, 48, 100, 0xFFFFFFFF, true);
+        graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.data.fields", leaves.size()), 410, 48, 222, 0xFFCCCCCC, false);
 
         hoveredAttachmentSummary = false;
         if (kind == TaczDataKind.GUN) renderAttachmentSummary(graphics, mouseX, mouseY);
 
         hoveredLeaf = null;
-        int firstRow = fieldScroll.smoothIndexOffset();
-        int shift = fieldScroll.visualShift(ROW_HEIGHT);
+        // The core samples this offset once for the viewport. Reuse that sample for text and hit bounds.
+        int pixelOffset = (int) Math.round(fieldPixelOffset);
+        int firstRow = pixelOffset / ROW_HEIGHT;
         int start = firstRow * FIELDS_PER_ROW;
-        int end = Math.min(leaves.size(), start + (visibleFieldRows() + 1) * FIELDS_PER_ROW);
-        graphics.scissor(14, fieldBaseY(), 617, fieldBaseY() + visibleFieldRows() * ROW_HEIGHT);
+        int end = Math.min(leaves.size(), start + (fieldViewportHeight() / ROW_HEIGHT + 2) * FIELDS_PER_ROW);
+        boolean mouseInFields = KineticTheme.hovering(mouseX, mouseY, FIELD_VIEWPORT_X, fieldBaseY(), FIELD_VIEWPORT_RIGHT - FIELD_VIEWPORT_X, fieldViewportHeight());
+        graphics.scissor(FIELD_VIEWPORT_X, fieldBaseY(), FIELD_VIEWPORT_RIGHT, FIELD_BOTTOM);
         for (int i = start; i < end; i++) {
-            int local = i - start;
-            int col = local % FIELDS_PER_ROW;
-            int row = local / FIELDS_PER_ROW;
-            int x = col == 0 ? LEFT_X : RIGHT_X;
-            int y = fieldBaseY() + row * ROW_HEIGHT - shift;
+            int x = LEFT_X + (i % FIELDS_PER_ROW) * COLUMN_WIDTH;
+            int y = fieldBaseY() + (i / FIELDS_PER_ROW) * ROW_HEIGHT - pixelOffset;
             TaczJsonLeafModel.Leaf leaf = leaves.get(i);
             Component label = fieldLabel(leaf.displayPath());
             // Controls sit at y + 2 and are 16 px tall; the 8 px label is centred on them.
             graphics.scrollingText(label, x, y + 6, LABEL_WIDTH, 0xFFFFFFFF, false);
-            if (KineticTheme.hovering(mouseX, mouseY, x, y + 2, INPUT_OFFSET + INPUT_WIDTH, 20)) hoveredLeaf = leaf;
+            if (mouseInFields && KineticTheme.hovering(mouseX, mouseY, x, y + 2, INPUT_OFFSET + INPUT_WIDTH, CONTROL_HEIGHT)) hoveredLeaf = leaf;
         }
         graphics.endScissor();
 
-        graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.data.fields", leaves.size()), 88, 338, 626 - 88, 0xFFCCCCCC, false);
     }
 
     @Override
@@ -593,8 +574,7 @@ public final class TaczDataDetailPage extends KineticPage {
             return true;
         }
         boolean widget = false;
-        int scrollHeight = visibleFieldRows() * ROW_HEIGHT - 4;
-        if (fieldScroll.beginDrag(mouseX, mouseY, input.button(), FIELD_SCROLL_X, fieldBaseY(), FIELD_SCROLL_WIDTH, scrollHeight, 18, 2)) {
+        if (fieldScroll.beginDrag(mouseX, mouseY, input.button(), FIELD_SCROLL_X, fieldBaseY(), FIELD_SCROLL_WIDTH, fieldViewportHeight(), 18, 2)) {
             return true;
         }
         return widget;
@@ -603,8 +583,7 @@ public final class TaczDataDetailPage extends KineticPage {
     @Override
     protected boolean onMouseDrag(MouseDragInput input) {
         double mouseX = input.x(), mouseY = input.y(); int button = input.rawButton(); double dragX = input.deltaX(), dragY = input.deltaY();
-        int scrollHeight = visibleFieldRows() * ROW_HEIGHT - 4;
-        if (fieldScroll.drag(mouseY, fieldBaseY(), scrollHeight, 18)) {
+        if (fieldScroll.drag(mouseY, fieldBaseY(), fieldViewportHeight(), 18)) {
             return true;
         }
         return false;
@@ -620,8 +599,7 @@ public final class TaczDataDetailPage extends KineticPage {
     @Override
     protected boolean onMouseScroll(ScrollInput input) {
         double mouseX = input.x(), mouseY = input.y(), delta = input.deltaY();
-        int scrollHeight = visibleFieldRows() * ROW_HEIGHT - 4;
-        if (KineticTheme.hovering(mouseX, mouseY, 14, fieldBaseY(), 612, scrollHeight) && fieldScroll.scroll(delta)) {
+        if (KineticTheme.hovering(mouseX, mouseY, FIELD_VIEWPORT_X, fieldBaseY(), FIELD_SCROLL_X + FIELD_SCROLL_WIDTH - FIELD_VIEWPORT_X, fieldViewportHeight()) && fieldScroll.scroll(delta, ROW_HEIGHT)) {
             return true;
         }
         return false;
@@ -646,12 +624,11 @@ public final class TaczDataDetailPage extends KineticPage {
         if (hoveredHeaderItem) {
             ItemStack stack = TaczDataStackUtil.build(kind, id);
             List<Component> lines = new ArrayList<>();
-            if (resourceAvailable && !stack.isEmpty()) {
-                lines.add(displayName(stack));
-            } else lines.add(KineticI18n.translatable("gui.taczworkshop.data.resource_missing"));
+            if (!resourceAvailable || stack.isEmpty()) lines.add(KineticI18n.translatable("gui.taczworkshop.data.resource_missing"));
             lines.add(KineticI18n.translatable("gui.taczworkshop.data.tooltip.item_id", id));
             if (!dataId.isBlank()) lines.add(KineticI18n.translatable("gui.taczworkshop.data.tooltip.data_id", dataId));
-            showTooltip(lines, 320);
+            if (resourceAvailable && !stack.isEmpty()) TaczPreviewIndexContext.with(kind, id, previewIndex, () -> showItemTooltip(stack, lines));
+            else showTooltip(lines, 320);
         }
     }
 
@@ -678,7 +655,7 @@ public final class TaczDataDetailPage extends KineticPage {
                 ATTACHMENT_SUMMARY_HEIGHT
         );
         if (hoveredAttachmentSummary) KineticTheme.stateOutline(graphics, ATTACHMENT_SUMMARY_X, ATTACHMENT_SUMMARY_Y, ATTACHMENT_SUMMARY_WIDTH, ATTACHMENT_SUMMARY_HEIGHT, false, true, false);
-        graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.data.slot.summary", enabled.size(), ATTACHMENT_TYPES.size()), ATTACHMENT_SUMMARY_X + 8, ATTACHMENT_SUMMARY_Y + 7, ATTACHMENT_SUMMARY_WIDTH - 16, 0xFFFFFFFF, false);
+        graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.data.slot.summary", enabled.size(), ATTACHMENT_TYPES.size()), ATTACHMENT_SUMMARY_X + 4, ATTACHMENT_SUMMARY_Y + 4, ATTACHMENT_SUMMARY_WIDTH - 8, 0xFFFFFFFF, false);
     }
 
     private List<Component> attachmentSummaryTooltip() {

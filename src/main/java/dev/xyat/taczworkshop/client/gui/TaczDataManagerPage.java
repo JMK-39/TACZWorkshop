@@ -6,7 +6,6 @@ import dev.xyat.kineticcore.api.client.gui.input.MouseInput;
 import dev.xyat.kineticcore.api.client.gui.text.KineticText;
 import dev.xyat.kineticcore.api.client.gui.overlay.KineticOverlays;
 import dev.xyat.kineticcore.api.client.gui.page.KineticPage;
-import dev.xyat.kineticcore.api.client.gui.render.KineticGraphics;
 import dev.xyat.kineticcore.api.client.gui.scroll.KineticScrollController;
 import dev.xyat.kineticcore.api.client.gui.theme.KineticTheme;
 import dev.xyat.kineticcore.api.client.gui.ui.KineticUi;
@@ -23,7 +22,6 @@ import dev.xyat.taczworkshop.data.TaczDataKind;
 import dev.xyat.taczworkshop.network.TaczDataNetwork;
 import dev.xyat.kineticcore.api.client.gui.render.KineticGraphics;
 import net.minecraft.network.chat.Component;
-import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
@@ -34,22 +32,26 @@ import java.util.Locale;
 import java.util.Map;
 
 public final class TaczDataManagerPage extends KineticPage {
-    private static final int SEARCH_X = 114;
-    private static final int SEARCH_Y = 10;
-    private static final int SEARCH_W = 180;
-    private static final int GRID_X = 14;
-    private static final int GRID_Y = 60;
-    private static final int SLOT_SIZE = 18;
-    private static final int CELL_SIZE = 19;
-    private static final int COLUMNS = 25;
-    private static final int ROWS_VISIBLE = 15;
+    private static final int SEARCH_X = 14;
+    private static final int SEARCH_Y = 24;
+    private static final int SEARCH_W = 220;
+    private static final int CATEGORY_X = 48;
+    private static final int TOOLBAR_Y = 4;
+    private static final int CATEGORY_WIDTH = 80;
+    private static final int GRID_X = 4;
+    private static final int GRID_Y = 48;
+    // Standard item slots, the same size in every add-on.
+    private static final int SLOT_SIZE = dev.xyat.kineticcore.api.client.gui.theme.KineticSizes.ITEM_SLOT;
+    private static final int CELL_SIZE = dev.xyat.kineticcore.api.client.gui.theme.KineticSizes.ITEM_PITCH;
+    private static final int COLUMNS = 20;
+    private static final int ROWS_VISIBLE = 12;
     private static final int GRID_WIDTH = COLUMNS * CELL_SIZE;
     private static final int GRID_HEIGHT = ROWS_VISIBLE * CELL_SIZE;
     private static final int SCROLL_X = GRID_X + GRID_WIDTH + 4;
     private static final int SCROLL_WIDTH = 4;
     private static final int INFO_X = SCROLL_X + SCROLL_WIDTH + 4;
     private static final int INFO_Y = GRID_Y;
-    private static final int INFO_WIDTH = 123;
+    private static final int INFO_WIDTH = 636 - INFO_X;
     private static final int INFO_HEIGHT = GRID_HEIGHT;
 
     private enum StatusFilter {
@@ -83,10 +85,20 @@ public final class TaczDataManagerPage extends KineticPage {
         configureStandaloneDraft(TaczDataClientState::capturePendingSnapshot, TaczDataClientState::restorePendingSnapshot);
     }
 
+    /** One view per data kind, for screenshot tools. */
+    @Override
+    public List<ReviewView> reviewViews() {
+        List<ReviewView> views = new ArrayList<>();
+        for (TaczDataKind value : TaczDataKind.values()) {
+            views.add(new ReviewView(value.name().toLowerCase(Locale.ROOT), () -> setKind(value)));
+        }
+        return views;
+    }
+
     @Override
     protected void build(KineticUi ui) {
         closeContextMenu();
-        ui().button(14, 10, 96).text(KineticI18n.translatable("gui.taczworkshop.back")).tooltip(KineticI18n.translatable("tip.taczworkshop.back.management")).onClick(this::close).build();
+        ui().button(4, 4, 40).text(KineticI18n.translatable("gui.taczworkshop.back")).tooltip(KineticI18n.translatable("tip.taczworkshop.back.management")).onClick(this::close).build();
         String oldSearch = search == null ? "" : search.textValue();
         search = ui().textField(SEARCH_X, SEARCH_Y, SEARCH_W).label(KineticI18n.translatable("gui.taczworkshop.search")).placeholder(KineticI18n.translatable("gui.taczworkshop.data.search.hint")).firstShownTextAsDefault().build();
         search.limitTextLength(256);
@@ -96,17 +108,17 @@ public final class TaczDataManagerPage extends KineticPage {
             rebuildFiltered();
         });
 
-        categoryButton = ui().button(298, 10, 180).text(KineticI18n.translatable("gui.taczworkshop.data.category", KineticI18n.translatable(tabKey(kind)))).tooltip(KineticI18n.translatable("tip.taczworkshop.data.category")).layer(1).onClick(this::openKindMenu).build();
+        categoryButton = ui().button(CATEGORY_X, TOOLBAR_Y, CATEGORY_WIDTH).text(KineticI18n.translatable("gui.taczworkshop.data.category", KineticI18n.translatable(tabKey(kind)))).tooltip(KineticI18n.translatable("tip.taczworkshop.data.category")).layer(1).onClick(this::openKindMenu).build();
 
-        activeFilterButton = ui().button(14, 34, 80).text(KineticI18n.translatable(StatusFilter.ACTIVE.key)).tooltip(KineticI18n.translatable("tip.taczworkshop.data.filter.active")).onClick(() -> setStatusFilter(StatusFilter.ACTIVE)).build();
+        activeFilterButton = ui().button(132, TOOLBAR_Y, 64).text(KineticI18n.translatable(StatusFilter.ACTIVE.key)).tooltip(KineticI18n.translatable("tip.taczworkshop.data.filter.active")).onClick(() -> setStatusFilter(StatusFilter.ACTIVE)).build();
         activeFilterButton.setEnabled(statusFilter != StatusFilter.ACTIVE);
-        modifiedFilterButton = ui().button(96, 34, 80).text(KineticI18n.translatable(StatusFilter.MODIFIED.key)).tooltip(KineticI18n.translatable("tip.taczworkshop.data.filter.modified")).onClick(() -> setStatusFilter(StatusFilter.MODIFIED)).build();
+        modifiedFilterButton = ui().button(200, TOOLBAR_Y, 64).text(KineticI18n.translatable(StatusFilter.MODIFIED.key)).tooltip(KineticI18n.translatable("tip.taczworkshop.data.filter.modified")).onClick(() -> setStatusFilter(StatusFilter.MODIFIED)).build();
         modifiedFilterButton.setEnabled(statusFilter != StatusFilter.MODIFIED);
-        removedFilterButton = ui().button(178, 34, 80).text(KineticI18n.translatable(StatusFilter.REMOVED.key)).tooltip(KineticI18n.translatable("tip.taczworkshop.data.filter.removed")).onClick(() -> setStatusFilter(StatusFilter.REMOVED)).build();
+        removedFilterButton = ui().button(268, TOOLBAR_Y, 64).text(KineticI18n.translatable(StatusFilter.REMOVED.key)).tooltip(KineticI18n.translatable("tip.taczworkshop.data.filter.removed")).onClick(() -> setStatusFilter(StatusFilter.REMOVED)).build();
         removedFilterButton.setEnabled(statusFilter != StatusFilter.REMOVED);
-        saveAllButton = ui().button(340, 34, 92).text(KineticI18n.translatable("gui.taczworkshop.data.save_all", TaczDataClientState.pendingCount())).tooltip(KineticI18n.translatable("tip.taczworkshop.data.save_all")).onClick(this::saveAll).build();
+        saveAllButton = ui().button(336, TOOLBAR_Y, 92).text(KineticI18n.translatable("gui.taczworkshop.data.save_all", TaczDataClientState.pendingCount())).tooltip(KineticI18n.translatable("tip.taczworkshop.data.save_all")).onClick(this::saveAll).build();
         saveAllButton.setEnabled(TaczDataClientState.hasPending());
-        ui().button(436, 34, 90).text(KineticI18n.translatable("gui.taczworkshop.data.refresh")).tooltip(KineticI18n.translatable("tip.taczworkshop.data.refresh")).onClick(TaczDataNetwork::requestDataList).build();
+        ui().button(432, TOOLBAR_Y, 40).text(KineticI18n.translatable("gui.taczworkshop.data.refresh")).tooltip(KineticI18n.translatable("tip.taczworkshop.data.refresh")).onClick(TaczDataNetwork::requestDataList).build();
 
         refreshFromState();
     }
@@ -130,8 +142,8 @@ public final class TaczDataManagerPage extends KineticPage {
                     () -> setKind(option)
             ));
         }
-        int menuX = categoryButton == null ? 298 : categoryButton.controlX();
-        int menuY = categoryButton == null ? 32 : categoryButton.controlY() + categoryButton.controlHeight() + 2;
+        int menuX = categoryButton == null ? CATEGORY_X : categoryButton.controlX();
+        int menuY = categoryButton == null ? TOOLBAR_Y + CONTROL_HEIGHT + 4 : categoryButton.controlY() + categoryButton.controlHeight() + 4;
         openContextMenu(menuX, menuY, items);
     }
 
@@ -202,16 +214,18 @@ public final class TaczDataManagerPage extends KineticPage {
 
     @Override
     protected void renderBackground(KineticGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        KineticTheme.panel(graphics, 6, 6, 628, 348);
-        KineticTheme.panelAlt(graphics, 10, 56, 620, 293);
-        KineticTheme.panelAlt(graphics, INFO_X, INFO_Y, INFO_WIDTH, INFO_HEIGHT);
+        KineticTheme.panel(graphics, 0, 0, width(), height());
+        KineticTheme.surface(graphics, 10, 44, 620, 293, KineticTheme.Surface.PANEL_ALT);
+        KineticTheme.surface(graphics, INFO_X, INFO_Y, INFO_WIDTH, INFO_HEIGHT, KineticTheme.Surface.PANEL_ALT);
+        graphics.hLine(10, 630, 44, KineticTheme.current().accentHover());
+        graphics.vLine(INFO_X - 2, INFO_Y, INFO_Y + INFO_HEIGHT, KineticTheme.current().accentHover());
         renderEntries(graphics, mouseX, mouseY);
         gridScroll.render(graphics, mouseX, mouseY, SCROLL_X, GRID_Y, SCROLL_WIDTH, GRID_HEIGHT, 18);
     }
 
     @Override
     protected void renderForeground(KineticGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.data.count", filtered.size()), 482, 16, 626 - 482, 0xFFFFFFFF, true);
+        graphics.scrollingText(KineticI18n.translatable("gui.taczworkshop.data.count", filtered.size()), 476, 8, 150, 0xFFFFFFFF, true);
         renderInfoPanel(graphics);
         if (filtered.isEmpty()) {
             graphics.scrollingTextCentered(KineticI18n.translatable("gui.taczworkshop.data.empty"), GRID_X + GRID_WIDTH / 2, GRID_Y + GRID_HEIGHT / 2 - KineticText.lineHeight() / 2, GRID_WIDTH - 8, 0xFFAAAAAA, true);
@@ -251,11 +265,6 @@ public final class TaczDataManagerPage extends KineticPage {
                 y += 13;
             }
             graphics.scrollingText(statusLine(hoveredEntry), x, y, INFO_WIDTH - 16, 0xFFFFFFFF, false);
-        } else {
-            for (FormattedCharSequence line : KineticText.wrap(KineticI18n.translatable("gui.taczworkshop.data.overview.guide"), INFO_WIDTH - 16)) {
-                graphics.text(line, x, y, 0xFFCCCCCC, false);
-                y += KineticText.lineHeight() + 2;
-            }
         }
     }
 
@@ -276,12 +285,12 @@ public final class TaczDataManagerPage extends KineticPage {
             TaczDataListEntry entry = filtered.get(index);
             boolean hovered = index == hoveredIndex && !overlayBlocksInput();
 
-            KineticTheme.itemSlot(graphics, x, y, hovered);
+            KineticTheme.itemSlot(graphics, x, y, SLOT_SIZE, hovered);
             ItemStack stack = stackFor(entry);
             if (!stack.isEmpty()) {
                 TaczPreviewIndexContext.with(entry, () -> KineticTheme.item(graphics, stack, x, y, SLOT_SIZE, 1.0F, false));
             } else {
-                graphics.centeredText(KineticI18n.translatable("gui.taczworkshop.data.missing_mark"), x + 9, y + 5, 0xFFFFCC55, true);
+                graphics.centeredText(KineticI18n.translatable("gui.taczworkshop.data.missing_mark"), x + SLOT_SIZE / 2, y + (SLOT_SIZE - 8) / 2, 0xFFFFCC55, true);
             }
 
             if (entry.removed()) KineticTheme.indicatorOutline(graphics, x, y, SLOT_SIZE, SLOT_SIZE, KineticTheme.Indicator.DANGER);
@@ -322,7 +331,7 @@ public final class TaczDataManagerPage extends KineticPage {
         int col = localX / CELL_SIZE;
         int row = localY / CELL_SIZE;
         if (col < 0 || col >= COLUMNS || row < 0 || row > ROWS_VISIBLE) return -1;
-        if (localX % CELL_SIZE == SLOT_SIZE || localY % CELL_SIZE == SLOT_SIZE) return -1;
+        if (localX % CELL_SIZE >= SLOT_SIZE || localY % CELL_SIZE >= SLOT_SIZE) return -1;
         int index = (gridScroll.smoothIndexOffset() + row) * COLUMNS + col;
         return index >= 0 && index < filtered.size() ? index : -1;
     }
@@ -410,13 +419,14 @@ public final class TaczDataManagerPage extends KineticPage {
         if (hoveredEntry == null) return;
         ItemStack stack = stackFor(hoveredEntry);
         List<Component> lines = new ArrayList<>();
-        lines.add(hoverName(hoveredEntry, stack));
+        if (stack.isEmpty()) lines.add(hoverName(hoveredEntry, stack));
         lines.add(KineticI18n.translatable("gui.taczworkshop.data.tooltip.item_id", hoveredEntry.id()));
         if (!hoveredEntry.dataId().isBlank()) lines.add(KineticI18n.translatable("gui.taczworkshop.data.tooltip.data_id", hoveredEntry.dataId()));
         lines.add(statusLine(hoveredEntry));
         lines.add(KineticI18n.translatable("tip.taczworkshop.data.open_entry"));
         lines.add(KineticI18n.translatable("tip.taczworkshop.data.context_entry"));
-        showTooltip(lines, 320);
+        if (!stack.isEmpty()) TaczPreviewIndexContext.with(hoveredEntry, () -> showItemTooltip(stack, lines));
+        else showTooltip(lines, 320);
     }
 
     private void stageRemovedEntry(TaczDataListEntry entry, boolean removed) {

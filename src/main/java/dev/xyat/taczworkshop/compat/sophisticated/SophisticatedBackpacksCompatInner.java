@@ -19,9 +19,32 @@ import net.p3pp3rf1y.sophisticatedcore.inventory.InventoryHandler;
 
 import java.util.ArrayList;
 import java.util.UUID;
+import java.util.List;
+import java.util.HashSet;
 import java.util.function.Consumer;
 
 public class SophisticatedBackpacksCompatInner {
+
+    public static List<IItemHandler> workbenchInventories(Player player) {
+        List<IItemHandler> result = new ArrayList<>();
+        var seen = new HashSet<UUID>();
+        for (ItemStack backpack : getAllInventoryBackpack(player)) {
+            var wrapper = new BackpackWrapper(backpack);
+            var handler = wrapper.getInventoryHandler();
+            if (wrapper.getContentsUuid().isPresent() && seen.add(wrapper.getContentsUuid().get())) result.add(handler);
+        }
+        return result;
+    }
+
+    public static void syncWorkbench(ServerPlayer player) {
+        if (player instanceof net.minecraftforge.common.util.FakePlayer) return;
+        var seen = new HashSet<UUID>();
+        for (ItemStack backpack : getAllInventoryBackpack(player)) {
+            new BackpackWrapper(backpack).getContentsUuid().filter(seen::add).ifPresent(uuid ->
+                    SBPPacketHandler.INSTANCE.sendToClient(player, new BackpackContentsMessage(uuid,
+                            BackpackStorage.get().getOrCreateBackpackContents(uuid))));
+        }
+    }
 
     public static ArrayList<ItemStack> getItemsFromBackpackItem(ItemStack itemStack) {
         ArrayList<ItemStack> items = new ArrayList<>();

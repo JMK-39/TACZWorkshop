@@ -7,6 +7,8 @@
   "plugin": "dev.xyat.taczworkshop.mixin.TaczMixinCompatibility",
   "mixins": [
     "TaczDataManagerMixin",
+    "compat.WorkbenchMixins$TableMixin",
+    "compat.WorkbenchMixins$MenuMixin",
     "compat.InventoryAccessor",
     "compat.TaczBackpackMixins$AbstractGunItemMixin",
     "compat.TaczBackpackMixins$ModernGunScriptApiMixin",
@@ -17,6 +19,7 @@
   ],
   "client": [
     "TimelessApiPreviewMixin",
+    "compat.WorkbenchScreenMixin",
     "compat.TaczBackpackMixins$GunAnimationStateContextMixin",
     "compat.TaczBackpackMixins$GunHudOverlayMixin",
     "compat.TaczUiMixins$ClientAttachmentItemTooltipMixin"

@@ -9,6 +9,9 @@ import net.minecraftforge.fml.common.Mod;
 @Mod("taczworkshop_validation")
 public final class RuntimeValidationMod {
     public RuntimeValidationMod() {
+        if (Boolean.getBoolean("taczworkshop.workbenchValidation")) {
+            MinecraftForge.EVENT_BUS.addListener(WorkbenchServerValidation::serverStarted);
+        }
         if (Boolean.getBoolean("taczworkshop.taczAddonServerValidation")) {
             MinecraftForge.EVENT_BUS.addListener(TaczAddonServerValidation::serverStarted);
         }

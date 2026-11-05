@@ -1,3 +1,45 @@
+2026年10月26日 — 26.10.26 — Clearer editors / 更清晰的编辑界面
+- The data overview no longer repeats the mouse guide; hovering an entry still shows its details.
+- 数据概览不再重复显示鼠标操作说明，悬停条目时仍显示其详情。
+
+2026年10月24日 — 26.10.24 — Buttons at the top, standard slots / 按钮置顶与统一物品格
+- 数据管理网格的格子背景也改为 22 像素标准尺寸（之前仍按 18 像素绘制）。
+- 数据管理物品网格改用 22 像素标准物品格。
+
+2026年10月20日 — 26.10.20 — Compact data editing / 紧凑数据编辑
+
+- Align data-manager actions on one toolbar with four-pixel gaps and an 80-pixel type selector. Data details use three field columns, 80-pixel value controls and a compact header.
+- Bind detail editors to KineticCore's scrolling viewport so partially visible fields slide and clip together with their labels, input and tooltips. The exact pixel range keeps the last field fully visible without a blank trailing row.
+- Move the detail field count beside the status and extend the field viewport to the four-pixel bottom inset, showing another complete row. Clicking unchanged values preserves the original JSON and pending edits; existing long strings load in full.
+- Keep one white outer canvas frame and use plain backgrounds with gray-white divider lines between content regions. Item cards, inputs and interactive state outlines retain their borders.
+- 数据管理操作统一为单行工具栏，间距为 4 像素，类型按钮缩为 80 像素；详情页改为三列字段、80 像素值控件和紧凑页头。
+- 详情字段接入 KineticCore 滚动视口，半行控件、文字、点击和提示按同一内容边界平滑裁剪；按实际像素高度限制滚动，底部完整显示最后字段且不多滚出空白行。
+- 字段计数移至状态旁，字段视口扩展至距底部 4 像素，多显示一整行；点击未修改的值不会改写原始 JSON 或产生待保存编辑，已有长字符串完整载入。
+- 界面仅保留白色画布外框，内容区域改用背景与灰白分隔线，物品格、输入框和交互状态描边继续保留。
+- Data-manager items and detail-header items use native item tooltips; missing resources, field explanations and attachment summaries retain their descriptive tooltips.
+- 数据管理物品与详情页头物品使用原版物品提示；缺失资源、字段说明及配件汇总保留对应文字说明。
+
+
+---
+
+2026年10月16日 — 数据编辑界面
+
+- 数据管理与详情搜索框加宽 40 像素，编辑画布统一为 640×360，返回按钮距外框 4 像素。
+- 数据详情页可用 Delete 执行已有移除操作，已移除条目保持原有恢复按钮操作。
+
+---
+
+2026年10月16日 — 26.10.16 — Workbench materials / 工作台材料接入
+
+- TaCZ gun and attachment workbenches use materials from a directly touching Refined Storage controller first, then the player's inventory, then carried Sophisticated Backpacks. Controllers across a gap, diagonally placed controllers and cables do not grant access.
+- Workbench ingredient counts include these sources. Crafting allocates overlapping ingredients together, consumes each item once, and refunds extracted materials if a source changes or the output cannot be created. Refunds that do not fit are retained with the player until inventory space is available.
+- Fix the material-count receiver failing to load with Mixin 0.8.5, so the original workbench screen receives synchronized counts correctly.
+- TaCZ 枪械与配件工作台仅在六面直接贴着 RS 控制器时读取 RS 材料，依次优先使用 RS、玩家背包、随身精妙背包；隔空、斜角或仅连着线缆均不接入 RS。
+- 工作台材料数量同步显示可用来源；制作统一分配重叠材料并准确扣除，材料变化或产物生成失败时退回已扣材料，背包放不下的退款保留至有空位时恢复。
+- 修复 Mixin 0.8.5 下材料数量接收接口未能加载的问题，原版工作台界面可正确接收同步数量。
+
+---
+
 2026年10月12日 — 26.10.12 — ContentStudio owns recipes / ContentStudio 接管配方
 
 - Fix startup failure with TaCZ addon (`taczaddon`): leave its overlapping ammunition and attachment-tooltip hooks to the addon, while keeping Workshop data editing, repair and reload active. SomeTaczAddon is a different compatibility target.

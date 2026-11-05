@@ -124,15 +124,22 @@ public final class TaczAddonServerValidation {
                         "Original TACZ data was not restored");
                 finished = true;
                 LOG.info("TACZ_ADDON_SERVER_PASS correct target, production data persistence/reload, addon ammo hooks, smithing recipes and restoration");
-                server.halt(false);
+                finishServer(server);
             }
         } catch (Throwable error) {
             finished = true;
             try { if (previous != null) TaczDataStore.replaceAll(previous); }
             catch (Throwable restore) { error.addSuppressed(restore); }
             LOG.error("TACZ_ADDON_SERVER_FAIL phase=" + phase, error);
-            server.halt(false);
+            finishServer(server);
         }
+    }
+
+    private static void finishServer(MinecraftServer server) {
+        if (server.isDedicatedServer()) server.halt(false);
+        else dev.xyat.kineticcore.api.runtime.KineticPlatform.runOnClient(() -> () ->
+                dev.xyat.kineticcore.api.runtime.KineticClientRuntime.execute(
+                        dev.xyat.kineticcore.api.runtime.KineticClientRuntime::stopClient));
     }
 
     private static GunData gunData() {

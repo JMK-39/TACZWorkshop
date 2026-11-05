@@ -113,6 +113,9 @@ repositories {
     }
     File localCoreBuildLibs = rootProject.file('../KineticCore/build/libs')
     if (localCoreBuildLibs.isDirectory()) kineticCoreLocalArtifactDirs.add(localCoreBuildLibs)
+    // Release jars: only the newest build of each mod is kept there (no pinned versions, 2026-11-04).
+    File newModsCore = new File(project.findProperty('output_mods_dir')?.toString() ?: 'D:/NEWMODS/1.20.1')
+    if (newModsCore.isDirectory()) kineticCoreLocalArtifactDirs.add(newModsCore)
     kineticCoreLocalArtifactDirs.eachWithIndex { File directory, int index ->
         ivy {
             name = "KineticCoreLocalForgePool${index}"
@@ -182,6 +185,9 @@ dependencies {
     }
     File localCoreBuildLibs = rootProject.file('../KineticCore/build/libs')
     if (localCoreBuildLibs.isDirectory()) localKineticCoreDirs.add(localCoreBuildLibs)
+    // Release jars: only the newest build of each mod is kept there (no pinned versions, 2026-11-04).
+    File newModsCore = new File(project.findProperty('output_mods_dir')?.toString() ?: 'D:/NEWMODS/1.20.1')
+    if (newModsCore.isDirectory()) localKineticCoreDirs.add(newModsCore)
     def localKineticCoreVersions = []
     localKineticCoreDirs.each { File directory ->
         directory.eachFile { File jar ->

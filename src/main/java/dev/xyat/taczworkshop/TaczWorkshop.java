@@ -6,6 +6,7 @@ import dev.xyat.kineticcore.api.runtime.KineticPlatform;
 import dev.xyat.taczworkshop.compat.ClientAmmoTickEvent;
 import dev.xyat.taczworkshop.config.TaczConfigGui;
 import dev.xyat.taczworkshop.network.TaczDataNetwork;
+import dev.xyat.taczworkshop.network.WorkbenchNetwork;
 import dev.xyat.taczworkshop.server.TaczDataRuntime;
 import net.minecraftforge.fml.common.Mod;
 import org.slf4j.Logger;
@@ -18,6 +19,7 @@ public final class TaczWorkshop {
     public TaczWorkshop() {
         KTServerConfigApi.registerActionPage(TaczConfigGui.PAGE_ID);
         TaczDataNetwork.register();
+        WorkbenchNetwork.register();
         TaczDataRuntime.register();
         KineticPlatform.runOnClient(() -> () -> {
             TaczConfigGui.load();

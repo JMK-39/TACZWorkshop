@@ -7,6 +7,7 @@ import dev.xyat.kineticcore.api.runtime.KineticPlatform;
 import net.minecraftforge.items.IItemHandler;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Consumer;
 
 public final class SophisticatedBackpacksCompat {
@@ -29,5 +30,13 @@ public final class SophisticatedBackpacksCompat {
 
     public static ArrayList<ItemStack> getAllInventoryBackpack(Player player) {
         return INSTALLED ? SophisticatedBackpacksCompatInner.getAllInventoryBackpack(player) : new ArrayList<>();
+    }
+
+    public static List<IItemHandler> workbenchInventories(Player player) {
+        return INSTALLED ? SophisticatedBackpacksCompatInner.workbenchInventories(player) : List.of();
+    }
+
+    public static void syncWorkbench(ServerPlayer player) {
+        if (INSTALLED) SophisticatedBackpacksCompatInner.syncWorkbench(player);
     }
 }

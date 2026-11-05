@@ -6,13 +6,19 @@ import dev.xyat.taczworkshop.data.*;
 import dev.xyat.kineticcore.api.client.event.KineticClientEvents;
 import dev.xyat.kineticcore.api.client.gui.KineticGui;
 import dev.xyat.kineticcore.api.client.gui.page.KineticPage;
+import dev.xyat.kineticcore.api.client.gui.scroll.KineticScrollController;
+import dev.xyat.kineticcore.api.client.gui.widget.KineticControl;
+import dev.xyat.kineticcore.api.client.gui.widget.KineticTextField;
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
+import dev.xyat.kineticcore.internal.client.gui.LayoutFrameRecorder;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
 import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.*;
 import org.slf4j.*;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.nio.file.*;
 import java.lang.reflect.Field;
 import java.util.*;
@@ -22,7 +28,7 @@ public final class GuiLongTextValidation {
  private static final Logger LOG=LoggerFactory.getLogger(GuiLongTextValidation.class);
  private static final String ROOT=System.getProperty("taczworkshop.guiValidation.output","D:/IDEAWork/TACZWorkshop/.worktrees/gui-long-text-20261004/.gradle/gui-long-text-20261004/screenshots");
  private static final String LONG_NAME="A deliberately long representative name for bounded text ".repeat(4);
- private static final String[] NAMES={"data-empty","data","detail-active","detail-modified","detail-removed"};
+ private static final String[] NAMES={"data-empty","data","detail-active","detail-modified","detail-removed","detail-scroll-top","detail-scroll-partial","detail-scroll-bottom","settings-management"};
  private static boolean installed,started,screenshot,finished,originalFullscreen,prepared;
  private static String originalLanguage;
  private static int originalScale,originalWidth,originalHeight,phase=-1,page=-1,captures,failures;
@@ -30,8 +36,10 @@ public final class GuiLongTextValidation {
  private static CompletableFuture<Void> reload;
  private static Language stressOriginal;
  private static KineticPage fixturePage;
+ private static net.minecraft.client.gui.screens.Screen fixtureScreen;
  private static Field mouseXField,mouseYField;
  private static double originalMouseX,originalMouseY;
+ private static final StringBuilder failureDetails = new StringBuilder();
     public static void install() {
         if (installed) return;
         installed = true;
@@ -42,7 +50,7 @@ public final class GuiLongTextValidation {
         if (finished) return;
         try {
             var mc = Minecraft.getInstance();
-            if (fixturePage != null && KineticGui.currentPage() == fixturePage) suppressCachedMouse();
+            if (fixtureScreen != null && mc.screen == fixtureScreen) suppressCachedMouse();
             if (!started) {
                 if (mc.player == null || mc.level == null || mc.getSingleplayerServer() == null) return;
                 if (Boolean.getBoolean("taczworkshop.taczAddonClientValidation")) TaczAddonClientValidation.check();
@@ -52,6 +60,7 @@ public final class GuiLongTextValidation {
                 originalWidth = mc.getWindow().getWidth();
                 originalHeight = mc.getWindow().getHeight();
                 originalFullscreen = mc.getWindow().isFullscreen();
+                Files.deleteIfExists(Path.of(ROOT, "result.txt"));
                 mc.options.guiScale().set(0);
                 if (originalFullscreen) mc.getWindow().toggleFullScreen();
                 nextPhase();
@@ -83,8 +92,7 @@ public final class GuiLongTextValidation {
                 nextPage();
             }
         } catch (Throwable error) {
-            failures++;
-            LOG.error("TACZ_GUI_FAIL phase=" + phase + " page=" + page, error);
+            recordFailure("TACZ_GUI_FAIL phase=" + phase + " page=" + page + " case=" + currentCase(), error);
             finish();
         }
     }
@@ -96,12 +104,13 @@ public final class GuiLongTextValidation {
         }
         phase++;
         page = -1;
-        String selectedPhases = System.getProperty("taczworkshop.guiValidation.phases", "");
+        String selectedPhases = System.getProperty("taczworkshop.guiValidation.phases", "1");
         while (phase < 5 && !selectedPhases.isBlank()
                 && !List.of(selectedPhases.split(",")).contains(String.valueOf(phase))) phase++;
         if (phase >= 5) { finish(); return; }
         var mc = Minecraft.getInstance();
         fixturePage = null;
+        fixtureScreen = null;
         mc.setScreen(null);
         String lang = phase == 2 || phase == 3 ? "zh_cn" : "en_us";
         boolean languageChanged = !lang.equals(mc.getLanguageManager().getSelected());
@@ -134,23 +143,162 @@ public final class GuiLongTextValidation {
         if (page >= NAMES.length) { nextPhase(); return; }
         openPage(page);
         fixturePage = KineticGui.currentPage();
+        fixtureScreen = Minecraft.getInstance().screen;
+        assertFixtureSurface();
         suppressCachedMouse();
         screenshot = false;
         prepared = false;
         due = System.currentTimeMillis() + 1100;
-        LOG.info("TACZ_GUI_OPEN phase={} index={} case={} page={}", phase, page, NAMES[page],
-                KineticGui.currentPage().getClass().getName());
+        LOG.info("TACZ_GUI_OPEN phase={} index={} case={} page={} screen={}", phase, page, NAMES[page],
+                fixturePage == null ? "none" : fixturePage.getClass().getName(), fixtureScreen.getClass().getName());
+    }
+
+    private static void assertFixtureSurface() throws Exception {
+        var screen = Minecraft.getInstance().screen;
+        var current = KineticGui.currentPage();
+        if (screen == null || screen != fixtureScreen) throw new AssertionError("Expected fixture screen, got " + screen);
+        if (page == 8) {
+            if (current != null || fixturePage != null
+                    || !screen.getClass().getName().equals("dev.xyat.kineticcore.internal.client.config.KTConfigScreen")) {
+                throw new AssertionError("Expected the registered Core settings screen, got page=" + current + " screen=" + screen);
+            }
+            var config = (dev.xyat.kineticcore.api.config.client.KTConfigPage) field(screen, "configPage");
+            if (!dev.xyat.taczworkshop.config.TaczConfigGui.PAGE_ID.equals(config.id())) {
+                throw new AssertionError("Expected TaCZ management settings, got " + config.id());
+            }
+        } else if (fixturePage == null || current != fixturePage) {
+            throw new AssertionError("Expected fixture page, got " + current);
+        }
     }
 
  private static void openPage(int i) throws Exception {
+  if(i==8){dev.xyat.kineticcore.api.config.client.KTConfigApi.openPage(dev.xyat.taczworkshop.config.TaczConfigGui.PAGE_ID);fixturePage=KineticGui.currentPage();return;}
   KineticPage p;
   if(i<=1){p=new TaczDataManagerPage();}
-  else {JsonObject d=new JsonObject();d.addProperty("kind","gun");d.addProperty("id","tacz:ak47");d.addProperty("data_id","tacz:ak47");d.addProperty("modified",i==3);d.addProperty("removed",i==4);JsonObject index=new JsonObject();index.addProperty("name","item.minecraft.diamond_sword");d.add("index",index);JsonObject data=new JsonObject();data.addProperty("damage",12);data.addProperty("a_very_long_field_identifier_for_layout",LONG_NAME);data.addProperty("a_very_long_boolean_field_identifier_for_layout",true);d.add("data",data);p=new TaczDataDetailPage(d);}
+  else {JsonObject d=new JsonObject();d.addProperty("kind","gun");d.addProperty("id","tacz:ak47");d.addProperty("data_id","tacz:ak47");d.addProperty("modified",i==3);d.addProperty("removed",i==4);JsonObject index=new JsonObject();index.addProperty("name","item.minecraft.diamond_sword");d.add("index",index);JsonObject data=new JsonObject();data.addProperty("damage",12);data.addProperty("a_very_long_field_identifier_for_layout",LONG_NAME);data.addProperty("a_very_long_boolean_field_identifier_for_layout",true);if(i>=5)for(int n=0;n<96;n++)data.addProperty(String.format("fixture_scroll_%03d",n),n);d.add("data",data);p=new TaczDataDetailPage(d);}
   KineticGui.open(p);fixturePage=p;
  }
  private static void preparePage(int i)throws Exception{
   if(i<=1){List<TaczDataListEntry> source=(List<TaczDataListEntry>)field(fixturePage,"source");source.clear();if(i==1)source.add(new TaczDataListEntry(TaczDataKind.GUN,"tacz:ak47","tacz:ak47", "item.minecraft.diamond_sword","gun",true,false,new JsonObject()));invoke(fixturePage,"rebuildFiltered");}
+  if(i>=5&&i<=7){verifyDetailScrollContract();KineticScrollController scroll=(KineticScrollController)field(fixturePage,"fieldScroll");scroll.setOffset(i==6?10:i==7?scroll.maxOffset():0);invoke(Minecraft.getInstance().screen,"updateScrollableWidgetPositions");}
  }
+
+    /** Catches row-sized movement, detached hit/tooltip bounds, blank overscroll and search retaining stale editors. */
+    private static void verifyDetailScrollContract() throws Exception {
+        var data = (JsonObject) field(fixturePage, "data");
+        JsonObject unchanged = data.deepCopy();
+        var pending = TaczDataClientState.capturePendingSnapshot();
+        boolean wasDirty = (Boolean) field(fixturePage, "dirty");
+        try {
+            checkDetailScrollContract(unchanged, pending, wasDirty);
+        } finally {
+            // Deliberate edits exercise the real responder, then restore this unsaved sample and global draft state.
+            if (!unchanged.equals(data)) {
+                for (String key : new ArrayList<>(data.keySet())) data.remove(key);
+                unchanged.entrySet().forEach(entry -> data.add(entry.getKey(), entry.getValue().deepCopy()));
+            }
+            setField(fixturePage, "dirty", wasDirty);
+            if (!pending.equals(TaczDataClientState.capturePendingSnapshot())) TaczDataClientState.restorePendingSnapshot(pending);
+            invoke(fixturePage, "rebuildFieldWidgets");
+        }
+    }
+
+    private static void checkDetailScrollContract(JsonObject unchanged, TaczDataClientState.PendingSnapshot pending, boolean wasDirty) throws Exception {
+        var screen = Minecraft.getInstance().screen;
+        var scroll = (KineticScrollController) field(fixturePage, "fieldScroll");
+        var editors = (List<KineticControl>) field(fixturePage, "activeFieldWidgets");
+        int top = ((Number) invoke(fixturePage, "fieldBaseY")).intValue();
+        int bottom = ((Number) field(fixturePage, "FIELD_BOTTOM")).intValue();
+        KineticControl first = editors.get(0);
+        scroll.setOffset(0);
+        invoke(screen, "updateScrollableWidgetPositions");
+        long fullyVisible = editors.stream().filter(editor -> editor.controlY() >= top
+                && editor.controlY() + editor.controlHeight() <= bottom).count();
+        if (fullyVisible < 36) throw new AssertionError("Expanded viewport must show twelve complete rows of three fields: " + fullyVisible);
+        if (unchanged.has("bullet") || !(first instanceof KineticTextField) || !"5.0".equals(((KineticTextField) first).textValue())) {
+            throw new AssertionError("Fixture must begin with an absent bullet.damage displayed as its virtual default 5.0");
+        }
+        int initialY = first.controlY();
+        scroll.setOffset(10);
+        invoke(screen, "updateScrollableWidgetPositions");
+        if (first.controlY() != initialY - 10 || first.controlY() >= top
+                || first.controlY() + first.controlHeight() <= top) {
+            throw new AssertionError("Ten pixels of scrolling must leave the first editor partially visible");
+        }
+        double x = first.controlX() + first.controlWidth() / 2.0D;
+        clickPage(x, top + 1);
+        if (!first.controlFocused()) throw new AssertionError("Visible part of a clipped editor must accept focus");
+        assertDetailUntouched(unchanged, pending, wasDirty, "clicking the visible default field");
+        clickPage(x, top - 1);
+        if (first.controlFocused()) throw new AssertionError("Hidden part of a clipped editor must reject focus");
+        assertDetailUntouched(unchanged, pending, wasDirty, "clicking the clipped-away field region");
+        if ((Boolean) invoke(screen, "isWidgetTooltipHitAllowed", first, x, (double) top - 1)
+                || !(Boolean) invoke(screen, "isWidgetTooltipHitAllowed", first, x, (double) top + 1)) {
+            throw new AssertionError("Editor tooltip bounds must match the visible viewport");
+        }
+        if (((List<?>) field(fixturePage, "activeFieldWidgets")).get(0) != first) {
+            throw new AssertionError("Pixel scrolling must retain editor identity and in-progress text");
+        }
+        scroll.setOffset(Integer.MAX_VALUE);
+        invoke(screen, "updateScrollableWidgetPositions");
+        KineticControl last = editors.get(editors.size() - 1);
+        int lastBottom = last.controlY() + last.controlHeight();
+        if (last.controlY() < top || lastBottom > bottom || lastBottom < bottom - 8) {
+            throw new AssertionError("Bottom scroll must show the complete last editor with no blank trailing row: " + lastBottom + " / " + bottom);
+        }
+        scroll.setOffset(Integer.MAX_VALUE);
+        invoke(screen, "updateScrollableWidgetPositions");
+        if (last.controlY() + last.controlHeight() != lastBottom) throw new AssertionError("Scrolling beyond the end moved the last field");
+        var search = (KineticTextField) field(fixturePage, "search");
+        search.setTextValue("fixture_scroll_09");
+        if (scroll.canScroll() || ((List<?>) field(fixturePage, "activeFieldWidgets")).size() != 6) {
+            throw new AssertionError("Search must reset the viewport and replace all stale editors with its six matches");
+        }
+        search.setTextValue("");
+        assertDetailUntouched(unchanged, pending, wasDirty, "scrolling and filtering");
+
+        search.setTextValue("a_very_long_field_identifier_for_layout");
+        var longEditors = (List<KineticControl>) field(fixturePage, "activeFieldWidgets");
+        if (longEditors.size() != 1 || !(longEditors.get(0) instanceof KineticTextField longText)
+                || !LONG_NAME.equals(longText.textValue())) {
+            throw new AssertionError("Loading a long existing string must preserve its complete text before any interaction");
+        }
+        invoke(screen, "updateScrollableWidgetPositions");
+        clickPage(longEditors.get(0).controlX() + 10, longEditors.get(0).controlY() + 8);
+        assertDetailUntouched(unchanged, pending, wasDirty, "clicking an unchanged long string");
+        search.setTextValue("");
+
+        var number = (KineticTextField) ((List<KineticControl>) field(fixturePage, "activeFieldWidgets")).get(0);
+        var data = (JsonObject) field(fixturePage, "data");
+        number.setTextValue("6.25");
+        if (!data.has("bullet") || data.getAsJsonObject("bullet").get("damage").getAsDouble() != 6.25D
+                || !(Boolean) field(fixturePage, "dirty") || pending.equals(TaczDataClientState.capturePendingSnapshot())) {
+            throw new AssertionError("A deliberate numeric edit must update and stage the actual gun field");
+        }
+        number.setTextValue("5.0");
+        if (data.getAsJsonObject("bullet").get("damage").getAsDouble() != 5.0D) {
+            throw new AssertionError("A deliberate edit back to the originally displayed default must still be applied");
+        }
+        LOG.info("TACZ_GUI_SCROLL_CONTRACT_PASS fullRows=12 partialPixels=10 clippedInput=true clippedTooltip=true bottomFullyVisible=true searchReset=true dataUnchanged=true intentionalDefaultEdit=true longTextPreserved=true");
+    }
+
+    private static void assertDetailUntouched(JsonObject unchanged, TaczDataClientState.PendingSnapshot pending, boolean wasDirty, String operation) throws Exception {
+        if (!unchanged.equals(field(fixturePage, "data"))) {
+            throw new AssertionError("Gun data changed after " + operation + ": before=" + unchanged + " after=" + field(fixturePage, "data"));
+        }
+        if ((Boolean) field(fixturePage, "dirty") != wasDirty || !pending.equals(TaczDataClientState.capturePendingSnapshot())) {
+            throw new AssertionError("Untouched gun data was marked or staged as edited after " + operation);
+        }
+    }
+
+    private static void clickPage(double x, double y) throws Exception {
+        var screen = Minecraft.getInstance().screen;
+        double originX = ((Number) invoke(screen, "canvasX")).doubleValue();
+        double originY = ((Number) invoke(screen, "canvasY")).doubleValue();
+        double scale = ((Number) invoke(screen, "canvasScale")).doubleValue();
+        screen.mouseClicked(originX + x * scale, originY + y * scale, 0);
+        screen.mouseReleased(originX + x * scale, originY + y * scale, 0);
+    }
     private static void setField(Object target, String name, Object value) throws Exception {
         for (Class<?> type = target.getClass(); type != null; type = type.getSuperclass()) try {
             var f = type.getDeclaredField(name); f.setAccessible(true); f.set(target, value); return;
@@ -168,13 +316,23 @@ public final class GuiLongTextValidation {
             originalMouseY = mouseYField.getDouble(mouse);
             LOG.info("TACZ_GUI_MOUSE cachedCoordinatesOnly=true fields={},{}", mouseXField.getName(), mouseYField.getName());
         }
-        if (Boolean.getBoolean("taczworkshop.guiValidation.hover") && fixturePage != null && List.of(1,2,12,14).contains(page)) {
+        if (fixturePage != null && (page == 6 || Boolean.getBoolean("taczworkshop.guiValidation.hover") && page >= 1)) {
             var mc = Minecraft.getInstance();
             double sx=((Number)invoke(mc.screen,"canvasX")).doubleValue();
             double sy=((Number)invoke(mc.screen,"canvasY")).doubleValue();
             double scale=((Number)invoke(mc.screen,"canvasScale")).doubleValue();
-            double px=((Number)field(fixturePage,"GRID_X")).doubleValue()+8;
-            double py=((Number)field(fixturePage,"GRID_Y")).doubleValue()+8;
+            double px, py;
+            if (page == 1) {
+                px=((Number)field(fixturePage,"GRID_X")).doubleValue()+8;
+                py=((Number)field(fixturePage,"GRID_Y")).doubleValue()+8;
+            } else if (page == 6) {
+                var first=((List<KineticControl>)field(fixturePage,"activeFieldWidgets")).get(0);
+                px=first.controlX()+first.controlWidth()/2.0D;
+                py=((Number)invoke(fixturePage,"fieldBaseY")).doubleValue()-1;
+            } else {
+                px=57;
+                py=13;
+            }
             mouseXField.setDouble(mouse,(sx+px*scale)*mc.getWindow().getWidth()/mc.getWindow().getGuiScaledWidth());
             mouseYField.setDouble(mouse,(sy+py*scale)*mc.getWindow().getHeight()/mc.getWindow().getGuiScaledHeight());
         } else {
@@ -211,8 +369,21 @@ public final class GuiLongTextValidation {
     private static void capture(String frame) throws Exception {
         var mc = Minecraft.getInstance();
         suppressCachedMouse();
-        var current = KineticGui.currentPage();
-        if (current != fixturePage) throw new AssertionError("Expected fixture page, got " + current);
+        assertFixtureSurface();
+        if (LayoutFrameRecorder.ENABLED) {
+            var frames = LayoutFrameRecorder.lastFrame().stream().filter(box -> box.kind() == LayoutFrameRecorder.Kind.FRAME
+                    && box.width() > 100 && box.height() > 60).toList();
+            if (frames.size() != 1 || frames.get(0).x() != 0 || frames.get(0).y() != 0
+                    || frames.get(0).width() != 640 || frames.get(0).height() != 360) {
+                throw new AssertionError("TACZ must draw one outer canvas frame without content-region boxes: " + frames);
+            }
+        }
+        if (page == 6 && field(fixturePage, "hoveredLeaf") != null) {
+            throw new AssertionError("A clipped-away field region must not provide a business tooltip");
+        }
+        if (page == 6 && ((List<KineticControl>) field(fixturePage, "activeFieldWidgets")).get(0).controlHovered()) {
+            throw new AssertionError("A clipped-away field region must not render the editor's hover state");
+        }
         Path path = Path.of(ROOT, String.format("%d-%02d-%s-%s.png", phase, page, NAMES[page], frame));
         Files.createDirectories(path.getParent());
         try (var image = Screenshot.takeScreenshot(mc.getMainRenderTarget())) { image.writeToFile(path); }
@@ -221,28 +392,58 @@ public final class GuiLongTextValidation {
                 mc.getWindow().getWidth(), mc.getWindow().getHeight());
     }
 
+    private static String currentCase() {
+        return page >= 0 && page < NAMES.length ? NAMES[page] : "none";
+    }
+
+    private static void recordFailure(String context, Throwable error) {
+        failures++;
+        LOG.error(context, error);
+        var trace = new StringWriter();
+        error.printStackTrace(new PrintWriter(trace));
+        failureDetails.append(context).append(System.lineSeparator()).append(trace).append(System.lineSeparator());
+    }
+
     private static void finish() {
+        if (finished) return;
         finished = true;
         var mc = Minecraft.getInstance();
         fixturePage = null;
+        fixtureScreen = null;
+        boolean userSettingsRestored = true;
         if (mouseXField != null && mouseYField != null) try {
             mouseXField.setDouble(mc.mouseHandler, originalMouseX);
             mouseYField.setDouble(mc.mouseHandler, originalMouseY);
         } catch (IllegalAccessException error) {
-            failures++;
-            LOG.error("TACZ_GUI_MOUSE_RESTORE_FAIL", error);
+            userSettingsRestored = false;
+            recordFailure("TACZ_GUI_MOUSE_RESTORE_FAIL", error);
         }
-        if (stressOriginal != null) { Language.inject(stressOriginal); stressOriginal = null; }
-        if (started) {
-            mc.options.guiScale().set(originalScale);
-            mc.getLanguageManager().setSelected(originalLanguage);
-            mc.options.languageCode = originalLanguage;
-            mc.setScreen(null);
-            mc.getWindow().setWindowed(originalWidth, originalHeight);
-            if (originalFullscreen && !mc.getWindow().isFullscreen()) mc.getWindow().toggleFullScreen();
+        try {
+            if (stressOriginal != null) { Language.inject(stressOriginal); stressOriginal = null; }
+            if (started) {
+                mc.options.guiScale().set(originalScale);
+                mc.getLanguageManager().setSelected(originalLanguage);
+                mc.options.languageCode = originalLanguage;
+                mc.setScreen(null);
+                mc.getWindow().setWindowed(originalWidth, originalHeight);
+                if (originalFullscreen && !mc.getWindow().isFullscreen()) mc.getWindow().toggleFullScreen();
+            }
+        } catch (Throwable error) {
+            userSettingsRestored = false;
+            recordFailure("TACZ_GUI_SETTINGS_RESTORE_FAIL", error);
         }
-        LOG.info("TACZ_GUI_{} pages={} captures={} failures={} userSettingsRestored=true", failures == 0 ? "PASS" : "FAIL",
-                NAMES.length, captures, failures);
+        try {
+            Path output = Path.of(ROOT);
+            Files.createDirectories(output);
+            Files.writeString(output.resolve("result.txt"), (failures == 0 ? "PASS" : "FAIL")
+                    + " captures=" + captures + " failures=" + failures + System.lineSeparator()
+                    + "phase=" + phase + " page=" + page + " case=" + currentCase()
+                    + " userSettingsRestored=" + userSettingsRestored + System.lineSeparator() + failureDetails);
+        } catch (Exception error) {
+            recordFailure("TACZ_GUI_RESULT_WRITE_FAIL output=" + ROOT, error);
+        }
+        LOG.info("TACZ_GUI_{} pages={} captures={} failures={} userSettingsRestored={}", failures == 0 ? "PASS" : "FAIL",
+                NAMES.length, captures, failures, userSettingsRestored);
         KineticClientRuntime.stopClient();
     }
 

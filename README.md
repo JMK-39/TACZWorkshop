@@ -22,11 +22,11 @@ TACZ Workshop provides in-game data editing and repair for installed TACZ conten
 
 Install the mod and required dependencies on both client and server for multiplayer use. Press **F6** to open KineticCore's configuration center, then open TACZ Workshop's data manager. F6 is the default shared configuration key.
 
-The editors read and modify server data. Opening server snapshots and submitting modifications require permission level **2**. A local preview is not proof that a server change has been accepted.
+The editors read and modify server data. Requesting server snapshots and submitting modifications require permission level **2**. A local preview is not proof that a server change has been accepted.
 
 ### Browse and tune content data
 
-The data manager searches by display name, item ID, or data ID and separates active, modified, and disabled entries. Modified entries are marked so they can be found again among the original gun-pack content.
+The data manager searches by display name, item ID, or data ID and separates normal, modified, and disabled entries. Modified entries are marked so they can be found again among a large amount of gun-pack content.
 
 | Category | Examples of editable data when present |
 | --- | --- |
@@ -56,15 +56,7 @@ The batch flow keeps pending edits distinct from saved server data. It also chec
 
 From **26.10.11**, the separate Workshop recipe editor and workbench-routing controls are removed. Use **ContentStudio → Recipe Manager → TACZ** to edit recipes or create a recipe using an existing registered type. Third-party visual editing requires **JEI**; saved datapack recipes continue loading without JEI. ContentStudio and JEI are optional for Workshop's data editing and repair.
 
-From 26.10.12, Workshop contains no recipe editor, loader, repair hook, or automatic converter. Existing legacy recipe files are preserved. Convert them separately when needed; new recipes use ContentStudio and TACZ's native workbench rules.
-
-### Validation and compatibility
-
-Data validation and data repair remain available. Recipe loading and editing are handled by ContentStudio.
-
-With Sophisticated Backpacks installed, the compatibility layer includes ammunition held in supported inventory backpacks in TACZ reload checks, consumption, and ammo display. The optional integration is more than an editor item picker; it affects ammunition availability during play.
-
-When **TaCZ addon (`taczaddon`)** is installed, it owns the overlapping backpack-ammunition and attachment-tooltip features. Workshop does not inject those hooks a second time; its data editing, repair, and reload hooks remain active. This is distinct from SomeTaczAddon (`sometaczaddon`). Dedicated-server validation covers TaCZ addon **1.1.8.3**, TaCZ **1.1.8-hotfix2**, ContentStudio **26.10.12**, and backpack-only ammunition with Sophisticated Backpacks **3.26.9.2194** / Core **1.5.6.2383** on Forge 1.20.1. Client validation covers joining a world with these mods, the actual injected hook owners, retained Workshop data-preview hook, and five Workshop data-editor pages in English and Chinese.
+Workshop no longer contains recipe editing, loading, repair hooks, or automatic conversion. Existing legacy recipe files are preserved. Convert them separately when needed; new recipes use ContentStudio and follow TACZ's own workbench rules.
 
 ### Storage and pack distribution
 
@@ -77,7 +69,6 @@ When **TaCZ addon (`taczaddon`)** is installed, it owns the overlapping backpack
 These are instance-level configuration files. Keep the original TACZ/LR Tactical packs installed: the overrides refer to their content IDs. Distribute the matching content packs and Workshop configuration together when reproducing a setup.
 
 If a data save fails, inspect the server message/log and confirm the referenced content packs are installed. Manage recipes in ContentStudio.
-
 
 <a id="chinese"></a>
 
@@ -133,15 +124,7 @@ TACZ Workshop 提供游戏内 TACZ 内容的数据修改与修复功能。配方
 
 从 **26.10.11** 起，移除工坊内独立的配方编辑器和工作台分配功能。请使用 **ContentStudio → 配方管理器 → TACZ** 修改配方，或选择已有配方类型新增自己的配方。第三方可视化编辑需要安装 **JEI**；已保存的数据包配方在没有 JEI 时仍会加载。工坊的数据修改与修复不依赖 ContentStudio 或 JEI。
 
-从 26.10.12 起，工坊不再包含配方编辑、加载、修复钩子或自动转换功能。旧配方文件保持原样，需要时单独转换；新配方使用 ContentStudio，并遵循 TACZ 自身的工作台规则。
-
-### 校验与兼容
-
-保留数据校验与数据修复，配方加载与编辑由 ContentStudio 负责。
-
-安装精妙背包后，兼容层会将支持的背包中的弹药纳入 TACZ 换弹检查、弹药消耗和数量显示。它不仅用于编辑器选物品，也影响实际游戏中的弹药可用性。
-
-安装 **TaCZ addon（模组 ID：`taczaddon`）** 时，重复的背包弹药与配件提示功能交由 addon 处理，工坊不再重复注入；数据修改、修复和重载仍正常启用。它与 SomeTaczAddon（`sometaczaddon`）是不同模组。专用服务端已验证 Forge 1.20.1 下的 TaCZ addon **1.1.8.3**、TaCZ **1.1.8-hotfix2**、ContentStudio **26.10.12** 组合，并验证精妙背包 **3.26.9.2194** / 精妙核心 **1.5.6.2383** 的背包独占弹药检查与消耗。客户端 GUI 仍待验证。
+工坊不再包含配方编辑、加载、修复钩子或自动转换功能。旧配方文件保持原样，需要时单独转换；新配方使用 ContentStudio，并遵循 TACZ 自身的工作台规则。
 
 ### 文件与整合包分发
 
