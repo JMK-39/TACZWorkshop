@@ -207,7 +207,7 @@ public final class TaczDataNetwork {
             TaczDataStore.upsert(new TaczDataOverride(parsedKind, packet.id(), packet.dataId(), packet.removed(), data));
             sendSaved(player);
             sendDataList(player);
-            TaczDataRuntime.reloadTaczData();
+            applySaved(player);
         } catch (Exception exception) {
             TaczWorkshop.LOGGER.warn("Rejected TACZ data save from {}: {}", player.getGameProfile().getName(), safeMessage(exception));
             sendToast(player, KineticI18n.translatable("msg.taczworkshop.data_save_failed"));
@@ -222,7 +222,7 @@ public final class TaczDataNetwork {
             TaczDataStore.reset(parsedKind, packet.id());
             sendSaved(player);
             sendDataList(player);
-            TaczDataRuntime.reloadTaczData();
+            applySaved(player);
         } catch (Exception exception) {
             sendToast(player, KineticI18n.translatable("msg.taczworkshop.data_reset_failed"));
         }
@@ -249,7 +249,7 @@ public final class TaczDataNetwork {
             }
             sendSaved(player);
             sendDataList(player);
-            TaczDataRuntime.reloadTaczData();
+            applySaved(player);
         } catch (Exception exception) {
             TaczWorkshop.LOGGER.warn("Rejected TACZ disabled-state change from {}: {}", player.getGameProfile().getName(), safeMessage(exception));
             sendToast(player, KineticI18n.translatable("msg.taczworkshop.data_save_failed"));
@@ -268,7 +268,6 @@ public final class TaczDataNetwork {
             if (batchId <= 0L) throw new IllegalArgumentException("Invalid data batch id");
             JsonArray edits = root.has("edits") && root.get("edits").isJsonArray() ? root.getAsJsonArray("edits") : new JsonArray();
             if (edits.size() > 4096) throw new IllegalArgumentException("Too many data edits");
-            if (!TaczDataRuntime.canStartBatchReload()) throw new IllegalStateException("A server reload is already pending");
 
             Map<TaczDataKind, Map<String, TaczDataOverride>> previous = TaczDataStore.snapshot();
             Map<TaczDataKind, Map<String, TaczDataOverride>> next = TaczDataStore.snapshot();
@@ -319,6 +318,12 @@ public final class TaczDataNetwork {
             TaczWorkshop.LOGGER.warn("Rejected TACZ data batch save from {}: {}", player.getGameProfile().getName(), safeMessage(exception));
             sendToast(player, KineticI18n.translatable("msg.taczworkshop.data_save_failed"));
         }
+    }
+
+    /** Applies a single saved change; the player hears only if it could not be applied. */
+    private static void applySaved(ServerPlayer player) {
+        TaczDataRuntime.applyTaczData(player.getServer(), () -> { },
+                () -> sendToast(player, KineticI18n.translatable("msg.taczworkshop.data_save_failed")));
     }
 
     private static void validateTaczData(TaczDataKind kind, JsonObject data) {

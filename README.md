@@ -15,8 +15,8 @@ TACZ Workshop provides in-game data editing and repair for installed TACZ conten
 | Minecraft | 1.20.1 |
 | Forge | 47.4.2 or newer |
 | Java | 17 |
-| KineticCore | 26.10.7 or newer; required |
-| Timeless and Classics Zero (TACZ) | Required |
+| KineticCore | 26.10.20 or newer; required |
+| Timeless and Classics Zero (TACZ) | 1.2.0 or newer; required |
 | Sophisticated Backpacks / Sophisticated Core | Optional backpack compatibility |
 | LR Tactical content | Needed for the corresponding melee, throwable, and consumable data categories |
 
@@ -48,9 +48,9 @@ For guns, attachment-type controls can allow or block supported attachment categ
 1. Open an entry and change the required fields.
 2. Return to the list and edit other entries as needed. Detail edits are staged in the client editing session.
 3. Use **Save All** in the data manager to submit the staged changes together.
-4. Wait for server validation, file writing, and the reload result before testing the content.
+4. The server validates the changes, writes the file and reloads TACZ's own data alone, which takes well under a second; then test the content. No `/reload` of every datapack runs.
 
-The batch flow keeps pending edits distinct from saved server data. It also checks whether another reload is already pending. Reset and disabled-state changes participate in the same staged workflow.
+The batch flow keeps pending edits distinct from saved server data. Saves made while one is still being applied wait for it and are then applied together. Reset and disabled-state changes participate in the same staged workflow.
 
 ### Recipe tools have moved to ContentStudio
 
@@ -62,7 +62,7 @@ Workshop no longer contains recipe editing, loading, repair hooks, or automatic 
 
 | File | Purpose |
 | --- | --- |
-| `config/kineticcore/taczdata.json` | Content-data overrides and disabled states |
+| `config/kineticcore/taczworkshop/data_overrides.json` | Content-data overrides and disabled states |
 | `config/kineticcore/taczrecipes.json` | Legacy recipe file; preserved and no longer loaded by Workshop |
 | Corresponding `.json.bak` files | Backup copies maintained by the stores when applicable |
 
@@ -83,8 +83,8 @@ TACZ Workshop 提供游戏内 TACZ 内容的数据修改与修复功能。配方
 | Minecraft | 1.20.1 |
 | Forge | 47.4.2 或更新版本 |
 | Java | 17 |
-| KineticCore | 必需，26.10.7 或更新版本 |
-| Timeless and Classics Zero（TACZ） | 必需 |
+| KineticCore | 必需，26.10.20 或更新版本 |
+| Timeless and Classics Zero（TACZ） | 必需，1.2.0 或更新版本 |
 | Sophisticated Backpacks / Sophisticated Core | 可选，用于精妙背包兼容 |
 | LR Tactical 内容 | 近战、投掷物和补给品等对应数据分类需要这些内容 |
 
@@ -116,9 +116,9 @@ TACZ Workshop 提供游戏内 TACZ 内容的数据修改与修复功能。配方
 1. 打开条目，修改所需字段。
 2. 返回列表后可继续编辑其他条目；详情修改先暂存在客户端编辑会话中。
 3. 在数据管理器点击 **全部保存**，统一提交待保存内容。
-4. 等待服务端校验、写入文件和重载完成，再实际测试。
+4. 服务端校验、写入文件，并只重新加载 TACZ 自己的数据（不到一秒），之后即可实际测试。不再对全部数据包执行 `/reload`。
 
-批量流程会区分待保存修改与服务端已保存状态，也会检查是否已有重载任务等待执行。重置和禁用状态修改同样进入暂存流程。
+批量流程会区分待保存修改与服务端已保存状态；上一次保存还在应用时再保存，会等它完成后一起应用。重置和禁用状态修改同样进入暂存流程。
 
 ### 配方功能已迁至 ContentStudio
 
@@ -130,7 +130,7 @@ TACZ Workshop 提供游戏内 TACZ 内容的数据修改与修复功能。配方
 
 | 文件 | 用途 |
 | --- | --- |
-| `config/kineticcore/taczdata.json` | 内容数据覆盖与禁用状态 |
+| `config/kineticcore/taczworkshop/data_overrides.json` | 内容数据覆盖与禁用状态 |
 | `config/kineticcore/taczrecipes.json` | 旧配方文件，保留原文件，工坊不再加载 |
 | 对应的 `.json.bak` 文件 | 存储逻辑在适用情况下维护的备份 |
 

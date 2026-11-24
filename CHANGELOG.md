@@ -1,3 +1,25 @@
+2026年11月24日 — 26.11.24 — Faster gun data saves / 枪械数据保存提速
+- Gun data pages keep the single-player server ticking. In-world update packets rebuild their indices while model warmup continues on TaCZ's background worker. Identical snapshots reuse the prepared packets and skip a second broadcast.
+- When a targeted save needs a full reload, the next save waits for that reload to finish before applying. The fallback uses the currently selected data packs in their existing order.
+- 打开枪械数据页面时，单人世界继续运行。进入世界后的数据更新会重建索引，模型预加载在 TaCZ 的后台线程继续。同样的快照复用已准备好的数据包，避免再次广播。
+- 定向保存失败需要全量回退时，下一次保存会等当前重载结束后再应用。回退沿用当前启用的数据包与顺序。
+
+2026年11月14日 — 26.11.14 — TaCZ 1.2.0
+- Updated the required TaCZ version to 1.2.0. Workshop data saves use its native compressed gun-pack messages and refresh the prepared snapshot used for players joining later. The same prepared messages are reused for every current player.
+- Native client sync parses the received snapshot and rebuilds indices from it, keeping single-player clients away from the integrated server's maps while another save reloads them. Updated the workbench craft-button and backpack ammo hooks to the new native APIs, including the shared HUD/gameplay ammo counter.
+- Builds now verify mixin target methods, fields and instructions against the actual dependency bytecode.
+- Backpack ammo compatibility retains all native inventory slots, including offhand, in both reload checks and the shared counter. Empty block-index override objects continue to disable those workbenches without producing invalid native indices.
+- 必需的 TaCZ 版本更新为 1.2.0。工坊数据保存使用新版原生压缩同步消息，并刷新后加入玩家使用的预备快照；当前在线玩家共用同一批预备消息。
+- 客户端同步使用收到的快照解析数据并重建索引，避免单人游戏中与服务端下一次保存重载的表发生并发冲突。工作台合成按钮、背包弹药消耗与统计已接入新版原生接口，HUD 与游戏逻辑共用弹药统计。
+- 构建时检查 Mixin 的目标方法、字段与指令是否存在于实际依赖中。
+- 背包弹药兼容在装填检查和共享计数中保留副手等全部原生物品栏槽位。空对象形式的方块索引覆盖继续表示禁用该工作台，不再生成无效的原生索引。
+
+2026年11月11日 — 26.11.11 — Saves without /reload / 保存不再执行 /reload
+- Saving, restoring or disabling TACZ data no longer runs /reload. Only TACZ's own data (and LR Tactical's) is read again and sent to the players. A /reload also rebuilt every other mod's recipes, tags, loot tables and advancements and restarted JEI on every client, for every single save; in a large pack that froze the game for tens of seconds each time.
+- 保存、恢复或禁用 TACZ 数据不再执行 /reload，只重新读取 TACZ 自己的数据（以及 LR Tactical 的数据）并同步给玩家。原来每保存一次都会 /reload：重建所有模组的配方、标签、战利品表和进度，并让每个客户端的 JEI 重新加载，在大型整合包里每次都要卡几十秒。
+- Saves made while one is still being applied wait for it and are then applied together, so quick saves in a row no longer queue up one reload each. If TACZ's data cannot be reloaded on its own, /reload still runs as before.
+- 上一次保存还在应用时再保存，会等它完成后一起应用，连续快速保存不再排队各重载一次。如果无法单独重载 TACZ 数据，仍会像以前一样执行 /reload。
+
 2026年10月26日 — 26.10.26 — Clearer editors / 更清晰的编辑界面
 - The data overview no longer repeats the mouse guide; hovering an entry still shows its details.
 - 数据概览不再重复显示鼠标操作说明，悬停条目时仍显示其详情。

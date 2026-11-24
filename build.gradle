@@ -259,7 +259,7 @@ dependencies {
     def kineticCoreDependency = fg.deobf("dev.xyat.kineticcore:kineticcore:${kineticCoreVersion}") { changing = true }
     implementation kineticCoreDependency
     kineticCoreReobf("dev.xyat.kineticcore:kineticcore:${kineticCoreVersion}") { changing = true }
-    implementation fg.deobf("maven.modrinth:timeless-and-classics-zero:C2pCZ5ht")
+    implementation fg.deobf("maven.modrinth:timeless-and-classics-zero:QGCbNkTy")
     implementation fg.deobf("maven.modrinth:sophisticated-backpacks:i8yHivUh")
     implementation fg.deobf("maven.modrinth:sophisticated-core:t68nu57v")
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
@@ -333,3 +333,4 @@ apply from: rootProject.file('gradle/kinetic-language-validation.gradle')
 
 // Separate opt-in GUI fixture; excluded from release artifacts.
 apply from: 'gradle/gui-long-text-validation.gradle'
+apply from: 'gradle/kinetic-mixin-validation.gradle'

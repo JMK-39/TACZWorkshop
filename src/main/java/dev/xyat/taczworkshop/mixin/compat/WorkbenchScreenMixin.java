@@ -47,7 +47,7 @@ public abstract class WorkbenchScreenMixin extends AbstractContainerScreen<GunSm
             WorkbenchNetwork.query(menu.containerId, recipe.getId());
         }
     }
-    @Inject(method = "lambda$addCraftButton$5", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "lambda$addCraftButton$10", at = @At("HEAD"), cancellable = true)
     private void workshop$guard(Button button, CallbackInfo callback) {
         if (selectedRecipe == null || !selectedRecipe.getId().equals(workshop$recipe) || !workshop$craftable) callback.cancel();
     }

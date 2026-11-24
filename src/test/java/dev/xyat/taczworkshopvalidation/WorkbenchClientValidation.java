@@ -30,6 +30,7 @@ public final class WorkbenchClientValidation {
                 if (mc.player == null || mc.level == null || mc.screen != null) return;
                 require(mc.getSingleplayerServer() != null, "Client fixture requires an integrated server");
                 require(mc.getWindow().getWidth() == 1920 && mc.getWindow().getHeight() == 1080, "Launch the original pack at 1920x1080");
+                TaczAmmoValidation.checkClient();
                 screen = new GunSmithTableScreen(new GunSmithTableMenu(9182, mc.player.getInventory(), DefaultAssets.DEFAULT_BLOCK_ID), mc.player.getInventory(), Component.literal("Workbench material validation"));
                 require(screen instanceof WorkbenchMaterialView, "Production screen mixin did not load");
                 mc.setScreen(screen);

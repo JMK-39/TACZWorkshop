@@ -82,6 +82,7 @@ public final class TaczDataManagerPage extends KineticPage {
 
     public TaczDataManagerPage() {
         super(KineticI18n.translatable("gui.taczworkshop.data.title"));
+        setPausesGame(false);
         configureStandaloneDraft(TaczDataClientState::capturePendingSnapshot, TaczDataClientState::restorePendingSnapshot);
     }
 

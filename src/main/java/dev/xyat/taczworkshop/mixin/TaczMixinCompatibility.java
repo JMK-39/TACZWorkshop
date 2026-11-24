@@ -15,7 +15,7 @@ public final class TaczMixinCompatibility implements IMixinConfigPlugin {
             "dev.xyat.taczworkshop.mixin.compat.TaczBackpackMixins$AbstractGunItemMixin",
             "dev.xyat.taczworkshop.mixin.compat.TaczBackpackMixins$ModernGunScriptApiMixin",
             "dev.xyat.taczworkshop.mixin.compat.TaczBackpackMixins$GunAnimationStateContextMixin",
-            "dev.xyat.taczworkshop.mixin.compat.TaczBackpackMixins$GunHudOverlayMixin",
+            "dev.xyat.taczworkshop.mixin.compat.TaczBackpackMixins$ClientAmmoCountMixin",
             "dev.xyat.taczworkshop.mixin.compat.TaczUiMixins$ClientAttachmentItemTooltipMixin"
     );
     private final BooleanSupplier addonPresent;

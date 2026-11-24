@@ -1,0 +1,25 @@
+// Validate dependency mixin targets as bytecode contracts; javac does not check annotation strings.
+configurations { kineticMixinCheck }
+dependencies { kineticMixinCheck 'org.ow2.asm:asm-tree:9.10.1' }
+
+tasks.register('checkKineticMixinTargets', Exec) {
+    group = 'verification'
+    dependsOn 'classes', 'processResources'
+    def launcher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(17) }
+    def checker = rootProject.file('gradle/KineticMixinTargetCheck.java')
+    def classesDir = sourceSets.main.java.classesDirectory
+    def resourcesDir = sourceSets.main.output.resourcesDir
+    def compileClasspath = sourceSets.main.compileClasspath
+    def toolClasspath = configurations.kineticMixinCheck
+    def classpathFile = layout.buildDirectory.file('tmp/checkKineticMixinTargets/classpath.txt')
+    inputs.file(checker)
+    doFirst {
+        File file = classpathFile.get().asFile
+        file.parentFile.mkdirs()
+        file.setText(compileClasspath.files.join(File.pathSeparator), 'UTF-8')
+        commandLine launcher.get().executablePath.asFile.absolutePath, '-cp', toolClasspath.asPath,
+                checker.absolutePath, classesDir.get().asFile.absolutePath,
+                "--classpath-file=${file.absolutePath}", "--configs=${resourcesDir.absolutePath}", '--srg-runtime'
+    }
+}
+tasks.named('check').configure { dependsOn 'checkKineticMixinTargets' }

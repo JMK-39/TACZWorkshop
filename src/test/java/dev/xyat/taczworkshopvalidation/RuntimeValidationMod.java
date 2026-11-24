@@ -15,6 +15,9 @@ public final class RuntimeValidationMod {
         if (Boolean.getBoolean("taczworkshop.taczAddonServerValidation")) {
             MinecraftForge.EVENT_BUS.addListener(TaczAddonServerValidation::serverStarted);
         }
+        if (Boolean.getBoolean("taczworkshopapply.guiValidation")) {
+            MinecraftForge.EVENT_BUS.addListener(TaczDataApplyValidation::serverStarted);
+        }
         if (Boolean.getBoolean("taczworkshop.guiValidation")) {
             MinecraftForge.EVENT_BUS.addListener(this::serverStarted);
         }

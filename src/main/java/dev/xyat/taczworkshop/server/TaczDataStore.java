@@ -7,7 +7,7 @@ import dev.xyat.taczworkshop.TaczWorkshop;
 import dev.xyat.taczworkshop.data.TaczDataCodec;
 import dev.xyat.taczworkshop.data.TaczDataKind;
 import dev.xyat.taczworkshop.data.TaczDataOverride;
-import dev.xyat.kineticcore.api.runtime.KineticPlatform;
+import dev.xyat.kineticcore.api.runtime.KineticPaths;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -17,12 +17,13 @@ import java.nio.file.StandardCopyOption;
 import java.util.Map;
 
 public final class TaczDataStore {
-    private static final Path DIRECTORY = KineticPlatform.configDirectory().resolve("kineticcore");
-    private static final Path FILE = DIRECTORY.resolve("taczdata.json");
-    private static final Path BACKUP = DIRECTORY.resolve("taczdata.json.bak");
+    private static final String CONFIG_FILE = "kineticcore/taczworkshop/data_overrides.json";
+    private static final Path FILE = KineticPaths.configFile(CONFIG_FILE);
+    private static final Path BACKUP = KineticPaths.configFile(CONFIG_FILE + ".bak");
     private static Map<TaczDataKind, Map<String, TaczDataOverride>> cache = TaczDataCodec.emptyMap();
     private static long cacheStamp = Long.MIN_VALUE;
     private static boolean healthy = true;
+    private static boolean migrated;
 
     private TaczDataStore() {
     }
@@ -91,18 +92,23 @@ public final class TaczDataStore {
     }
 
     private static void reloadIfChanged() {
-        if (!Files.exists(FILE)) {
-            if (cacheStamp != Long.MIN_VALUE) cache = TaczDataCodec.emptyMap();
-            cacheStamp = Long.MIN_VALUE;
-            healthy = true;
-            return;
-        }
         try {
+            if (!migrated) {
+                KineticPaths.migrateConfigFile("kineticcore/taczdata.json", CONFIG_FILE);
+                KineticPaths.migrateConfigFile("kineticcore/taczdata.json.bak", CONFIG_FILE + ".bak");
+                migrated = true;
+            }
+            if (!Files.exists(FILE)) {
+                if (cacheStamp != Long.MIN_VALUE) cache = TaczDataCodec.emptyMap();
+                cacheStamp = Long.MIN_VALUE;
+                healthy = true;
+                return;
+            }
             long stamp = Files.getLastModifiedTime(FILE).toMillis();
             if (stamp == cacheStamp) return;
             String raw = Files.readString(FILE, StandardCharsets.UTF_8);
             JsonElement parsed = JsonParser.parseString(raw.isBlank() ? "{}" : raw);
-            if (!parsed.isJsonObject()) throw new IllegalArgumentException("taczdata.json root is not an object");
+            if (!parsed.isJsonObject()) throw new IllegalArgumentException("Data overrides must be a JSON object");
             cache = TaczDataCodec.decodeRoot(parsed.getAsJsonObject());
             cacheStamp = stamp;
             healthy = true;
@@ -113,8 +119,8 @@ public final class TaczDataStore {
     }
 
     private static void saveCache() throws IOException {
-        Files.createDirectories(DIRECTORY);
-        Path temp = DIRECTORY.resolve("taczdata.json.tmp");
+        Files.createDirectories(FILE.getParent());
+        Path temp = FILE.resolveSibling(FILE.getFileName() + ".tmp");
         String json = TaczDataCodec.GSON.toJson(TaczDataCodec.encodeRoot(cache));
         Files.writeString(temp, json + System.lineSeparator(), StandardCharsets.UTF_8);
         if (Files.exists(FILE)) Files.copy(FILE, BACKUP, StandardCopyOption.REPLACE_EXISTING);
@@ -128,6 +134,6 @@ public final class TaczDataStore {
     }
 
     private static void ensureHealthy() throws IOException {
-        if (!healthy) throw new IOException("taczdata.json could not be read; refusing to overwrite it");
+        if (!healthy) throw new IOException(FILE + " could not be read; refusing to overwrite it");
     }
 }

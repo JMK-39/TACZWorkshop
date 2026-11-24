@@ -3,7 +3,7 @@ package dev.xyat.taczworkshop.mixin.compat;
 import dev.xyat.kineticcore.api.registry.KineticRegistries;
 import com.tacz.guns.api.item.gun.AbstractGunItem;
 import com.tacz.guns.client.animation.statemachine.GunAnimationStateContext;
-import com.tacz.guns.client.gui.overlay.GunHudOverlay;
+import com.tacz.guns.client.gameplay.ClientAmmoCount;
 import com.tacz.guns.item.ModernKineticGunScriptAPI;
 import dev.xyat.taczworkshop.compat.ClientAmmoTickEvent;
 import dev.xyat.taczworkshop.compat.VirtualInventory;
@@ -24,7 +24,7 @@ import net.minecraftforge.items.IItemHandler;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.ModifyArg;
+import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
 import java.util.ArrayList;
@@ -40,7 +40,8 @@ public final class TaczBackpackMixins {
         private <T> LazyOptional<T> taczworkshop_tacz$checkBackpackAmmos(LivingEntity instance, Capability<T> capability, Direction facing) {
             if (!(instance instanceof Player player)) return instance.getCapability(capability, facing);
             ArrayList<ItemStack> items = SophisticatedBackpacksCompat.getItemsFromInventoryBackpack(player);
-            items.addAll(player.getInventory().items);
+            for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++)
+                items.add(player.getInventory().getItem(slot));
             VirtualInventory inventory = new VirtualInventory(items.size(), player);
             for (int i = 0; i < items.size(); i++) inventory.setItem(i, items.get(i));
             return LazyOptional.of(() -> (T) inventory.getHandler());
@@ -65,7 +66,7 @@ public final class TaczBackpackMixins {
             return LazyOptional.of(() -> (T) inventory.getHandler());
         }
 
-        @Redirect(method = "lambda$consumeAmmoFromPlayer$4", at = @At(value = "INVOKE", target = "Lcom/tacz/guns/api/item/gun/AbstractGunItem;findAndExtractInventoryAmmo(Lnet/minecraftforge/items/IItemHandler;Lnet/minecraft/world/item/ItemStack;I)I"))
+        @Redirect(method = "lambda$consumeAmmoFromPlayer$5", at = @At(value = "INVOKE", target = "Lcom/tacz/guns/api/item/gun/AbstractGunItem;findAndExtractInventoryAmmo(Lnet/minecraftforge/items/IItemHandler;Lnet/minecraft/world/item/ItemStack;I)I"))
         private int taczworkshop_tacz$useBackpackAmmo(AbstractGunItem gun, IItemHandler inventoryHandler, ItemStack gunItem, int requested) {
             if (!(shooter instanceof ServerPlayer player)) return gun.findAndExtractInventoryAmmo(inventoryHandler, gunItem, requested);
             final int[] remaining = {requested};
@@ -98,9 +99,10 @@ public final class TaczBackpackMixins {
         }
     }
 
-    @Mixin(value = GunHudOverlay.class, remap = false)
-    public static class GunHudOverlayMixin {
-        @ModifyArg(method = "handleCacheCount", at = @At(value = "INVOKE", target = "Lcom/tacz/guns/client/gui/overlay/GunHudOverlay;handleInventoryAmmo(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/entity/player/Inventory;)V"))
+    @Mixin(value = ClientAmmoCount.class, remap = false)
+    public static class ClientAmmoCountMixin {
+        // Native dummy/creative handling runs before this inventory read; HUD and gameplay share the same counter.
+        @ModifyVariable(method = "get", at = @At("STORE"), ordinal = 0)
         private static Inventory taczworkshop_tacz$useBackpackAmmo(Inventory inventory) {
             return ClientAmmoTickEvent.virtualInventory == null ? inventory : ClientAmmoTickEvent.virtualInventory;
         }

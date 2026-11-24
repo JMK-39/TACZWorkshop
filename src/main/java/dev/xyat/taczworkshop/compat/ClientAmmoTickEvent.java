@@ -34,7 +34,9 @@ public final class ClientAmmoTickEvent {
             backpackSynced = true;
         }
         ArrayList<ItemStack> items = SophisticatedBackpacksCompat.getItemsFromInventoryBackpack(player);
-        items.addAll(player.getInventory().items);
+        // Native 1.2.0 gameplay counts every inventory compartment, including offhand and armor.
+        for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++)
+            items.add(player.getInventory().getItem(slot));
         VirtualInventory inventory = new VirtualInventory(items.size(), player);
         for (int i = 0; i < items.size(); i++) inventory.setItem(i, items.get(i));
         virtualInventory = inventory;

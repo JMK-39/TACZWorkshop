@@ -3,6 +3,7 @@ package dev.xyat.taczworkshop.mixin;
 import com.google.gson.JsonElement;
 import com.tacz.guns.resource.manager.JsonDataManager;
 import dev.xyat.taczworkshop.server.TaczBaseDataCache;
+import dev.xyat.taczworkshop.server.TaczDisabledBlockIndices;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.util.profiling.ProfilerFiller;
@@ -18,6 +19,9 @@ public abstract class TaczDataManagerMixin {
     @Inject(method = "apply", at = @At("HEAD"))
     private void taczworkshop_tacz$captureAndApply(Map<ResourceLocation, JsonElement> source, ResourceManager resourceManager, ProfilerFiller profiler, CallbackInfo ci) {
         JsonDataManager<?> manager = (JsonDataManager<?>) (Object) this;
+        if (manager.getDataClass() == com.tacz.guns.resource.index.CommonBlockIndex.class) {
+            TaczDisabledBlockIndices.removeEmptyOverrides(source);
+        }
         TaczBaseDataCache.Domain domain = TaczBaseDataCache.domainForClass(manager.getDataClass());
         if (domain != null) TaczBaseDataCache.captureAndApply(domain, source);
     }

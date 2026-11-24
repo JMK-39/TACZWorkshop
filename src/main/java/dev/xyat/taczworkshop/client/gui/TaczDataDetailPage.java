@@ -75,6 +75,7 @@ public final class TaczDataDetailPage extends KineticPage {
 
     public TaczDataDetailPage(JsonObject detail) {
         super(KineticI18n.translatable("gui.taczworkshop.data.detail.title"));
+        setPausesGame(false);
         this.kind = TaczDataKind.fromWire(read(detail, "kind"));
         this.id = read(detail, "id");
         this.dataId = read(detail, "data_id");

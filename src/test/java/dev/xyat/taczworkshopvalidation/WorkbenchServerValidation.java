@@ -28,6 +28,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.AABB;
@@ -56,6 +57,7 @@ public final class WorkbenchServerValidation {
     private static final int CLIENT_MENU = 9182;
     private static final List<String> checks = new ArrayList<>();
     private static final Set<BlockPos> placed = new LinkedHashSet<>();
+    private static final Set<Long> forcedChunksAdded = new LinkedHashSet<>();
     private static ServerLevel level;
     private static FakePlayer player;
     private static BlockPos root, controller;
@@ -94,6 +96,8 @@ public final class WorkbenchServerValidation {
             if (++wait < 30) return;
             if (phase == 0) {
                 initialize(server);
+                TaczAmmoValidation.checkServer(player, backpack);
+                check("offhand/backpack native reload checks, exact ammo debit and exhaustion");
                 resetMaterials(2, 4);
                 require(RefinedStorageMaterials.adjacent(player, table).isEmpty(), "RS without a controller");
                 craftAndCheck(5, 1, 0, 1);
@@ -186,6 +190,16 @@ public final class WorkbenchServerValidation {
         level.getChunkAt(root);
         for (BlockPos pos : BlockPos.betweenClosed(root.offset(-3, -3, -3), root.offset(3, 3, 3)))
             require(level.getBlockState(pos).isAir() && level.getBlockEntity(pos) == null, "Temporary fixture volume is occupied: " + pos);
+        // A FakePlayer is not a chunk-loading player. Keep the air-only fixture alive across server ticks.
+        for (int x = (root.getX() - 3) >> 4; x <= (root.getX() + 3) >> 4; x++) {
+            for (int z = (root.getZ() - 3) >> 4; z <= (root.getZ() + 3) >> 4; z++) {
+                long key = ChunkPos.asLong(x, z);
+                if (!level.getForcedChunks().contains(key)) {
+                    level.setChunkForced(x, z, true);
+                    forcedChunksAdded.add(key);
+                }
+            }
+        }
         player = FakePlayerFactory.get(level, new GameProfile(UUID.fromString("c5ecec51-6fab-401e-984e-dddc16b60010"), "WorkbenchFixture"));
         player.setGameMode(GameType.SURVIVAL); player.getInventory().clearContent();
         player.setPos(root.getX() + .5, root.getY(), root.getZ() + .5);
@@ -225,7 +239,12 @@ public final class WorkbenchServerValidation {
         try {
             level.getRecipeManager().replaceRecipes(replacement);
             WorkbenchMaterials.Preview preview = WorkbenchMaterials.preview(player, menu, recipe);
-            require(preview.craftable() == available, "Server preview differs from craft expectation");
+            require(preview.craftable() == available, "Server preview differs from craft expectation: counts="
+                    + Arrays.toString(preview.counts()) + " inventory=" + inventoryIron()
+                    + " backpack=" + new BackpackWrapper(backpack).getInventoryHandler().getStackInSlot(0)
+                    + " valid=" + WorkbenchMaterials.valid(player, menu) + " alive=" + player.isAlive()
+                    + " menu=" + (player.containerMenu == menu) + " pos=" + player.position()
+                    + " tableRemoved=" + table.isRemoved());
             menu.doCraft(recipe.getId(), player);
             var spawned = items().stream().filter(value -> !before.contains(value.getUUID())).toList();
             try {
@@ -296,6 +315,11 @@ public final class WorkbenchServerValidation {
         removeController();
         if (level != null) for (BlockPos pos : placed) level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
         placed.clear();
+        if (level != null) for (long key : forcedChunksAdded) {
+            ChunkPos chunk = new ChunkPos(key);
+            level.setChunkForced(chunk.x, chunk.z, false);
+        }
+        forcedChunksAdded.clear();
         if (player != null) { player.containerMenu = player.inventoryMenu; player.getInventory().clearContent(); }
         if (backpackId != null) { BackpackStorage.get().removeBackpackContents(backpackId); backpackId = null; }
     }

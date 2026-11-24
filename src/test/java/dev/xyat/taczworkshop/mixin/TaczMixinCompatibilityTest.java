@@ -12,7 +12,7 @@ class TaczMixinCompatibilityTest {
             "compat.TaczBackpackMixins$AbstractGunItemMixin",
             "compat.TaczBackpackMixins$ModernGunScriptApiMixin",
             "compat.TaczBackpackMixins$GunAnimationStateContextMixin",
-            "compat.TaczBackpackMixins$GunHudOverlayMixin",
+            "compat.TaczBackpackMixins$ClientAmmoCountMixin",
             "compat.TaczUiMixins$ClientAttachmentItemTooltipMixin"
     };
 
