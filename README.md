@@ -8,6 +8,21 @@
 
 TACZ Workshop provides in-game data editing and repair for installed TACZ content. Recipe creation, editing and removal now belong to ContentStudio.
 
+### Edit and save a TaCZ weight override
+
+Filter the in-game list, select an entry, then search its fields for weight. Change 3.5 to 4.0, return to the manager and use Save All. The server saved the new value for that entry.
+
+![Filtering a game data entry, editing its weight, and saving the staged change on the server](https://raw.githubusercontent.com/wiki/JMK-39/TACZWorkshop/media/tutorials-20261126/en.gif)
+
+<details>
+<summary>Full walkthrough with Mandarin narration</summary>
+
+https://github.com/user-attachments/assets/063c2424-e6b7-4668-be58-eae51cb4dfa6
+
+</details>
+
+[Editor guide](https://github.com/JMK-39/TACZWorkshop/wiki/Data-Overrides)
+
 ### Installation and access
 
 | Component | Requirement |
@@ -15,7 +30,7 @@ TACZ Workshop provides in-game data editing and repair for installed TACZ conten
 | Minecraft | 1.20.1 |
 | Forge | 47.4.2 or newer |
 | Java | 17 |
-| KineticCore | 26.10.20 or newer; required |
+| KineticCore | 26.11.24 or newer; required |
 | Timeless and Classics Zero (TACZ) | 1.2.0 or newer; required |
 | Sophisticated Backpacks / Sophisticated Core | Optional backpack compatibility |
 | LR Tactical content | Needed for the corresponding melee, throwable, and consumable data categories |
@@ -76,6 +91,21 @@ If a data save fails, inspect the server message/log and confirm the referenced 
 
 TACZ Workshop 提供游戏内 TACZ 内容的数据修改与修复功能。配方新增、修改与移除已统一交给 ContentStudio。
 
+### 在 TaCZ 工坊里修改并保存重量
+
+先筛选游戏条目，再在字段里搜索「重量」。把 3.5 改为 4.0，返回管理器点击「全部保存」。本次实录核对了服务端保存的条目，里面的重量已经是 4.0。
+
+![筛选游戏条目、搜索重量字段并将修改保存到服务端的实录](https://raw.githubusercontent.com/wiki/JMK-39/TACZWorkshop/media/tutorials-20261126/zh.gif)
+
+<details>
+<summary>播放完整普通话讲解</summary>
+
+https://github.com/user-attachments/assets/063c2424-e6b7-4668-be58-eae51cb4dfa6
+
+</details>
+
+[编辑器使用指南](https://github.com/JMK-39/TACZWorkshop/wiki/%E8%B5%84%E6%96%99%E8%A6%86%E7%9B%96%E4%B8%8E%E4%BF%9D%E5%AD%98)
+
 ### 安装与入口
 
 | 组件 | 要求 |
@@ -83,7 +113,7 @@ TACZ Workshop 提供游戏内 TACZ 内容的数据修改与修复功能。配方
 | Minecraft | 1.20.1 |
 | Forge | 47.4.2 或更新版本 |
 | Java | 17 |
-| KineticCore | 必需，26.10.20 或更新版本 |
+| KineticCore | 必需，26.11.24 或更新版本 |
 | Timeless and Classics Zero（TACZ） | 必需，1.2.0 或更新版本 |
 | Sophisticated Backpacks / Sophisticated Core | 可选，用于精妙背包兼容 |
 | LR Tactical 内容 | 近战、投掷物和补给品等对应数据分类需要这些内容 |
