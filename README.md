@@ -91,6 +91,8 @@ If a data save fails, inspect the server message/log and confirm the referenced 
 
 TACZ Workshop 提供游戏内 TACZ 内容的数据修改与修复功能。配方新增、修改与移除已统一交给 ContentStudio。
 
+<a name="zh-walkthrough"></a>
+
 ### 在 TaCZ 工坊里修改并保存重量
 
 先筛选游戏条目，再在字段里搜索「重量」。把 3.5 改为 4.0，返回管理器点击「全部保存」。本次实录核对了服务端保存的条目，里面的重量已经是 4.0。
