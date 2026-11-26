@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       mod_version:
-        description: Release version in YY.M.D format (for example, 26.9.25)
+        description: Release date in YY.MM.DD format (for example, 26.09.25)
         required: true
         type: string
 
@@ -29,29 +29,19 @@ jobs:
         with:
           gradle-version: '8.8'
 
-      - name: Validate version and reject duplicate release
+      - name: Validate release date
         env:
           VERSION: ${{ inputs.mod_version }}
-          GH_TOKEN: ${{ github.token }}
         run: |
           python - <<'PY'
           from datetime import datetime
           import os
           import re
           version = os.environ["VERSION"]
-          if not re.fullmatch(r"\d{2}\.(?:[1-9]|1[0-2])\.(?:[1-9]|[12]\d|3[01])", version):
-              raise SystemExit("Version must use YY.M.D without leading zeroes, such as 26.9.25")
+          if not re.fullmatch(r"[0-9]{2}\.[0-9]{2}\.[0-9]{2}", version):
+              raise SystemExit("Version must use YY.MM.DD, such as 26.09.25")
           datetime.strptime(version, "%y.%m.%d")
           PY
-          tag="v$VERSION"
-          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "Release $tag already exists" >&2
-            exit 1
-          fi
-          if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; then
-            echo "Tag $tag already exists" >&2
-            exit 1
-          fi
 
       - name: Build mod JAR
         env:
@@ -71,9 +61,12 @@ jobs:
         env:
           VERSION: ${{ inputs.mod_version }}
           GH_TOKEN: ${{ github.token }}
-        run: >-
-          gh release create "v$VERSION"
-          "build/release/taczworkshop-$VERSION.jar"
-          --repo "$GITHUB_REPOSITORY"
-          --title "TACZWorkshop $VERSION"
-          --generate-notes
+        run: |
+          tag="v$VERSION"
+          artifact="build/release/taczworkshop-$VERSION.jar"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$tag" "$artifact" --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$tag" "$artifact" --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" --title "TACZWorkshop $VERSION" --generate-notes
+          fi
