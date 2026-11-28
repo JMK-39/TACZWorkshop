@@ -20,8 +20,12 @@ public final class SophisticatedBackpacksCompat {
         return INSTALLED ? SophisticatedBackpacksCompatInner.getItemsFromInventoryBackpack(player) : new ArrayList<>();
     }
 
-    public static void syncAllBackpack(Player player) {
-        if (INSTALLED) SophisticatedBackpacksCompatInner.syncAllBackpack(player);
+    public static ArrayList<ItemStack> getClientItems(Player player) {
+        return INSTALLED ? SophisticatedBackpacksCompatInner.getClientItems(player) : new ArrayList<>();
+    }
+
+    public static void clearClientRequests() {
+        if (INSTALLED) SophisticatedBackpacksCompatInner.clearClientRequests();
     }
 
     public static void modifyInventoryBackpack(ServerPlayer player, ItemStack backpackItem, Consumer<IItemHandler> action) {

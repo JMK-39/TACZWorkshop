@@ -28,7 +28,7 @@ Filter the in-game list, select an entry, then search its fields for weight. Cha
 | Java | 17 |
 | KineticCore | 26.11.24 or newer; required |
 | Timeless and Classics Zero (TACZ) | 1.2.0 or newer; required |
-| Sophisticated Backpacks / Sophisticated Core | Optional backpack compatibility |
+| Sophisticated Backpacks / Sophisticated Core | Optional. Backpack integration requires Backpacks **3.26.22.2264+** and Core **1.5.40.2493+**. |
 | LR Tactical content | Needed for the corresponding melee, throwable, and consumable data categories |
 
 Install the mod and required dependencies on both client and server for multiplayer use. Press **F6** to open KineticCore's configuration center, then open TACZ Workshop's data manager. F6 is the default shared configuration key.
@@ -109,7 +109,7 @@ TACZ Workshop 提供游戏内 TACZ 内容的数据修改与修复功能。配方
 | Java | 17 |
 | KineticCore | 必需，26.11.24 或更新版本 |
 | Timeless and Classics Zero（TACZ） | 必需，1.2.0 或更新版本 |
-| Sophisticated Backpacks / Sophisticated Core | 可选，用于精妙背包兼容 |
+| 精妙背包 / 精妙核心 | 可选。使用背包联动时，需要精妙背包 **3.26.22.2264+** 和精妙核心 **1.5.40.2493+**。 |
 | LR Tactical 内容 | 近战、投掷物和补给品等对应数据分类需要这些内容 |
 
 多人游戏中，在客户端和服务端安装模组及必需前置。按 **F6** 打开 KineticCore 配置中心，进入 TACZ Workshop 的数据管理器。F6 是共享配置中心的默认按键。

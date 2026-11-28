@@ -98,6 +98,14 @@ final class TaczAmmoValidation {
         int rest = script.consumeAmmoFromPlayer(99);
         expect(rest == 4 && new BackpackWrapper(bag).getInventoryHandler().getStackInSlot(0).isEmpty(), "server backpack clamps at remaining ammo: used=" + rest);
         expect(!script.hasAmmoToConsume(), "server cannot reuse consumed ammo");
+        ItemStack box = new ItemStack(ModItems.AMMO_BOX.get());
+        IAmmoBox ammoBox = (IAmmoBox) box.getItem();
+        ammoBox.setAmmoId(box, KineticResourceIds.parse("tacz:762x39"));
+        ammoBox.setAmmoCount(box, 11);
+        new BackpackWrapper(bag).getInventoryHandler().setStackInSlot(0, box);
+        expect(script.consumeAmmoFromPlayer(5) == 5, "server consumes five rounds from a carried ammo box");
+        ItemStack saved = new BackpackWrapper(bag).getInventoryHandler().getStackInSlot(0);
+        expect(ammoBox.getAmmoCount(saved) == 6, "remaining rounds are persisted in the backpack item's storage");
     }
 
     private static ItemStack ammo(int count) {

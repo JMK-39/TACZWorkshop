@@ -1,3 +1,17 @@
+2026年11月28日 — 26.11.28 — Sophisticated Backpacks ammo sync / 精妙背包弹药同步
+
+**English**
+
+- Fixed a client crash when joining a world with a Sophisticated Backpack. TaCZ Workshop now requests contents using the backpack's ID and its current inventory or equipment slot.
+- Picking up, equipping or moving a backpack refreshes its ammunition count. Keeping it in the same slot reuses the synced contents. Taking it off and removing it from the inventory drops its ammunition from the HUD.
+- Backpack integration requires Sophisticated Backpacks **3.26.22.2264+** and Sophisticated Core **1.5.40.2493+** on Forge 1.20.1. Both remain optional.
+
+**简体中文**
+
+- 修复了携带精妙背包进入世界时客户端可能崩溃的问题。工坊按背包 ID 和当前物品栏或装备槽位请求内容。
+- 拾取、装备或移动背包会刷新弹药计数。背包留在原槽位时复用已同步的数据，移出随身物品栏和装备槽后，其中的弹药会从 HUD 中扣除。
+- Forge 1.20.1 的背包联动要求精妙背包 **3.26.22.2264+**、精妙核心 **1.5.40.2493+**。两者均为可选依赖。
+
 2026年11月24日 — 26.11.24 — Faster gun data saves / 枪械数据保存提速
 - Gun data pages keep the single-player server ticking. In-world update packets rebuild their indices while model warmup continues on TaCZ's background worker. Identical snapshots reuse the prepared packets and skip a second broadcast.
 - When a targeted save needs a full reload, the next save waits for that reload to finish before applying. The fallback uses the currently selected data packs in their existing order.

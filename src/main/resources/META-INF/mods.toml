@@ -42,13 +42,13 @@ side="BOTH"
 [[dependencies.taczworkshop]]
 modId="sophisticatedbackpacks"
 mandatory=false
-versionRange="[0,)"
+versionRange="[3.26.22.2264,)"
 ordering="AFTER"
 side="BOTH"
 
 [[dependencies.taczworkshop]]
 modId="sophisticatedcore"
 mandatory=false
-versionRange="[0,)"
+versionRange="[1.5.40.2493,)"
 ordering="AFTER"
 side="BOTH"

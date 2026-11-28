@@ -5,101 +5,116 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.items.IItemHandler;
-import net.p3pp3rf1y.sophisticatedbackpacks.api.CapabilityBackpackWrapper;
 import net.p3pp3rf1y.sophisticatedbackpacks.backpack.BackpackStorage;
 import net.p3pp3rf1y.sophisticatedbackpacks.backpack.wrapper.BackpackWrapper;
-import net.p3pp3rf1y.sophisticatedbackpacks.backpack.wrapper.IBackpackWrapper;
-import net.p3pp3rf1y.sophisticatedbackpacks.common.gui.BackpackContainer;
-import net.p3pp3rf1y.sophisticatedbackpacks.common.gui.BackpackContext;
 import net.p3pp3rf1y.sophisticatedbackpacks.network.BackpackContentsMessage;
 import net.p3pp3rf1y.sophisticatedbackpacks.network.RequestBackpackInventoryContentsMessage;
 import net.p3pp3rf1y.sophisticatedbackpacks.network.SBPPacketHandler;
 import net.p3pp3rf1y.sophisticatedbackpacks.util.PlayerInventoryProvider;
 import net.p3pp3rf1y.sophisticatedcore.inventory.InventoryHandler;
+import net.p3pp3rf1y.sophisticatedcore.linkedstorage.LinkedStorageStackData;
+import net.p3pp3rf1y.sophisticatedcore.network.ItemStackReference;
 
 import java.util.ArrayList;
 import java.util.UUID;
 import java.util.List;
 import java.util.HashSet;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Consumer;
 
 public class SophisticatedBackpacksCompatInner {
+    private static Player clientOwner;
+    private static Map<UUID, ItemStackReference> requestedSlots = Map.of();
 
     public static List<IItemHandler> workbenchInventories(Player player) {
         List<IItemHandler> result = new ArrayList<>();
-        var seen = new HashSet<UUID>();
         for (ItemStack backpack : getAllInventoryBackpack(player)) {
-            var wrapper = new BackpackWrapper(backpack);
-            var handler = wrapper.getInventoryHandler();
-            if (wrapper.getContentsUuid().isPresent() && seen.add(wrapper.getContentsUuid().get())) result.add(handler);
+            result.add(new BackpackWrapper(backpack).getInventoryHandler());
         }
         return result;
     }
 
     public static void syncWorkbench(ServerPlayer player) {
         if (player instanceof net.minecraftforge.common.util.FakePlayer) return;
-        var seen = new HashSet<UUID>();
         for (ItemStack backpack : getAllInventoryBackpack(player)) {
-            new BackpackWrapper(backpack).getContentsUuid().filter(seen::add).ifPresent(uuid ->
-                    SBPPacketHandler.INSTANCE.sendToClient(player, new BackpackContentsMessage(uuid,
-                            BackpackStorage.get().getOrCreateBackpackContents(uuid))));
+            new BackpackWrapper(backpack).getContentsUuid().ifPresent(uuid -> sendInventory(player, uuid));
         }
     }
 
-    public static ArrayList<ItemStack> getItemsFromBackpackItem(ItemStack itemStack) {
-        ArrayList<ItemStack> items = new ArrayList<>();
-        BackpackWrapper backpackWrapper = new BackpackWrapper(itemStack);
-        InventoryHandler handler = backpackWrapper.getInventoryHandler();
-        int size = itemStack.getTag() != null ? itemStack.getTag().getInt("inventorySlots") : 0;
-        for (int i = 0; i < size; i++) {
-            items.add(handler.getStackInSlot(i));
+    private static void appendInventory(BackpackWrapper backpack, List<ItemStack> items) {
+        InventoryHandler handler = backpack.getInventoryHandler();
+        for (int i = 0; i < handler.getSlots(); i++) {
+            ItemStack stack = handler.getStackInSlot(i);
+            if (!stack.isEmpty()) items.add(stack);
         }
-        return items;
     }
 
     public static ArrayList<ItemStack> getItemsFromInventoryBackpack(Player player) {
         ArrayList<ItemStack> items = new ArrayList<>();
-        getAllInventoryBackpack(player).forEach(itemStack -> items.addAll(getItemsFromBackpackItem(itemStack)));
+        for (ItemStack backpack : getAllInventoryBackpack(player)) appendInventory(new BackpackWrapper(backpack), items);
         return items;
     }
 
-    public static void syncAllBackpack(Player player) {
-        getAllInventoryBackpack(player).forEach(itemStack -> {
-            IBackpackWrapper backpackWrapper = itemStack.getCapability(CapabilityBackpackWrapper.getCapabilityInstance()).orElse(IBackpackWrapper.Noop.INSTANCE);
-            if (backpackWrapper.getContentsUuid().isPresent()) {
-                UUID uuid = backpackWrapper.getContentsUuid().get();
-                SBPPacketHandler.INSTANCE.sendToServer(new RequestBackpackInventoryContentsMessage(uuid));
+    public static ArrayList<ItemStack> getClientItems(Player player) {
+        if (clientOwner != player) {
+            requestedSlots = Map.of();
+            clientOwner = player;
+        }
+        Map<UUID, ItemStackReference> carried = new HashMap<>();
+        ArrayList<ItemStack> items = new ArrayList<>();
+        PlayerInventoryProvider.get().runOnBackpacks(player, (stack, inventoryName, identifier, index) -> {
+            if (LinkedStorageStackData.getEndpoint(stack) != null) return false;
+            var wrapper = new BackpackWrapper(stack);
+            UUID uuid = wrapper.getContentsUuid().orElse(null);
+            if (uuid == null || carried.containsKey(uuid)) return false;
+            var slot = new ItemStackReference(ItemStackReference.EQUIPMENT_HANDLER, index, inventoryName, identifier);
+            carried.put(uuid, slot);
+            if (!slot.equals(requestedSlots.get(uuid)))
+                SBPPacketHandler.INSTANCE.sendToServer(new RequestBackpackInventoryContentsMessage(uuid, slot));
+            appendInventory(wrapper, items);
+            return false;
+        });
+        requestedSlots = carried;
+        return items;
+    }
+
+    public static void clearClientRequests() {
+        clientOwner = null;
+        requestedSlots = Map.of();
+    }
+
+    private static void sendInventory(ServerPlayer player, UUID uuid) {
+        if (player instanceof net.minecraftforge.common.util.FakePlayer) return;
+        BackpackStorage.get().getBackpackContents(uuid).ifPresent(contents -> {
+            CompoundTag snapshot = new CompoundTag();
+            for (String key : List.of("inventory", "upgradeInventory")) {
+                var value = contents.get(key);
+                if (value != null) snapshot.put(key, value.copy());
             }
+            SBPPacketHandler.INSTANCE.sendToClient(player, new BackpackContentsMessage(uuid, snapshot));
         });
     }
 
     public static void modifyInventoryBackpack(ServerPlayer player, ItemStack backpackItem, Consumer<IItemHandler> action) {
         PlayerInventoryProvider.get().runOnBackpacks(player, (backpack, inventoryName, identifier, index) -> {
-            if (!backpack.equals(backpackItem)) return false;
-            BackpackContext.Item backpackContext = new BackpackContext.Item(inventoryName, identifier, index);
-            BackpackContainer container = new BackpackContainer(player.containerMenu.containerId + 1, player, backpackContext);
-            InventoryHandler inventoryHandler = container.getStorageWrapper().getInventoryHandler();
-
-            action.accept(inventoryHandler);
-
-            int size = container.slots.size() - player.getInventory().items.size();
-            for (int i = 0; i < size; i++) {
-                container.getSlot(i).set(inventoryHandler.getStackInSlot(i));
-            }
-
-            if (container.getStorageWrapper().getContentsUuid().isPresent()) {
-                UUID uuid = container.getStorageWrapper().getContentsUuid().get();
-                CompoundTag backpackContent = BackpackStorage.get().getOrCreateBackpackContents(uuid);
-                SBPPacketHandler.INSTANCE.sendToClient(player, new BackpackContentsMessage(uuid, backpackContent));
-            }
-            return false;
+            if (backpack != backpackItem || LinkedStorageStackData.getEndpoint(backpack) != null) return false;
+            var wrapper = new BackpackWrapper(backpack);
+            var inventory = wrapper.getInventoryHandler();
+            action.accept(inventory);
+            // TaCZ changes ammo-box NBT in place. Give the native handler a chance to persist those slots too.
+            for (int i = 0; i < inventory.getSlots(); i++) inventory.onContentsChanged(i);
+            wrapper.getContentsUuid().ifPresent(uuid -> sendInventory(player, uuid));
+            return true;
         });
     }
 
     public static ArrayList<ItemStack> getAllInventoryBackpack(Player player) {
         ArrayList<ItemStack> items = new ArrayList<>();
+        var seen = new HashSet<UUID>();
         PlayerInventoryProvider.get().runOnBackpacks(player, (backpack, inventoryName, identifier, index) -> {
-            items.add(backpack);
+            if (LinkedStorageStackData.getEndpoint(backpack) == null
+                    && new BackpackWrapper(backpack).getContentsUuid().filter(seen::add).isPresent()) items.add(backpack);
             return false;
         });
         return items;

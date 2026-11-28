@@ -10,7 +10,6 @@ import java.util.ArrayList;
 
 public final class ClientAmmoTickEvent {
     public static VirtualInventory virtualInventory;
-    private static boolean backpackSynced;
     private static boolean registered;
 
     private ClientAmmoTickEvent() {
@@ -20,20 +19,23 @@ public final class ClientAmmoTickEvent {
         if (registered) return;
         registered = true;
         KineticClientEvents.onTick(KineticClientEvents.TickPhase.START, ClientAmmoTickEvent::storageBackpack);
+        KineticClientEvents.onLogout(() -> {
+            virtualInventory = null;
+            SophisticatedBackpacksCompat.clearClientRequests();
+        });
     }
 
     private static void storageBackpack() {
         Player player = KineticClientRuntime.localPlayer();
         if (player == null) {
             virtualInventory = null;
-            backpackSynced = false;
             return;
         }
-        if (!backpackSynced) {
-            SophisticatedBackpacksCompat.syncAllBackpack(player);
-            backpackSynced = true;
+        ArrayList<ItemStack> items = SophisticatedBackpacksCompat.getClientItems(player);
+        if (items.isEmpty()) {
+            virtualInventory = null;
+            return;
         }
-        ArrayList<ItemStack> items = SophisticatedBackpacksCompat.getItemsFromInventoryBackpack(player);
         // Native 1.2.0 gameplay counts every inventory compartment, including offhand and armor.
         for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++)
             items.add(player.getInventory().getItem(slot));
